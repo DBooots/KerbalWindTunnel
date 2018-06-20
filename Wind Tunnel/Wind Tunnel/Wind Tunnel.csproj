@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{13572B17-7B9F-4252-B723-28DAC8796A91}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>KerbalWindTunnel</RootNamespace>
+    <AssemblyName>Wind Tunnel</AssemblyName>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CalculationManager.cs" />
+    <Compile Include="Extensions\KSPClassExtensions.cs" />
+    <Compile Include="Extensions\DrawingHelper.cs" />
+    <Compile Include="Extensions\HashCodeHelper.cs" />
+    <Compile Include="Extensions\Linq2.cs" />
+    <Compile Include="Framework\ConfigNodeStorage.cs" />
+    <Compile Include="Framework\ExtensionsUnity.cs" />
+    <Compile Include="Framework\FrameworkExt\Extensions.cs" />
+    <Compile Include="Extensions\FloatCurve2.cs" />
+    <Compile Include="Framework\FrameworkExt\KSPDateStructure.cs" />
+    <Compile Include="Framework\FrameworkExt\KSPDateTime.cs" />
+    <Compile Include="Framework\FrameworkExt\KSPTimeSpan.cs" />
+    <Compile Include="Framework\FrameworkExt\MonoBehaviourWindowPlus.cs" />
+    <Compile Include="Framework\MonoBehaviourExtended.cs" />
+    <Compile Include="Framework\MonoBehaviourWindow.cs" />
+    <Compile Include="Framework\SkinsLibrary.cs" />
+    <Compile Include="Graphing\AoACurve.cs" />
+    <Compile Include="Graphing\EnvelopeSurf.cs" />
+    <Compile Include="Graphing\VelCurve.cs" />
+    <Compile Include="RootSolvers\Bisect.cs" />
+    <Compile Include="RootSolvers\Brent.cs" />
+    <Compile Include="RootSolvers\RootSolver.cs" />
+    <Compile Include="StockAero.cs" />
+    <Compile Include="StockAeroUtil.cs" />
+    <Compile Include="WindowGraph.cs" />
+    <Compile Include="AeroPredictor.cs" />
+    <Compile Include="VesselCache\SimulatedLiftingSurface.cs" />
+    <Compile Include="VesselCache\SimCurves.cs" />
+    <Compile Include="VesselCache\SimulatedEngine.cs" />
+    <Compile Include="VesselCache\SimulatedPart.cs" />
+    <Compile Include="ToolbarWrapper.cs" />
+    <Compile Include="VesselCache\SimulatedVessel.cs" />
+    <Compile Include="WindTunnel.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WindTunnelWindow.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Framework\LICENSE_Framework.md" />
+    <None Include="LICENSE.md" />
+    <None Include="VesselCache\LICENSE_VesselCache.md" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
