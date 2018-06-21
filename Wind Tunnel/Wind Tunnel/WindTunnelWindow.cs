@@ -199,6 +199,7 @@ namespace KerbalWindTunnel
 
         private GUIStyle exitButton = new GUIStyle(HighLogic.Skin.button);
         private GUIStyle clearBox = new GUIStyle(HighLogic.Skin.box);
+        private GUIStyle labelCentered = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
 
         Texture2D crossHair = new Texture2D(1, 1);
         Texture2D selectedCrossHair = new Texture2D(1, 1);

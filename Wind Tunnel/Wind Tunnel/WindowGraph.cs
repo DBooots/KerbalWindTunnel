@@ -501,7 +501,7 @@ namespace KerbalWindTunnel
         private void DrawProgressBar(float percentComplete)
         {
             //GUI.Label(new Rect(PlotPosition.x, PlotPosition.y + graphHeight / 2 - 30, graphWidth + 45, 20), "Calculating... (" + percentComplete * 100 + "%)");
-            GUILayout.Label(String.Format("Calculating... ({0:N1}%)", percentComplete * 100), GUILayout.Height(graphHeight));
+            GUILayout.Label(String.Format("Calculating... ({0:N1}%)", percentComplete * 100), labelCentered, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
             Rect rectBar = new Rect(PlotPosition.x, PlotPosition.y + 292 / 2 - 10, 292 + 45, 20);
             //blnReturn = Drawing.DrawBar(styleBack, out rectBar, Width);
             GUI.Button(rectBar, "");
