@@ -593,7 +593,7 @@ namespace KerbalWindTunnel
         public static float GetMajorUnit(float max, float min, bool forX)
         {
             if (Mathf.Sign(max) != Mathf.Sign(min))
-                return GetMajorUnit(max);
+                return GetMajorUnit(max - min);
             float c;
             if (forX)
                 c = 12f / 7;
