@@ -382,6 +382,11 @@ namespace KerbalWindTunnel
 
             // Display selected point details.
             GUILayout.Label(this.conditionDetails);
+            if (CurrentGraphMode == GraphMode.AoACurves && Graphing.AoACurve.Status == CalculationManager.RunStatus.Completed)
+            {
+                Graphing.AoACurve.AoAPoint zeroPoint = new Graphing.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
+                GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure));
+            }
             
 
             GUILayout.EndVertical();
