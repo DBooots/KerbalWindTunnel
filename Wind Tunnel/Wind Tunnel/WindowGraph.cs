@@ -10,7 +10,8 @@ namespace KerbalWindTunnel
 {
     public partial class WindTunnelWindow
     {
-
+        private bool showEnvelopeMask = true;
+        private EnvelopeSurf.Conditions maskConditions = EnvelopeSurf.Conditions.Blank;
         //private string[][] graphSelections = new string[][] {
         //    new string[] { "Excess Thrust", "Excess Acceleration", "Thrust Available", "Level Flight AoA", "Max Lift AoA", "Max Lift Force" },
         //    new string[] {"Lift Force", "Drag Force", "Lift-Drag Ratio" },
@@ -63,6 +64,11 @@ namespace KerbalWindTunnel
                                         }
                                     }
                                 }//*/
+                                if (showEnvelopeMask && !maskConditions.Equals(EnvelopeSurf.currentConditions))
+                                {
+                                    CreateSurfMask(EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Thrust_excess), Color.gray, f => !float.IsNaN(f) && !float.IsInfinity(f) && f > 0, 2);
+                                    maskConditions = EnvelopeSurf.currentConditions;
+                                }
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.ExcessThrust:
@@ -266,6 +272,42 @@ namespace KerbalWindTunnel
             DrawGraph();
         }
 
+        Texture2D maskTex = new Texture2D(graphWidth, graphHeight, TextureFormat.ARGB32, false);
+        private void CreateSurfMask(float[,] values, Color lineColor, Func<float, bool> criteria, int maskWidth = 1)
+        {
+            int xNum = values.GetUpperBound(0) + 1;
+            int yNum = values.GetUpperBound(1) + 1;
+            for (int x = 0; x < graphWidth; x++)
+            {
+                for (int yg = 0; yg < graphHeight; yg++)
+                {
+                    int y = graphHeight - 1 - yg;
+                    float pixelValue = PixelsToValue(x, y, xNum, yNum, values);
+                    bool mask = false;
+                    if (!criteria(pixelValue))
+                    {
+                        for(int w = 1; w <= maskWidth; w++)
+                        {
+                            if ((x >= w && criteria(PixelsToValue(x - w, y, xNum, yNum, values))) ||
+                                (x <= graphWidth - 1 - w && criteria(PixelsToValue(x + w, y, xNum, yNum, values))) ||
+                                (y >= w && criteria(PixelsToValue(x, y - w, xNum, yNum, values))) ||
+                                (y <= graphHeight - 1 - w && criteria(PixelsToValue(x, y + w, xNum, yNum, values))))
+                            {
+                                mask = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (mask)
+                        maskTex.SetPixel(x, y, lineColor);
+                    else
+                        maskTex.SetPixel(x, y, Color.clear);
+                }
+            }
+
+            maskTex.Apply();
+        }
+
         static Color[] blank = null;
         private float[] lineValues;
         private void CreateLineGraph(float xLeft, float xRight, float[] values)
@@ -394,6 +436,8 @@ namespace KerbalWindTunnel
             GUIContent graph = new GUIContent(graphTex);
             graphRect = GUILayoutUtility.GetRect(graph, HighLogic.Skin.box, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
             GUI.Box(graphRect, graph);
+            if (CurrentGraphMode == GraphMode.FlightEnvelope && showEnvelopeMask)
+                GUI.Box(graphRect, maskTex, clearBox);
             //GUILayout.Box(graphTex, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
 
             GUILayout.EndHorizontal();
