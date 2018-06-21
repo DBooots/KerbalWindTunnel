@@ -182,6 +182,11 @@ namespace KerbalWindTunnel
                     default:
                         throw new ArgumentOutOfRangeException("graphMode");
                 }
+
+                if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
+                    conditionDetails = GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, CurrentGraphMode == GraphMode.AoACurves ? this.AoA : float.NaN, false);
+                else
+                    conditionDetails = "";
             }
             else
             {
@@ -286,6 +291,11 @@ namespace KerbalWindTunnel
             graphTex.Apply();
 
             this.graphSettings = new GraphSettings(xLeft, xRight, yBottom, yTop);
+            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
+            {
+                selectedCrossHairVect = CrossHairsFromConditions(Altitude, Speed, AoA);
+                SetConditionsFromGraph(selectedCrossHairVect);
+            }
 
             CreateHorzAxis(this.graphSettings);
             CreateVertAxis(this.graphSettings);
@@ -366,6 +376,11 @@ namespace KerbalWindTunnel
             graphTex.Apply();
 
             this.graphSettings = new GraphSettings(xLeft, xRight, min, max);
+            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
+            {
+                selectedCrossHairVect = CrossHairsFromConditions(Altitude, Speed, AoA);
+                SetConditionsFromGraph(selectedCrossHairVect);
+            }
 
             CreateHorzAxis(this.graphSettings);
             CreateVertAxis(this.graphSettings);
