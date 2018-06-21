@@ -64,6 +64,9 @@ namespace KerbalWindTunnel
             Vector3 thrustForce = GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent, AoA);
             return new Vector2(thrustForce.z, thrustForce.y);
         }
+
+        public abstract float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent);
+
         public static Vector3 ToFlightFrame(Vector3 force, float AoA)
         {
             return Quaternion.AngleAxis((AoA * 180 / Mathf.PI), Vector3.left) * force;

@@ -120,5 +120,10 @@ namespace KerbalWindTunnel.VesselCache
 
             return thrust * g * multIsp * maxFuelFlow * multFlow * (thrustPercentage / 100f) * isp * thrustLevel;
         }
+
+        public float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

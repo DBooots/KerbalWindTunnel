@@ -99,5 +99,10 @@ namespace KerbalWindTunnel
 
             return thrust;
         }
+
+        public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

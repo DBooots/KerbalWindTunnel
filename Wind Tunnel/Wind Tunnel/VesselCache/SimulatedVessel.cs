@@ -115,6 +115,16 @@ namespace KerbalWindTunnel.VesselCache
             return thrust;
         }
 
+        public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        {
+            float burnRate = 0;
+            for (int i = engines.Count - 1; i >= 0; i--)
+            {
+                burnRate += engines[i].GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent);
+            }
+            return burnRate;
+        }
+
         private static readonly Pool<SimulatedVessel> pool = new Pool<SimulatedVessel>(Create, Reset);
 
         public static int PoolSize
