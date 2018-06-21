@@ -30,54 +30,181 @@ namespace KerbalWindTunnel
         private AeroPredictor vessel = null;
         private CelestialBody body = Planetarium.fetch.CurrentMainBody;
 
-        private GraphMode graphMode = GraphMode.FlightEnvelope;
+        private GraphMode _graphMode = GraphMode.FlightEnvelope;
+        public GraphMode CurrentGraphMode
+        {
+            get { return _graphMode; }
+            set
+            {
+                if (value != CurrentGraphMode)
+                {
+                    // Cancel any running computations.
+                    Cancel();
+
+                    // Save certain settings:
+                    savedGraphSelect[(int)CurrentGraphMode] = CurrentGraphSelect;
+
+                    // Actually change mode
+                    _graphMode = value;
+
+                    // Load new settings:
+                    _graphSelect = savedGraphSelect[(int)CurrentGraphMode];
+                    GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, this.AoA, false);
+
+                    // Reset the strings:
+                    Speed = Speed;
+                    Altitude = Altitude;
+                    AoA = AoA;
+
+                    // Request a new graph;
+                    graphDirty = true;
+                    graphRequested = false;
+                }
+            }
+        }
         public enum GraphMode
         {
             FlightEnvelope = 0,
             AoACurves = 1,
             VelocityCurves = 2
         }
+
+        public readonly GraphSelect[][] selectFromIndex = new GraphSelect[][]{
+            new GraphSelect[]{ GraphSelect.ExcessThrust, GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.LiftSlope, GraphSelect.ExcessAcceleration, GraphSelect.FuelBurn, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce },
+            new GraphSelect[]{ GraphSelect.LiftForce, GraphSelect.DragForce, GraphSelect.LiftDragRatio, GraphSelect.LiftSlope },
+            new GraphSelect[]{ GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.DragForce, GraphSelect.LiftSlope, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce } };
+
+        public readonly int[][] indexFromSelect = new int[][]
+        {
+            new int[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0 },
+            new int[]{ 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 1 },
+            new int[]{ 0, 0, 1, 2, 4, 0, 0, 5, 6, 0, 3 } };
+
         public enum GraphSelect
         {
-            LevelFlightAoA = 0,
-            MaxLiftAoA = 1,
-            ThrustAvailable = 2,
-            ExcessThrust = 3,
-            ExcessAcceleration = 4,
-            MaxLiftForce = 5,
-            LiftForce = 0,
-            DragForce = 1,
-            LiftDragRatio = 2
+            ExcessThrust = 0,
+            LevelFlightAoA = 1,
+            LiftDragRatio = 2,
+            ThrustAvailable = 3,
+            LiftSlope = 4,
+            ExcessAcceleration = 5,
+            FuelBurn = 6,
+            MaxLiftAoA = 7,
+            MaxLiftForce = 8,
+
+            LiftForce = 9,
+            DragForce = 10,
+            //LiftDragRatio = 2,
+            //LiftSlope = 4
+
+            //LevelFlightAoA = 1,
+            //LiftDragRatio = 2,
+            //ThrustAvailable = 3,
+            //DragForce = 10,
+            //LiftSlope = 4,
+            //MaxLiftAoA = 7,
+            //MaxLiftForce = 8,
         }
-        private GraphSelect graphSelect = GraphSelect.ExcessThrust;
+        private GraphSelect _graphSelect = GraphSelect.ExcessThrust;
+        public GraphSelect CurrentGraphSelect
+        {
+            get { return _graphSelect; }
+            set
+            {
+                if (value != _graphSelect)
+                {
+                    _graphSelect = value;
+                    graphDirty = true;
+                    graphRequested = false;
+                }
+            }
+        }
+
         private GraphSelect[] savedGraphSelect = new GraphSelect[] { GraphSelect.ExcessThrust, GraphSelect.LiftForce, GraphSelect.LevelFlightAoA };
         private readonly string[] graphModes = new string[] { "Flight Envelope", "AoA Curves", "Velocity Curves" };
         private readonly string[][] graphSelections = new string[][] {
-            new string[] { "Level Flight AoA", "Max Lift AoA", "Thrust Available", "Excess Thrust", "Excess Acceleration", "Max Lift Force" },
-            new string[] { "Lift Force", "Drag Force", "Lift-Drag Ratio" },
-            new string[] { "Level Flight AoA", "Max Lift AoA", "Thrust Available" }
+            new string[] { "Excess Thrust", "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Lift Slope", "Excess Acceleration" },
+            new string[] { "Lift Force", "Drag Force", "Lift/Drag Ratio", "Lift Slope" },
+            new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Drag Force" }
         };
         private readonly string[] highliftModeStrings = new string[] { "Off", "Drag", "Lift" };
-        private readonly string[][] graphUnits = new string[][] {
-            new string[] { "{0:N2}°", "{0:N2}°", "{0:N0}kN", "{0:N0}kN", "{0:N2}g", "{0:N0}kN" },
-            new string[] { "{0:N0}kN", "{0:N0}kN", "{0:N2}" },
-            new string[] { "{0:N2}°", "{0:N2}°", "{0:N0}kN" } };
+        private readonly string[] graphUnits = new string[] { "{0:N0}kN", "{0:N2}°", "{0:N2}", "{0:N0}kN", "{0:N2}m^2/°", "{0:N2}g", "{0:N0}kg/s", "{0:N2}°", "{0:N0}kN", "{0:N0}kN", "{0:N0}kN" };
 
         private bool graphDirty = true;
         private bool graphRequested = false;
         private string altitudeStr = "0";
         private string speedStr = "0";
         private string aoaStr = "0";
-        private float altitude = 0;
-        private float speed = 100; //TODO:
-        private float aoa = 0;
-        private bool mach = false;
+        private float _altitude = 0;
+        public float Altitude
+        {
+            get { return _altitude; }
+            private set
+            {
+                _altitude = value;
+                altitudeStr = value.ToString("F0");
+            }
+        }
+        private float _speed = 100; //TODO:
+        public float Speed
+        {
+            get { return _speed; }
+            private set
+            {
+                _speed = value;
+                if (Mach)
+                    speedStr = (value / (float)body.GetSpeedOfSound(body.GetPressure(Altitude), Extensions.KSPClassExtensions.GetDensity(body, Altitude))).ToString("F3");
+                else
+                    speedStr = value.ToString("F2");
+            }
+        }
+        private float _aoa = 0;
+        public float AoA
+        {
+            get { return _aoa; }
+            private set
+            {
+                _aoa = value;
+                aoaStr = (value * 180 / Mathf.PI).ToString("F3");
+            }
+        }
+        private bool _mach = false;
+        public bool Mach
+        {
+            get { return _mach; }
+            private set
+            {
+                if (value != _mach)
+                {
+                    float speedOfSound;
+
+                    lock (body)
+                        speedOfSound = (float)body.GetSpeedOfSound(body.GetPressure(Altitude), Extensions.KSPClassExtensions.GetDensity(body, Altitude));
+
+                    if (value)
+                        speedStr = (Speed / speedOfSound).ToString("F3");
+                    else
+                        speedStr = Speed.ToString("F2");
+
+                    _mach = value;
+                }
+            }
+        }
+
+        internal const float AoAdelta = 0.1f / 180 * Mathf.PI;
 
         private List<cbItem> lstPlanets = new List<cbItem>();
         private CelestialBody cbStar;
         private int planetIndex = 0;
 
         private GUIStyle exitButton = new GUIStyle(HighLogic.Skin.button);
+        private GUIStyle clearBox = new GUIStyle(HighLogic.Skin.box);
+
+        Texture2D crossHair = new Texture2D(1, 1);
+        Texture2D selectedCrossHair = new Texture2D(1, 1);
+        Texture2D clearTex = new Texture2D(1, 1);
+
+        Vector2 selectedCrossHairVect = new Vector2(-1, -1);
 
         internal override void Start()
         {
@@ -85,12 +212,18 @@ namespace KerbalWindTunnel
             hAxisMarks.normal.textColor = hAxisMarks.focused.textColor = hAxisMarks.hover.textColor = hAxisMarks.active.textColor = Color.white;
             vAxisMarks.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = Color.white;
             exitButton.normal.textColor = exitButton.focused.textColor = exitButton.hover.textColor = exitButton.active.textColor = Color.red;
-
-            Texture2D crossHair = new Texture2D(1, 1);
+            
             crossHair.SetPixel(0, 0, new Color32(255, 25, 255, 192));
             crossHair.Apply();
-
             stylePlotCrossHair.normal.background = crossHair;
+
+            selectedCrossHair.SetPixel(0, 0, new Color32(255, 255, 255, 192));
+            selectedCrossHair.Apply();
+            styleSelectedCrossHair.normal.background = selectedCrossHair;
+
+            clearTex.SetPixel(0, 0, Color.clear);
+            clearTex.Apply();
+            clearBox.normal.background = clearTex;
         }
 
         internal override void DrawWindow(int id)
@@ -99,32 +232,9 @@ namespace KerbalWindTunnel
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(graphWidth + 55 + axisWidth));
 
-            GraphMode newGraphMode = (GraphMode)GUILayout.SelectionGrid((int)graphMode, graphModes, 3);
-            if (newGraphMode != graphMode)
-            {
-                switch (graphMode)
-                {
-                    case GraphMode.FlightEnvelope:
-                        Graphing.EnvelopeSurf.Cancel();
-                        break;
-                    case GraphMode.AoACurves:
-                        Graphing.AoACurve.Cancel();
-                        break;
-                    case GraphMode.VelocityCurves:
-                        Graphing.VelCurve.Cancel();
-                        break;
-                }
-                savedGraphSelect[(int)graphMode] = graphSelect;
-                graphMode = newGraphMode;
-                graphSelect = savedGraphSelect[(int)graphMode];
-                speedStr = speed.ToString();
-                altitudeStr = altitude.ToString();
-                aoaStr = aoa.ToString();
-                graphDirty = true;
-                graphRequested = false;
-            }
+            CurrentGraphMode = (GraphMode)GUILayout.SelectionGrid((int)CurrentGraphMode, graphModes, 3);
 
-            DrawGraph(graphMode, graphSelect);
+            DrawGraph(CurrentGraphMode, CurrentGraphSelect);
             /*if (GUILayout.Button("Test!"))
             {
                 Debug.Log("Testing!");
@@ -165,35 +275,18 @@ namespace KerbalWindTunnel
                 Debug.Log("");
             }//*/
 
-            GraphSelect newgraphSelect = (GraphSelect)GUILayout.SelectionGrid((int)graphSelect, graphSelections[(int)graphMode], 3);
-            if (newgraphSelect != graphSelect)
-            {
-                graphSelect = newgraphSelect;
-                graphDirty = true;
-                graphRequested = false;
-            }
+            CurrentGraphSelect = selectFromIndex[(int)CurrentGraphMode][GUILayout.SelectionGrid(indexFromSelect[(int)CurrentGraphMode][(int)CurrentGraphSelect], graphSelections[(int)CurrentGraphMode], 3)];
 
-            if (graphMode == GraphMode.AoACurves || graphMode == GraphMode.VelocityCurves)
+            if (CurrentGraphMode == GraphMode.AoACurves || CurrentGraphMode == GraphMode.VelocityCurves)
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Altitude: ");
                 altitudeStr = GUILayout.TextField(altitudeStr);
 
-                if (graphMode == GraphMode.AoACurves)
+                if (CurrentGraphMode == GraphMode.AoACurves)
                 {
-                    bool newMach = GUILayout.Toggle(mach,"");//, "Mach");
-                    if (newMach != mach)
-                    {
-                        lock (body)
-                        {
-                            if (mach)
-                                speedStr = (speed / (float)body.GetSpeedOfSound(body.GetPressure(altitude), Extensions.KSPClassExtensions.GetDensity(body, altitude))).ToString();
-                            else
-                                speedStr = (speed * (float)body.GetSpeedOfSound(body.GetPressure(altitude), Extensions.KSPClassExtensions.GetDensity(body, altitude))).ToString();
-                        }
-                        mach = newMach;
-                    }
-                    if (!mach)
+                    Mach = GUILayout.Toggle(Mach, "");
+                    if (!Mach)
                     {
                         GUILayout.Label("Speed (m/s): ");
                         speedStr = GUILayout.TextField(speedStr);
@@ -206,28 +299,26 @@ namespace KerbalWindTunnel
                 }
                 if (GUILayout.Button("Apply"))
                 {
-                    if (float.TryParse(altitudeStr, out altitude) && (graphMode != GraphMode.AoACurves || float.TryParse(speedStr, out speed)))
+                    if (float.TryParse(altitudeStr, out float altitude) && (CurrentGraphMode != GraphMode.AoACurves | float.TryParse(speedStr, out float speed)))
                     {
-                        switch (graphMode)
+                        if(this.Altitude != altitude || this.Speed != speed)
                         {
-                            case GraphMode.FlightEnvelope:
-                                Graphing.EnvelopeSurf.Cancel();
-                                break;
-                            case GraphMode.AoACurves:
-                                Graphing.AoACurve.Cancel();
-                                break;
-                            case GraphMode.VelocityCurves:
-                                Graphing.VelCurve.Cancel();
-                                break;
+                            this.Altitude = altitude;
+                            if (CurrentGraphMode == GraphMode.AoACurves)
+                            {
+
+                                if (Mach)
+                                    lock (body)
+                                        _speed *= (float)body.GetSpeedOfSound(body.GetPressure(Altitude), Extensions.KSPClassExtensions.GetDensity(body, Altitude));
+                                this.Speed = speed;
+                            }
+
+                            Cancel();
+
+                            graphDirty = true;
+                            graphRequested = false;
+                            Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
                         }
-
-                        if (mach)
-                            lock (body)
-                                speed *= (float)body.GetSpeedOfSound(body.GetPressure(altitude), Extensions.KSPClassExtensions.GetDensity(body, altitude));
-
-                        graphDirty = true;
-                        graphRequested = false;
-                        Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.altitude, this.speed, this.aoa);
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -263,7 +354,9 @@ namespace KerbalWindTunnel
                     releasable.Release();
                 this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
                 //this.vessel = new StockAero();
-                Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.altitude, this.speed, this.aoa);
+                Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                selectedCrossHairVect = new Vector2(-1, -1);
+                maskConditions = Graphing.EnvelopeSurf.Conditions.Blank;
             }
             GUILayout.EndHorizontal();
             GUILayout.Space(2);
@@ -281,6 +374,9 @@ namespace KerbalWindTunnel
                     releasable.Release();
                 this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
                 //this.vessel = new StockAero();
+
+                selectedCrossHairVect = new Vector2(-1, -1);
+                maskConditions = Graphing.EnvelopeSurf.Conditions.Blank;
             }
 
             // Display selected point details.
@@ -296,7 +392,7 @@ namespace KerbalWindTunnel
 
             if(newhighlightMode != WindTunnel.Instance.highlightMode)
             {
-                Parent.UpdateHighlighting(newhighlightMode, this.body, this.altitude, this.speed, this.aoa);
+                Parent.UpdateHighlighting(newhighlightMode, this.body, this.Altitude, this.Speed, this.AoA);
             }
 
             GUILayout.EndHorizontal();
@@ -310,10 +406,10 @@ namespace KerbalWindTunnel
                     if (float.TryParse(aoaStr, out float tempAoA))
                     {
                         tempAoA *= Mathf.PI / 180;
-                        if (tempAoA != aoa)
+                        if (tempAoA != AoA)
                         {
-                            aoa = tempAoA;
-                            Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.altitude, this.speed, this.aoa);
+                            AoA = tempAoA;
+                            Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
                         }
                     }
                 }
@@ -323,32 +419,95 @@ namespace KerbalWindTunnel
 
             if (GUI.Button(new Rect(this.WindowRect.width - 18, 2, 16, 16), "X", exitButton))
                 WindTunnel.Instance.CloseWindow();
-
+            
             Vector2 vectMouse = Event.current.mousePosition;
+
+            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
+            {
+                if(graphRect.x + selectedCrossHairVect.x != vectMouse.x)
+                GUI.Box(new Rect(graphRect.x + selectedCrossHairVect.x, graphRect.y, 1, graphRect.height), "", styleSelectedCrossHair);
+                if (CurrentGraphMode == GraphMode.FlightEnvelope)
+                    if (graphRect.y + selectedCrossHairVect.y != vectMouse.y)
+                        GUI.Box(new Rect(graphRect.x, graphRect.y + selectedCrossHairVect.y, graphRect.width, 1), "", styleSelectedCrossHair);
+            }
+
             if (graphRect.Contains(vectMouse) && Status == CalculationManager.RunStatus.Completed)
             {
                 GUI.Box(new Rect(vectMouse.x, graphRect.y, 1, graphRect.height), "", stylePlotCrossHair);
-                if (graphMode == GraphMode.FlightEnvelope)
+                if (CurrentGraphMode == GraphMode.FlightEnvelope)
                     GUI.Box(new Rect(graphRect.x, vectMouse.y, graphRect.width, 1), "", stylePlotCrossHair);
 
-                float showValue = GetGraphValue((int)(vectMouse.x - graphRect.x), graphMode == GraphMode.FlightEnvelope ? (int)(graphHeight - (vectMouse.y - graphRect.y)) : -1);
-                GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format(graphUnits[(int)graphMode][(int)graphSelect], showValue), SkinsLibrary.CurrentTooltip);
+                float showValue = GetGraphValue((int)(vectMouse.x - graphRect.x), CurrentGraphMode == GraphMode.FlightEnvelope ? (int)(graphHeight - (vectMouse.y - graphRect.y)) : -1);
+                GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
 
                 if(Event.current.type == EventType.MouseDown && Event.current.button == 0)
                 {
-                    conditionDetails = GetConditionDetails((vectMouse.x - graphRect.x) / graphWidth, graphMode == GraphMode.FlightEnvelope ? (graphHeight - (vectMouse.y - graphRect.y)) / graphHeight : float.NaN);
+                    //conditionDetails = GetConditionDetails((vectMouse.x - graphRect.x) / graphWidth, CurrentGraphMode == GraphMode.FlightEnvelope ? (graphHeight - (vectMouse.y - graphRect.y)) / graphHeight : float.NaN);
+                    selectedCrossHairVect = vectMouse - graphRect.position;
+                    SetConditionsFromGraph(selectedCrossHairVect);
+                    conditionDetails = GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, this.AoA, true);
                 }
             }
         }
 
+        private void SetConditionsFromGraph(Vector2 crossHairs)
+        {
+            switch (CurrentGraphMode)
+            {
+                case GraphMode.FlightEnvelope:
+                    this.Altitude = ((graphHeight - crossHairs.y) / graphHeight) * (graphSettings.yTop - graphSettings.yBottom) + graphSettings.yBottom;
+                    this.Speed = (crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
+                    break;
+                case GraphMode.AoACurves:
+                    this.AoA = ((crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft) * Mathf.PI / 180;
+                    break;
+                case GraphMode.VelocityCurves:
+                    this.Speed = (crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
+                    break;
+            }
+        }
+
+        private Vector2 CrossHairsFromConditions(float altitude, float speed, float aoa)
+        {
+            switch (CurrentGraphMode)
+            {
+                case GraphMode.FlightEnvelope:
+                    return new Vector2((speed - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth,
+                        altitude / (graphSettings.yTop - graphSettings.yBottom) * graphHeight);
+                case GraphMode.AoACurves:
+                    return new Vector2(((aoa * 180 / Mathf.PI) - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth, 0);
+                case GraphMode.VelocityCurves:
+                    return new Vector2((speed - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth, 0);
+                default:
+                    return new Vector2(-1, -1);
+            }
+        }
+
+        public void Cancel()
+        {
+            switch (CurrentGraphMode)
+            {
+                case GraphMode.FlightEnvelope:
+                    Graphing.EnvelopeSurf.Cancel();
+                    break;
+                case GraphMode.AoACurves:
+                    Graphing.AoACurve.Cancel();
+                    break;
+                case GraphMode.VelocityCurves:
+                    Graphing.VelCurve.Cancel();
+                    break;
+            }
+        }
+
         private string conditionDetails = "";
+        private GUIStyle styleSelectedCrossHair = new GUIStyle();
         private GUIStyle stylePlotCrossHair = new GUIStyle();
 
         public CalculationManager.RunStatus Status
         {
             get
             {
-                switch (graphMode)
+                switch (CurrentGraphMode)
                 {
                     case GraphMode.AoACurves:
                         return Graphing.AoACurve.Status;

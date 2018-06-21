@@ -97,7 +97,7 @@ namespace KerbalWindTunnel
                     case GraphMode.AoACurves:
                         if (!graphRequested)
                         {
-                            AoACurve.Calculate(vessel, body, altitude, speed, -20f * Mathf.PI / 180, 20f * Mathf.PI / 180, 0.5f * Mathf.PI / 180);
+                            AoACurve.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.PI / 180, 20f * Mathf.PI / 180, 0.5f * Mathf.PI / 180);
                             graphRequested = true;
                         }
                         switch (AoACurve.Status)
@@ -129,7 +129,7 @@ namespace KerbalWindTunnel
                     case GraphMode.VelocityCurves:
                         if (!graphRequested)
                         {
-                            VelCurve.Calculate(vessel, body, altitude, 0, 2000, 10);
+                            VelCurve.Calculate(vessel, body, Altitude, 0, 2000, 10);
                             graphRequested = true;
                         }
                         switch (VelCurve.Status)
@@ -359,49 +359,47 @@ namespace KerbalWindTunnel
             else
                 return PixelsToValue(x, y, surfValues);
         }
-        private string GetConditionDetails(float x, float y = float.NaN)
+        public string GetConditionDetails(GraphMode mode, float altitude, float speed = float.NaN, float aoa = float.NaN)
         {
-            switch (graphMode)
+            return GetConditionDetails(mode, altitude, speed, aoa, false);
+        }
+        private string GetConditionDetails(GraphMode mode, float altitude, float speed, float aoa, bool setAoA)
+        {
+            switch (mode)
             {
                 case GraphMode.FlightEnvelope:
-                    this.altitude = y * (graphSettings.yTop - graphSettings.yBottom) + graphSettings.yBottom;
-                    this.altitudeStr = String.Format("{0:N0}", this.altitude);
-                    this.speed = x * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
-                    this.speedStr = String.Format("{0:N0}", this.speed);
-                    EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, altitude, speed, this.rootSolver, 0);
-                    this.aoa = conditionPtFE.AoA_level;
-                    this.aoaStr = String.Format("{0:N2}", this.aoa);
+                    EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, Altitude, Speed, this.rootSolver, 0);
+                    if (setAoA)
+                        this.AoA = conditionPtFE.AoA_level;
 
-                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Level Flight AoA:\t{2:N2}°\n" +
+                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{9:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
                         "Excess Thrust:\t{3:N0}kN\n" + "Excess Acceleration:\t{4:N2}g\n" + "Max Lift Force:\t{5:N0}kN\n" +
                         "Max Lift AoA:\t{6:N2}°\n" + "Lift/Drag Ratio:\t{8:N2}\n" + "Available Thrust:\t{7:N0}kN",
                         conditionPtFE.altitude, conditionPtFE.speed, conditionPtFE.AoA_level * 180 / Mathf.PI,
                         conditionPtFE.Thrust_excess, conditionPtFE.Accel_excess, conditionPtFE.Lift_max,
-                        conditionPtFE.AoA_max * 180 / Mathf.PI, conditionPtFE.Thrust_available, conditionPtFE.LDRatio);
+                        conditionPtFE.AoA_max * 180 / Mathf.PI, conditionPtFE.Thrust_available, conditionPtFE.LDRatio,
+                        conditionPtFE.mach);
 
                 case GraphMode.AoACurves:
-                    this.aoa = (x * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft) / 180 * Mathf.PI;
-                    this.aoaStr = String.Format("{0}", this.aoa);
-                    AoACurve.AoAPoint conditionPtAoA = new AoACurve.AoAPoint(this.vessel, this.body, this.altitude, this.speed, this.aoa);
+                    AoACurve.AoAPoint conditionPtAoA = new AoACurve.AoAPoint(this.vessel, this.body, this.Altitude, this.Speed, this.AoA);
 
-                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "AoA:\t{2:N2}°\n" +
+                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
                         "Lift:\t{3:N0}kN\n" + "Drag:\t{4:N0}kN\n" + "Lift/Drag Ratio:\t{5:N2}",
                         conditionPtAoA.altitude, conditionPtAoA.speed, conditionPtAoA.AoA * 180 / Mathf.PI,
-                        conditionPtAoA.Lift, conditionPtAoA.Drag, conditionPtAoA.LDRatio);
+                        conditionPtAoA.Lift, conditionPtAoA.Drag, conditionPtAoA.LDRatio, conditionPtAoA.mach);
 
                 case GraphMode.VelocityCurves:
-                    this.speed = x * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
-                    this.speedStr = String.Format("{0:N0}", this.speed);
-                    VelCurve.VelPoint conditionPtVel = new VelCurve.VelPoint(this.vessel, this.body, this.altitude, speed, this.rootSolver);
-                    this.aoa = conditionPtVel.AoA_level;
-                    this.aoaStr = String.Format("{0:N0}", this.aoa);
+                    VelCurve.VelPoint conditionPtVel = new VelCurve.VelPoint(this.vessel, this.body, this.Altitude, Speed, this.rootSolver);
+                    if (setAoA)
+                        this.AoA = conditionPtVel.AoA_level;
 
-                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Level Flight AoA:\t{2:N2}°\n" +
+                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{7:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
                         "Excess Thrust:\t{3:N0}kN\n" +
                         "Max Lift AoA:\t{4:N2}°\n" + "Lift/Drag Ratio:\t{6:N0}\n" + "Available Thrust:\t{5:N0}kN",
                         conditionPtVel.altitude, conditionPtVel.speed, conditionPtVel.AoA_level * 180 / Mathf.PI,
                         conditionPtVel.Thrust_excess,
-                        conditionPtVel.AoA_max * 180 / Mathf.PI, conditionPtVel.Thrust_available, conditionPtVel.LDRatio);
+                        conditionPtVel.AoA_max * 180 / Mathf.PI, conditionPtVel.Thrust_available, conditionPtVel.LDRatio,
+                        conditionPtVel.mach);
 
                 default:
                     return "";
