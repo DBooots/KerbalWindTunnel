@@ -89,6 +89,15 @@ namespace KerbalWindTunnel
                                     case GraphSelect.MaxLiftForce:
                                         CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Lift_max)); // Max Lift Force
                                         break;
+                                    case GraphSelect.LiftDragRatio:
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.LDRatio));
+                                        break;
+                                    case GraphSelect.DragForce:
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.drag));
+                                        break;
+                                    case GraphSelect.LiftSlope:
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure));
+                                        break;
                                 }
                                 graphDirty = false;
                                 break;
@@ -121,6 +130,9 @@ namespace KerbalWindTunnel
                                     case GraphSelect.LiftDragRatio:
                                         CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.LDRatio).ToArray()); // Lift-Drag Ratio
                                         break;
+                                    case GraphSelect.LiftSlope:
+                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
+                                        break;
                                 }
                                 graphDirty = false;
                                 break;
@@ -152,6 +164,15 @@ namespace KerbalWindTunnel
                                         break;
                                     case GraphSelect.ThrustAvailable:
                                         CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.Thrust_available).ToArray()); // Thrust Available
+                                        break;
+                                    case GraphSelect.LiftDragRatio:
+                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.LDRatio).ToArray());
+                                        break;
+                                    case GraphSelect.DragForce:
+                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.drag).ToArray());
+                                        break;
+                                    case GraphSelect.LiftSlope:
+                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
                                         break;
                                 }
                                 graphDirty = false;
