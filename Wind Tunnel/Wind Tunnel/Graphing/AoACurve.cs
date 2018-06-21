@@ -134,16 +134,29 @@ namespace KerbalWindTunnel.Graphing
             public readonly float altitude;
             public readonly float speed;
             public readonly float AoA;
+            public readonly float dynamicPressure;
+            public readonly float dLift;
+            public readonly float mach;
 
             public AoAPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA)
             {
                 this.altitude = altitude;
                 this.speed = speed;
                 this.AoA = AoA;
+                float atmDensity, atmPressure;
+                lock (body)
+                {
+                    atmPressure = (float)body.GetPressure(altitude);
+                    atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
+                    this.mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
+                }
+                this.dynamicPressure = 0.0005f * atmDensity * speed * speed;
                 Vector3 force = AeroPredictor.ToFlightFrame(vessel.GetAeroForce(body, speed, altitude, AoA), AoA);
                 Lift = force.y;
                 Drag = -force.z;
                 LDRatio = Mathf.Abs(Lift / Drag);
+                dLift = (vessel.GetLiftForceMagnitude(body, speed, altitude, AoA + WindTunnelWindow.AoAdelta) - Lift) /
+                    (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
             }
         }
 

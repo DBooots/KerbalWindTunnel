@@ -141,6 +141,9 @@ namespace KerbalWindTunnel.Graphing
             public readonly float altitude;
             public readonly float speed;
             public readonly float LDRatio;
+            public readonly float mach;
+            public readonly float dynamicPressure;
+            public readonly float dLift;
 
             public VelPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, RootSolvers.RootSolver solver)
             {
@@ -157,6 +160,8 @@ namespace KerbalWindTunnel.Graphing
                     gravParameter = (float)body.gravParameter;
                     radius = (float)body.Radius;
                 }
+                this.mach = mach;
+                this.dynamicPressure = 0.0005f * atmDensity * speed * speed;
                 float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))); // TODO: Minus centrifugal force...
                 Vector3 thrustForce = vessel.GetThrustForce(mach, atmDensity, atmPressure, oxygenAvailable);
                 AoA_level = solver.Solve(
@@ -170,12 +175,15 @@ namespace KerbalWindTunnel.Graphing
                     drag = AeroPredictor.GetDragForceMagnitude(vessel.GetAeroForce(body, speed, altitude, AoA_level, mach, atmDensity), AoA_level);
                     Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
                     LDRatio = Mathf.Abs(weight / drag);
+                    dLift = (vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level + WindTunnelWindow.AoAdelta) -
+                        vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level)) / (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
                 }
                 else
                 {
                     drag = float.PositiveInfinity;
                     Thrust_excess = float.NegativeInfinity;
                     LDRatio = 0;
+                    dLift = 0;
                 }
             }
         }
