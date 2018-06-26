@@ -475,15 +475,24 @@ namespace KerbalWindTunnel
             //GUILayout.Box(graphTex, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
 
             GUILayout.EndHorizontal();
+
             GUILayout.Box("", GUIStyle.none, GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(5));
             GUILayout.BeginHorizontal();
             GUILayout.Box("", GUIStyle.none, GUILayout.Width(axisWidth + 4), GUILayout.Height(axisWidth));
             GUILayout.Box(axisTexHorz, GUIStyle.none, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
             GUILayout.EndHorizontal();
 
+            GUILayout.Label("", GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(10));
+
+            if (CurrentGraphMode == GraphMode.FlightEnvelope)
+            {
+                GUILayout.BeginHorizontal(GUILayout.Height(28));
+                GUILayout.Label("Colourmap goes here...", labelCentered);
+                GUILayout.EndHorizontal();
+            }
+
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
-            GUILayout.Label("", GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(10));
 
             for (int i = 0; i <= graphSettings.yMarks; i++)
             {
@@ -501,7 +510,7 @@ namespace KerbalWindTunnel
         private void DrawProgressBar(float percentComplete)
         {
             //GUI.Label(new Rect(PlotPosition.x, PlotPosition.y + graphHeight / 2 - 30, graphWidth + 45, 20), "Calculating... (" + percentComplete * 100 + "%)");
-            GUILayout.Label(String.Format("Calculating... ({0:N1}%)", percentComplete * 100), labelCentered, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
+            GUILayout.Label(String.Format("Calculating... ({0:N1}%)", percentComplete * 100), labelCentered, GUILayout.Height(graphHeight + 66), GUILayout.Width(graphWidth));
             Rect rectBar = new Rect(PlotPosition.x, PlotPosition.y + 292 / 2 - 10, 292 + 45, 20);
             //blnReturn = Drawing.DrawBar(styleBack, out rectBar, Width);
             GUI.Button(rectBar, "");

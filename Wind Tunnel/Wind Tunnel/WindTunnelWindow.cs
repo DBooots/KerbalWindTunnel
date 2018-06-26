@@ -280,24 +280,33 @@ namespace KerbalWindTunnel
 
             if (CurrentGraphMode == GraphMode.AoACurves || CurrentGraphMode == GraphMode.VelocityCurves)
             {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Altitude: ");
-                altitudeStr = GUILayout.TextField(altitudeStr);
+                GUILayout.BeginHorizontal(GUILayout.Height(25), GUILayout.ExpandHeight(false));
+                GUILayout.Label("Altitude: ", GUILayout.Width(62));
+                altitudeStr = GUILayout.TextField(altitudeStr, GUILayout.Width(105), GUILayout.Height(22));
 
                 if (CurrentGraphMode == GraphMode.AoACurves)
                 {
-                    Mach = GUILayout.Toggle(Mach, "");
+                    Rect toggleRect = GUILayoutUtility.GetRect(new GUIContent(""), HighLogic.Skin.label, GUILayout.Width(20));
+                    Mach = GUI.Toggle(toggleRect, Mach, "    ", new GUIStyle(HighLogic.Skin.toggle) { padding = new RectOffset(-6, -6, -6, -6) });
+                    //Mach = GUILayout.Toggle(Mach, "", GUILayout.Width(30), GUILayout.Height(20));
                     if (!Mach)
                     {
-                        GUILayout.Label("Speed (m/s): ");
-                        speedStr = GUILayout.TextField(speedStr);
+                        GUILayout.Label("Speed (m/s): ", GUILayout.Width(101));
+                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132), GUILayout.Height(22));
                     }
                     else
                     {
-                        GUILayout.Label("Speed (Mach): ");
-                        speedStr = GUILayout.TextField(speedStr);
+                        GUILayout.Label("Speed (Mach): ", GUILayout.Width(101));
+                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132), GUILayout.Height(22));
                     }
                 }
+                else
+                {
+                    GUILayout.Label("", GUILayout.Width(20));
+                    GUILayout.Label("", GUILayout.Width(101));
+                    GUILayout.Label("", GUILayout.Width(132));
+                }
+
                 if (GUILayout.Button("Apply"))
                 {
                     if (float.TryParse(altitudeStr, out float altitude) && (CurrentGraphMode != GraphMode.AoACurves | float.TryParse(speedStr, out float speed)))
