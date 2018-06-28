@@ -7,7 +7,15 @@ using UnityEngine;
 
 namespace KerbalWindTunnel
 {
-    public class CalculationManager
+    public interface ICalculationManager
+    {
+        CalculationManager.RunStatus Status { get; }
+        float PercentComplete { get; }
+        void Cancel();
+
+    }
+
+    public class CalculationManager : ICalculationManager
     {
         private volatile int linked = 0;
         private volatile int completed = 0;
