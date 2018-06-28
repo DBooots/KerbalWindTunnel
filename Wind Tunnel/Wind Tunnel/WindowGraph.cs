@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using KerbalWindTunnel.Graphing;
+using KerbalWindTunnel.DataGenerators;
 using KerbalWindTunnel.Extensions;
 using UnityEngine;
 
@@ -30,15 +31,15 @@ namespace KerbalWindTunnel
                     case GraphMode.FlightEnvelope:
                         if (!graphRequested)
                         {
-                            EnvelopeSurf.Calculate(vessel, body, 0, 2000, 10, 0, 25000, 100);
+                            EnvelopeSurfGenerator.Calculate(vessel, body, 0, 2000, 10, 0, 25000, 100);
                             graphRequested = true;
                         }
-                        switch (EnvelopeSurf.Status)
+                        switch (EnvelopeSurfGenerator.Status)
                         {
                             case CalculationManager.RunStatus.PreStart:
                             case CalculationManager.RunStatus.Cancelled:
                             case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(EnvelopeSurf.PercentComplete);
+                                DrawProgressBar(EnvelopeSurfGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
                                 float bottom = EnvelopeSurf.currentConditions.lowerBoundAltitude;
@@ -66,37 +67,37 @@ namespace KerbalWindTunnel
                                 }//*/
                                 if (showEnvelopeMask && !maskConditions.Equals(EnvelopeSurf.currentConditions))
                                 {
-                                    CreateSurfMask(EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Thrust_excess), Color.gray, f => !float.IsNaN(f) && !float.IsInfinity(f) && f > 0, 2);
+                                    CreateSurfMask(EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.Thrust_excess), Color.gray, f => !float.IsNaN(f) && !float.IsInfinity(f) && f > 0, 2);
                                     maskConditions = EnvelopeSurf.currentConditions;
                                 }
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.ExcessThrust:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Thrust_excess), true); // Excess Thrust
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.Thrust_excess), true); // Excess Thrust
                                         break;
                                     case GraphSelect.ExcessAcceleration:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Accel_excess), true); // Excess Acceleration
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.Accel_excess), true); // Excess Acceleration
                                         break;
                                     case GraphSelect.ThrustAvailable:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Thrust_available), true); // Thrust Available
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.Thrust_available), true); // Thrust Available
                                         break;
                                     case GraphSelect.LevelFlightAoA:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.AoA_level * 180 / Mathf.PI)); // Level Flight AoA
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.AoA_level * 180 / Mathf.PI)); // Level Flight AoA
                                         break;
                                     case GraphSelect.MaxLiftAoA:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.AoA_max * 180 / Mathf.PI)); // Max Lift AoA
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.AoA_max * 180 / Mathf.PI)); // Max Lift AoA
                                         break;
                                     case GraphSelect.MaxLiftForce:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Lift_max)); // Max Lift Force
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.Lift_max)); // Max Lift Force
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.LDRatio));
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.LDRatio));
                                         break;
                                     case GraphSelect.DragForce:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.drag));
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.drag));
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure));
+                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure));
                                         break;
                                 }
                                 graphDirty = false;
@@ -106,32 +107,32 @@ namespace KerbalWindTunnel
                     case GraphMode.AoACurves:
                         if (!graphRequested)
                         {
-                            AoACurve.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.PI / 180, 20f * Mathf.PI / 180, 0.5f * Mathf.PI / 180);
+                            AoACurveGenerator.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.PI / 180, 20f * Mathf.PI / 180, 0.5f * Mathf.PI / 180);
                             graphRequested = true;
                         }
-                        switch (AoACurve.Status)
+                        switch (AoACurveGenerator.Status)
                         {
                             case CalculationManager.RunStatus.PreStart:
                             case CalculationManager.RunStatus.Cancelled:
                             case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(EnvelopeSurf.PercentComplete);
+                                DrawProgressBar(AoACurveGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
-                                float left = AoACurve.currentConditions.lowerBound * 180 / Mathf.PI;
-                                float right = AoACurve.currentConditions.upperBound * 180 / Mathf.PI;
+                                float left = AoACurveGenerator.currentConditions.lowerBound * 180 / Mathf.PI;
+                                float right = AoACurveGenerator.currentConditions.upperBound * 180 / Mathf.PI;
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.LiftForce:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.Lift).ToArray()); // Lift Force
+                                        CreateLineGraph(left, right, AoACurveGenerator.AoAPoints.Select(pt => pt.Lift).ToArray()); // Lift Force
                                         break;
                                     case GraphSelect.DragForce:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.Drag).ToArray()); // Drag Force
+                                        CreateLineGraph(left, right, AoACurveGenerator.AoAPoints.Select(pt => pt.Drag).ToArray()); // Drag Force
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.LDRatio).ToArray()); // Lift-Drag Ratio
+                                        CreateLineGraph(left, right, AoACurveGenerator.AoAPoints.Select(pt => pt.LDRatio).ToArray()); // Lift-Drag Ratio
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
+                                        CreateLineGraph(left, right, AoACurveGenerator.AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
                                         break;
                                 }
                                 graphDirty = false;
@@ -141,15 +142,15 @@ namespace KerbalWindTunnel
                     case GraphMode.VelocityCurves:
                         if (!graphRequested)
                         {
-                            VelCurve.Calculate(vessel, body, Altitude, 0, 2000, 10);
+                            VelCurveGenerator.Calculate(vessel, body, Altitude, 0, 2000, 10);
                             graphRequested = true;
                         }
-                        switch (VelCurve.Status)
+                        switch (VelCurveGenerator.Status)
                         {
                             case CalculationManager.RunStatus.PreStart:
                             case CalculationManager.RunStatus.Cancelled:
                             case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(EnvelopeSurf.PercentComplete);
+                                DrawProgressBar(VelCurveGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
                                 float left = VelCurve.currentConditions.lowerBound;
@@ -157,22 +158,22 @@ namespace KerbalWindTunnel
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.LevelFlightAoA:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => float.IsNaN(pt.AoA_level) ? float.PositiveInfinity : pt.AoA_level * 180 / Mathf.PI).ToArray()); // Level Flight AoA
+                                        CreateLineGraph(left, right, VelCurveGenerator.VelPoints.Select(pt => float.IsNaN(pt.AoA_level) ? float.PositiveInfinity : pt.AoA_level * 180 / Mathf.PI).ToArray()); // Level Flight AoA
                                         break;
                                     case GraphSelect.MaxLiftAoA:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => float.IsNaN(pt.AoA_max) ? float.PositiveInfinity : pt.AoA_max * 180 / Mathf.PI).ToArray()); // Max Lift AoA
+                                        CreateLineGraph(left, right, VelCurveGenerator.VelPoints.Select(pt => float.IsNaN(pt.AoA_max) ? float.PositiveInfinity : pt.AoA_max * 180 / Mathf.PI).ToArray()); // Max Lift AoA
                                         break;
                                     case GraphSelect.ThrustAvailable:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.Thrust_available).ToArray()); // Thrust Available
+                                        CreateLineGraph(left, right, VelCurveGenerator.VelPoints.Select(pt => pt.Thrust_available).ToArray()); // Thrust Available
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.LDRatio).ToArray());
+                                        CreateLineGraph(left, right, VelCurveGenerator.VelPoints.Select(pt => pt.LDRatio).ToArray());
                                         break;
                                     case GraphSelect.DragForce:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.drag).ToArray());
+                                        CreateLineGraph(left, right, VelCurveGenerator.VelPoints.Select(pt => pt.drag).ToArray());
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
+                                        CreateLineGraph(left, right, VelCurveGenerator.VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
                                         break;
                                 }
                                 graphDirty = false;

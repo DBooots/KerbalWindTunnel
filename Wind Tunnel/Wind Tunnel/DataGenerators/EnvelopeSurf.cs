@@ -1,53 +1,26 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using UnityEngine;
 
-namespace KerbalWindTunnel.Graphing
+namespace KerbalWindTunnel.DataGenerators
 {
-    public static class EnvelopeSurf
+    public class EnvelopeSurf : DataSetGenerator
     {
-        public static EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
-        private static CalculationManager calculationManager = new CalculationManager();
-        public static CalculationManager.RunStatus Status
-        {
-            get
-            {
-                CalculationManager.RunStatus status = calculationManager.Status;
-                if (status == CalculationManager.RunStatus.Completed && !valuesSet)
-                    return CalculationManager.RunStatus.Running;
-                if (status == CalculationManager.RunStatus.PreStart && valuesSet)
-                    return CalculationManager.RunStatus.Completed;
-                return status;
-            }
-        }
-        public static float PercentComplete
-        {
-            get { return calculationManager.PercentComplete; }
-        }
-        private static bool valuesSet = false;
+        public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
         public static Conditions currentConditions = Conditions.Blank;
         private static Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
-
-        public static void Cancel()
+        
+        public override void Clear()
         {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
-            valuesSet = false;
-        }
-        public static void Clear()
-        {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
+            base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
             envelopePoints = new EnvelopePoint[0,0];
         }
 
-        public static void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
+        public void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
         {
             Conditions newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
             if (newConditions.Equals(currentConditions))
@@ -70,7 +43,7 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
-        private static IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
+        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
         {
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
@@ -86,7 +59,7 @@ namespace KerbalWindTunnel.Graphing
                     //newAoAPoints[i] = new AoAPoint(vessel, conditions.body, conditions.altitude, conditions.speed, conditions.lowerBound + trueStep * i);
                     GenData genData = new GenData(vessel, conditions, conditions.lowerBoundSpeed + trueStepX * i, conditions.lowerBoundAltitude + trueStepY * j, solver, manager);
                     results[i, j] = genData.storeState;
-                    ThreadPool.QueueUserWorkItem(GenerateAoAPoint, genData);
+                    ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
                 }
             }
 
@@ -113,7 +86,8 @@ namespace KerbalWindTunnel.Graphing
                 valuesSet = true;
             }
         }
-        private static void GenerateAoAPoint(object obj)
+
+        private static void GenerateSurfPoint(object obj)
         {
             GenData data = (GenData)obj;
             if (data.storeState.manager.Cancelled)

@@ -1,53 +1,26 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using UnityEngine;
 
-namespace KerbalWindTunnel.Graphing
+namespace KerbalWindTunnel.DataGenerators
 {
-    public static class VelCurve
+    public class VelCurve : DataSetGenerator
     {
-        public static VelPoint[] VelPoints = new VelPoint[0];
-        private static CalculationManager calculationManager = new CalculationManager();
-        public static CalculationManager.RunStatus Status
-        {
-            get
-            {
-                CalculationManager.RunStatus status = calculationManager.Status;
-                if (status == CalculationManager.RunStatus.Completed && !valuesSet)
-                    return CalculationManager.RunStatus.Running;
-                if (status == CalculationManager.RunStatus.PreStart && valuesSet)
-                    return CalculationManager.RunStatus.Completed;
-                return status;
-            }
-        }
-        public static float PercentComplete
-        {
-            get { return calculationManager.PercentComplete; }
-        }
-        private static bool valuesSet = false;
+        public VelPoint[] VelPoints = new VelPoint[0];
         public static Conditions currentConditions = Conditions.Blank;
         private static Dictionary<Conditions, VelPoint[]> cache = new Dictionary<Conditions, VelPoint[]>();
-
-        public static void Cancel()
+        
+        public override void Clear()
         {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
-            valuesSet = false;
-        }
-        public static void Clear()
-        {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
+            base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
             VelPoints = new VelPoint[0];
         }
 
-        public static void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float lowerBound = 0, float upperBound = 2000, float step = 50)
+        public void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float lowerBound = 0, float upperBound = 2000, float step = 50)
         {
             Conditions newConditions = new Conditions(body, altitude, lowerBound, upperBound, step);
             if (newConditions.Equals(currentConditions))
@@ -70,7 +43,7 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
-        private static IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
+        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
         {
             int numPts = (int)Math.Ceiling((conditions.upperBound - conditions.lowerBound) / conditions.step);
             VelPoint[] newVelPoints = new VelPoint[numPts + 1];
