@@ -6,7 +6,7 @@ using System.Text;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class Graph : IDisposable
+    public class Graph : IDisposable, DataGenerators.IGraphableProvider
     {
         public UnityEngine.Texture2D graphTex;
         public UnityEngine.Texture2D hAxisTex;
@@ -30,6 +30,8 @@ namespace KerbalWindTunnel.Graphing
         private bool graphDirty = true;
         private bool axesDirty = true;
 
+        public virtual List<IGraphable> Graphables { get { return graphs.ToList(); } }
+
         public Graph(int width, int height, int axisWidth)
         {
             this.graphTex = new UnityEngine.Texture2D(width, height, UnityEngine.TextureFormat.ARGB32, false);
@@ -50,6 +52,21 @@ namespace KerbalWindTunnel.Graphing
             for (int i = graphs.Count - 1; i >= 0; i--)
                 RemoveGraphAt(i);
             graphDirty = true;
+        }
+
+        public virtual IGraphable GetGraphableByName(string name)
+        {
+            return graphs.Find(g => g.Name.ToLower() == name.ToLower());
+        }
+
+        public IGraphable FindGraph(Predicate<IGraphable> predicate)
+        {
+            return graphs.Find(predicate);
+        }
+
+        public int IndexOf(IGraphable graphable)
+        {
+            return graphs.IndexOf(graphable);
         }
 
         public void AddGraph(IGraphable newGraph)
