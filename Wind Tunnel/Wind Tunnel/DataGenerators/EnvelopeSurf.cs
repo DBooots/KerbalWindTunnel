@@ -57,10 +57,12 @@ namespace KerbalWindTunnel.DataGenerators
             float right = currentConditions.upperBoundSpeed;
             SurfGraph newSurfGraph;
             newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive };
-            newSurfGraph.ColorFunc = (x, y, z) => z / newSurfGraph.ZMax;
+            float maxThrustExcess = newSurfGraph.ZMax;
+            newSurfGraph.ColorFunc = (x, y, z) => z / maxThrustExcess;
             graphs.Add("Excess Thrust", newSurfGraph);
             newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top) { Name = "Excess Acceleration", Unit = "g", StringFormat = "N2", Color = Jet_Dark_Positive };
-            newSurfGraph.ColorFunc = (x, y, z) => z / newSurfGraph.ZMax;
+            float maxAccelExcess = newSurfGraph.ZMax;
+            newSurfGraph.ColorFunc = (x, y, z) => z / maxAccelExcess;
             graphs.Add("Excess Acceleration", newSurfGraph);
             graphs.Add("Thrust Available", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top) { Name = "Thrust Available", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
             graphs.Add("Level AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_level * 180 / Mathf.PI), left, right, bottom, top) { Name = "Level AoA", Unit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
