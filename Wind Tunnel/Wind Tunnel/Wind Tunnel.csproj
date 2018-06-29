@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CalculationManager.cs" />
+    <Compile Include="DataGenerators\IGraphableProvider.cs" />
     <Compile Include="Extensions\KSPClassExtensions.cs" />
     <Compile Include="Extensions\DrawingHelper.cs" />
     <Compile Include="Extensions\HashCodeHelper.cs" />
