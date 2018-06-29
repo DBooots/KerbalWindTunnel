@@ -41,6 +41,21 @@ namespace KerbalWindTunnel.Graphing
 
         private void CalculateBounds(float min, float max, bool forX = true)
         {
+            if (min > max)
+            {
+                float temp = min;
+                min = max;
+                max = temp;
+            }
+            if(min == max)
+            {
+                this._min = min;
+                this._max = max;
+                this.MajorUnit = 0;
+                this.TickCount = 0;
+                this.labels = new List<string>() { string.Format("{0}", this.Min) };
+                return;
+            }
             this.MajorUnit = GetMajorUnit(max, min, forX);
             if (min % MajorUnit == 0)
                 this._min = min;
@@ -55,7 +70,7 @@ namespace KerbalWindTunnel.Graphing
 
             this.labels = new List<string>(TickCount + 1);
             for (int i = 0; i <= TickCount; i++)
-                labels.Add(string.Format("{0}", this.Min + MajorUnit * i));
+                labels.Add(string.Format("{0}", _min + MajorUnit * i));
         }
 
         public void DrawAxis(ref Texture2D axisTex, Color color, bool inverted = false)
