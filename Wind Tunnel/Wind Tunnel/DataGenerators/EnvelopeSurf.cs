@@ -3,11 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using KerbalWindTunnel.Graphing;
+using KerbalWindTunnel.Extensions;
 
 namespace KerbalWindTunnel.DataGenerators
 {
     public class EnvelopeSurf : DataSetGenerator
     {
+        protected static readonly ColorMap Jet_Dark_Positive = new ColorMap(ColorMap.Jet_Dark) { Filter = (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v) };
+
         public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
         public static Conditions currentConditions = Conditions.Blank;
         private static Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
@@ -39,8 +43,32 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
+                GenerateGraphs();
                 valuesSet = true;
             }
+        }
+
+        private void GenerateGraphs()
+        {
+            graphs.Clear();
+            float bottom = currentConditions.lowerBoundAltitude;
+            float top = currentConditions.upperBoundAltitude;
+            float left = currentConditions.lowerBoundSpeed;
+            float right = currentConditions.upperBoundSpeed;
+            SurfGraph newSurfGraph;
+            newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive };
+            newSurfGraph.ColorFunc = (x, y, z) => z / newSurfGraph.ZMax;
+            graphs.Add("Excess Thrust", newSurfGraph);
+            newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top) { Name = "Excess Acceleration", Unit = "g", StringFormat = "N2", Color = Jet_Dark_Positive };
+            newSurfGraph.ColorFunc = (x, y, z) => z / newSurfGraph.ZMax;
+            graphs.Add("Excess Acceleration", newSurfGraph);
+            graphs.Add("Thrust Available", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top) { Name = "Thrust Available", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphs.Add("Level AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_level * 180 / Mathf.PI), left, right, bottom, top) { Name = "Level AoA", Unit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Max Lift AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_max * 180 / Mathf.PI), left, right, bottom, top) { Name = "Max Lift AoA", Unit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Max Lift", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top) { Name = "Max Lift", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphs.Add("Lift/Drag Ratio", new SurfGraph(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Drag", new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag), left, right, bottom, top) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphs.Add("Lift Slope", new SurfGraph(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
@@ -83,6 +111,7 @@ namespace KerbalWindTunnel.DataGenerators
                 cache.Add(conditions, newEnvelopePoints);
                 envelopePoints = newEnvelopePoints;
                 currentConditions = conditions;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }

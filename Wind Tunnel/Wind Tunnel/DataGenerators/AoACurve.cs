@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using UnityEngine;
+using KerbalWindTunnel.Graphing;
 
 namespace KerbalWindTunnel.DataGenerators
 {
@@ -33,14 +35,26 @@ namespace KerbalWindTunnel.DataGenerators
 
             if (!cache.TryGetValue(newConditions, out AoAPoints))
             {
-                WindTunnel.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
+                WindTunnelWindow.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
             }
             else
             {
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
+                GenerateGraphs();
                 valuesSet = true;
             }
+        }
+
+        private void GenerateGraphs()
+        {
+            graphs.Clear();
+            float left = currentConditions.lowerBound * 180 / Mathf.PI;
+            float right = currentConditions.upperBound * 180 / Mathf.PI;
+            graphs.Add("Lift", new LineGraph(AoAPoints.Select(pt => pt.Lift).ToArray(), left, right) { Name = "Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Drag", new LineGraph(AoAPoints.Select(pt => pt.Drag).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Lift/Drag Ratio", new LineGraph(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Lift Slope", new LineGraph(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = Color.green });
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
@@ -74,6 +88,7 @@ namespace KerbalWindTunnel.DataGenerators
                 cache.Add(conditions, newAoAPoints);
                 AoAPoints = newAoAPoints;
                 currentConditions = conditions;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }
