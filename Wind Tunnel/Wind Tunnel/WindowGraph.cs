@@ -42,10 +42,10 @@ namespace KerbalWindTunnel
                                 DrawProgressBar(EnvelopeSurfGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
-                                float bottom = EnvelopeSurf.currentConditions.lowerBoundAltitude;
-                                float top = EnvelopeSurf.currentConditions.upperBoundAltitude;
-                                float left = EnvelopeSurf.currentConditions.lowerBoundSpeed;
-                                float right = EnvelopeSurf.currentConditions.upperBoundSpeed;
+                                float bottom = EnvelopeSurfGenerator.currentConditions.lowerBoundAltitude;
+                                float top = EnvelopeSurfGenerator.currentConditions.upperBoundAltitude;
+                                float left = EnvelopeSurfGenerator.currentConditions.lowerBoundSpeed;
+                                float right = EnvelopeSurfGenerator.currentConditions.upperBoundSpeed;
                                 /*for (int x = 0; x <= EnvelopeSurf.envelopePoints.GetUpperBound(0); x++)
                                 {
                                     for (int y = 0; y <= EnvelopeSurf.envelopePoints.GetUpperBound(1); y++)
@@ -65,10 +65,10 @@ namespace KerbalWindTunnel
                                         }
                                     }
                                 }//*/
-                                if (showEnvelopeMask && !maskConditions.Equals(EnvelopeSurf.currentConditions))
+                                if (showEnvelopeMask && !maskConditions.Equals(EnvelopeSurfGenerator.currentConditions))
                                 {
                                     CreateSurfMask(EnvelopeSurfGenerator.envelopePoints.SelectToArray(pt => pt.Thrust_excess), Color.gray, f => !float.IsNaN(f) && !float.IsInfinity(f) && f > 0, 2);
-                                    maskConditions = EnvelopeSurf.currentConditions;
+                                    maskConditions = EnvelopeSurfGenerator.currentConditions;
                                 }
                                 switch (graphSelect)
                                 {
@@ -153,8 +153,8 @@ namespace KerbalWindTunnel
                                 DrawProgressBar(VelCurveGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
-                                float left = VelCurve.currentConditions.lowerBound;
-                                float right = VelCurve.currentConditions.upperBound;
+                                float left = VelCurveGenerator.currentConditions.lowerBound;
+                                float right = VelCurveGenerator.currentConditions.upperBound;
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.LevelFlightAoA:

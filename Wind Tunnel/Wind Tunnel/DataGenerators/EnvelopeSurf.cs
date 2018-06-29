@@ -13,8 +13,8 @@ namespace KerbalWindTunnel.DataGenerators
         protected static readonly ColorMap Jet_Dark_Positive = new ColorMap(ColorMap.Jet_Dark) { Filter = (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v) };
 
         public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
-        public static Conditions currentConditions = Conditions.Blank;
-        private static Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
+        public Conditions currentConditions = Conditions.Blank;
+        private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
         
         public override void Clear()
         {
@@ -199,7 +199,7 @@ namespace KerbalWindTunnel.DataGenerators
                     liftforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
                     drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                     Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
-                    Accel_excess = (Thrust_excess / weight);
+                    Accel_excess = (Thrust_excess / vessel.Mass);
                     LDRatio = Mathf.Abs(weight / drag);
                     dLift = (vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level + WindTunnelWindow.AoAdelta) -
                         vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level)) / (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);

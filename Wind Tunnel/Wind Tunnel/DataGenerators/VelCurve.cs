@@ -11,8 +11,8 @@ namespace KerbalWindTunnel.DataGenerators
     public class VelCurve : DataSetGenerator
     {
         public VelPoint[] VelPoints = new VelPoint[0];
-        public static Conditions currentConditions = Conditions.Blank;
-        private static Dictionary<Conditions, VelPoint[]> cache = new Dictionary<Conditions, VelPoint[]>();
+        public Conditions currentConditions = Conditions.Blank;
+        private Dictionary<Conditions, VelPoint[]> cache = new Dictionary<Conditions, VelPoint[]>();
         
         public override void Clear()
         {
