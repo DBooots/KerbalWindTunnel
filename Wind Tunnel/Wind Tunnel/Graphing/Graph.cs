@@ -28,6 +28,7 @@ namespace KerbalWindTunnel.Graphing
 
         private List<IGraphable> graphs = new List<IGraphable>();
         private bool graphDirty = true;
+        private bool axesDirty = true;
 
         public Graph(int width, int height, int axisWidth)
         {
@@ -107,9 +108,10 @@ namespace KerbalWindTunnel.Graphing
             ZMin = colorAxis.Min;
             ZMax = colorAxis.Max;
 
-            if (!(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax && oldLimits[4] == ZMin && oldLimits[5] == ZMax))
+            if (axesDirty || !(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax && oldLimits[4] == ZMin && oldLimits[5] == ZMax))
             {
                 graphDirty = true;
+                axesDirty = true;
                 return true;
             }
             return false;
@@ -133,7 +135,8 @@ namespace KerbalWindTunnel.Graphing
             if (!graphDirty)
                 return;
 
-            if (RecalculateLimits())
+            RecalculateLimits();
+            if (axesDirty)
             {
                 ClearTexture(ref hAxisTex);
                 ClearTexture(ref vAxisTex);
@@ -141,6 +144,7 @@ namespace KerbalWindTunnel.Graphing
                 horizontalAxis.DrawAxis(ref hAxisTex, UnityEngine.Color.white);
                 verticalAxis.DrawAxis(ref vAxisTex, UnityEngine.Color.white);
                 colorAxis.DrawAxis(ref cAxisTex, UnityEngine.Color.white);
+                axesDirty = false;
             }
             ClearTexture(ref graphTex);
 
