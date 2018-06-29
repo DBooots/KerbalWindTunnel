@@ -47,13 +47,13 @@ namespace KerbalWindTunnel.Graphing
                 min = max;
                 max = temp;
             }
-            if(min == max)
+            if (min == max || float.IsNaN(min) || float.IsNaN(max) || float.IsInfinity(min) || float.IsInfinity(max))
             {
                 this._min = min;
                 this._max = max;
                 this.MajorUnit = 0;
-                this.TickCount = 0;
-                this.labels = new List<string>() { string.Format("{0}", this.Min) };
+                this.TickCount = 1;
+                this.labels = new List<string>() { string.Format("{0}", this.Min), string.Format("{0}", this.Max) };
                 return;
             }
             this.MajorUnit = GetMajorUnit(max, min, forX);
@@ -66,7 +66,7 @@ namespace KerbalWindTunnel.Graphing
             else
                 this._max = Mathf.Ceil(Mathf.Max(max, 0) / MajorUnit * 1.05f) * MajorUnit;
 
-            TickCount = Mathf.RoundToInt((max - min) / MajorUnit);
+            TickCount = Mathf.RoundToInt((_max - _min) / MajorUnit);
 
             this.labels = new List<string>(TickCount + 1);
             for (int i = 0; i <= TickCount; i++)
@@ -105,9 +105,9 @@ namespace KerbalWindTunnel.Graphing
                         axisTex.SetPixel(b, a, rowColor);
                 }
                 if (horizontal)
-                    axisTex.SetPixel(a, inverted ? minor : 0, color);
+                    axisTex.SetPixel(a, inverted ? 0 : minor, color);
                 else
-                    axisTex.SetPixel(inverted ? minor : 0, a, color);
+                    axisTex.SetPixel(inverted ? 0 : minor, a, color);
             }
 
             axisTex.Apply();

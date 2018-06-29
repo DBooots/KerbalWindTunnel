@@ -24,7 +24,7 @@ namespace KerbalWindTunnel.Graphing
             set
             {
                 _values = value;
-                ValuesChanged.Invoke(this, null);
+                ValuesChanged?.Invoke(this, null);
             }
         }
         public event EventHandler ValuesChanged;
@@ -200,7 +200,8 @@ namespace KerbalWindTunnel.Graphing
             this.YMax = yTop;
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
-            this.Values = values;
+            this._values = values;
+            ValuesChanged?.Invoke(this, null);
         }
     }
 }

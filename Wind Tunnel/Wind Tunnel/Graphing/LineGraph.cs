@@ -28,10 +28,16 @@ namespace KerbalWindTunnel.Graphing
                 float yMax = float.MinValue;
                 for (int i = value.Length - 1; i >= 0; i--)
                 {
-                    xLeft = Math.Min(xLeft, value[i].x);
-                    xRight = Math.Max(xRight, value[i].x);
-                    yMin = Math.Min(yMin, value[i].y);
-                    yMax = Math.Max(yMax, value[i].y);
+                    if (!float.IsInfinity(value[i].x) && !float.IsNaN(value[i].x))
+                    {
+                        xLeft = Math.Min(xLeft, value[i].x);
+                        xRight = Math.Max(xRight, value[i].x);
+                    }
+                    if (!float.IsInfinity(value[i].y) && !float.IsNaN(value[i].y))
+                    {
+                        yMin = Math.Min(yMin, value[i].y);
+                        yMax = Math.Max(yMax, value[i].y);
+                    }
                 }
                 this.XMax = xRight;
                 this.XMin = xLeft;
@@ -51,7 +57,7 @@ namespace KerbalWindTunnel.Graphing
                         break;
                 }
 
-                ValuesChanged.Invoke(this, null);
+                ValuesChanged?.Invoke(this, null);
             }
         }
         public event EventHandler ValuesChanged;
@@ -157,8 +163,11 @@ namespace KerbalWindTunnel.Graphing
             for (int i = values.Length - 1; i >= 0; i--)
             {
                 this._values[i] = new UnityEngine.Vector2(xLeft + xStep * i, values[i]);
-                yMin = Math.Min(yMin, _values[i].y);
-                yMax = Math.Max(yMax, _values[i].y);
+                if (!float.IsInfinity(_values[i].y) && !float.IsNaN(_values[i].y))
+                {
+                    yMin = Math.Min(yMin, _values[i].y);
+                    yMax = Math.Max(yMax, _values[i].y);
+                }
             }
             this.XMax = xRight;
             this.XMin = xLeft;
@@ -167,7 +176,7 @@ namespace KerbalWindTunnel.Graphing
             this.sorted = true;
             this.equalSteps = true;
 
-            ValuesChanged.Invoke(this, null);
+            ValuesChanged?.Invoke(this, null);
         }
         public void SetValues(UnityEngine.Vector2[] values)
         {

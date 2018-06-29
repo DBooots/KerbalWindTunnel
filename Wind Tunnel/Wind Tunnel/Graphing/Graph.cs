@@ -92,9 +92,9 @@ namespace KerbalWindTunnel.Graphing
                     if (surf.ZMax > this.ZMax || float.IsNaN(this.ZMax)) this.ZMax = surf.ZMax;
                 }
                 if (graphs[i].XMin < this.XMin || float.IsNaN(this.XMin)) this.XMin = graphs[i].XMin;
-                if (graphs[i].XMax < this.XMax || float.IsNaN(this.XMax)) this.XMax = graphs[i].XMax;
+                if (graphs[i].XMax > this.XMax || float.IsNaN(this.XMax)) this.XMax = graphs[i].XMax;
                 if (graphs[i].YMin < this.YMin || float.IsNaN(this.YMin)) this.YMin = graphs[i].YMin;
-                if (graphs[i].YMax < this.YMax || float.IsNaN(this.YMax)) this.YMax = graphs[i].YMax;
+                if (graphs[i].YMax > this.YMax || float.IsNaN(this.YMax)) this.YMax = graphs[i].YMax;
             }
 
             horizontalAxis = new Axis(XMin, XMax, true);
@@ -102,8 +102,8 @@ namespace KerbalWindTunnel.Graphing
             colorAxis = new Axis(ZMin, ZMax);
             XMin = horizontalAxis.Min;
             XMax = horizontalAxis.Max;
-            YMin = horizontalAxis.Min;
-            YMax = horizontalAxis.Max;
+            YMin = verticalAxis.Min;
+            YMax = verticalAxis.Max;
             ZMin = colorAxis.Min;
             ZMax = colorAxis.Max;
 
@@ -142,6 +142,7 @@ namespace KerbalWindTunnel.Graphing
                 verticalAxis.DrawAxis(ref vAxisTex, UnityEngine.Color.white);
                 colorAxis.DrawAxis(ref cAxisTex, UnityEngine.Color.white);
             }
+            ClearTexture(ref graphTex);
 
             for (int i = 0; i < graphs.Count; i++)
             {
@@ -156,8 +157,8 @@ namespace KerbalWindTunnel.Graphing
             if (graphs.Count - 1 < index)
                 return float.NaN;
 
-            float xVal = x / (graphTex.width - 1) * (XMax - XMin) + XMin;
-            float yVal = y / (graphTex.height - 1) * (YMax - YMin) + YMin;
+            float xVal = x / (float)(graphTex.width - 1) * (XMax - XMin) + XMin;
+            float yVal = y / (float)(graphTex.height - 1) * (YMax - YMin) + YMin;
 
             return graphs[index].ValueAt(xVal, yVal);
         }
@@ -166,8 +167,8 @@ namespace KerbalWindTunnel.Graphing
             if (graphs.Count == 0)
                 return "";
 
-            float xVal = x / (graphTex.width - 1) * (XMax - XMin) + XMin;
-            float yVal = y / (graphTex.height - 1) * (YMax - YMin) + YMin;
+            float xVal = x / (float)(graphTex.width - 1) * (XMax - XMin) + XMin;
+            float yVal = y / (float)(graphTex.height - 1) * (YMax - YMin) + YMin;
 
             string returnValue = String.Format("{2}{0:" + graphs[0].StringFormat + "}{1}", graphs[0].ValueAt(xVal, yVal), graphs[0].Unit, graphs[0].Name != "" ? graphs[0].Name + ": " : "");
             for (int i = 1; i < graphs.Count; i++)
