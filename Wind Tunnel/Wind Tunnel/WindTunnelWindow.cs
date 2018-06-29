@@ -207,6 +207,8 @@ namespace KerbalWindTunnel
             }
         }
 
+        private Graphing.Graph grapher = new Graphing.Graph(graphWidth, graphHeight, axisWidth);
+
         internal const float AoAdelta = 0.1f / 180 * Mathf.PI;
 
         private List<cbItem> lstPlanets = new List<cbItem>();
@@ -404,7 +406,6 @@ namespace KerbalWindTunnel
                 GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure));
             }
             
-
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
@@ -477,14 +478,14 @@ namespace KerbalWindTunnel
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    this.Altitude = ((graphHeight - crossHairs.y) / graphHeight) * (graphSettings.yTop - graphSettings.yBottom) + graphSettings.yBottom;
-                    this.Speed = (crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
+                    this.Altitude = ((graphHeight - crossHairs.y) / graphHeight) * (grapher.YMax - grapher.YMin) + grapher.YMin;
+                    this.Speed = (crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                     break;
                 case GraphMode.AoACurves:
-                    this.AoA = ((crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft) * Mathf.PI / 180;
+                    this.AoA = ((crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin) * Mathf.PI / 180;
                     break;
                 case GraphMode.VelocityCurves:
-                    this.Speed = (crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
+                    this.Speed = (crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                     break;
             }
         }
@@ -494,12 +495,12 @@ namespace KerbalWindTunnel
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    return new Vector2((speed - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth,
-                        altitude / (graphSettings.yTop - graphSettings.yBottom) * graphHeight);
+                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth,
+                        altitude / (grapher.YMax - grapher.YMin) * graphHeight);
                 case GraphMode.AoACurves:
-                    return new Vector2(((aoa * 180 / Mathf.PI) - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth, 0);
+                    return new Vector2(((aoa * 180 / Mathf.PI) - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth, 0);
                 case GraphMode.VelocityCurves:
-                    return new Vector2((speed - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth, 0);
+                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth, 0);
                 default:
                     return new Vector2(-1, -1);
             }
@@ -542,7 +543,8 @@ namespace KerbalWindTunnel
         internal override void OnDestroy()
         {
             base.OnDestroy();
-            Destroy(graphTex);
+            grapher.Dispose();
+            Destroy(maskTex);
         }
 
         private void BodyParseChildren(CelestialBody cbRoot, int Depth = 0)
