@@ -16,6 +16,22 @@ namespace KerbalWindTunnel
     public partial class WindTunnelWindow : MonoBehaviourWindowPlus
     {
         public static WindTunnelWindow Instance;
+        private DataGenerators.EnvelopeSurf EnvelopeSurfGenerator = new DataGenerators.EnvelopeSurf();
+        private DataGenerators.AoACurve AoACurveGenerator = new DataGenerators.AoACurve();
+        private DataGenerators.VelCurve VelCurveGenerator = new DataGenerators.VelCurve();
+        public DataGenerators.DataSetGenerator GraphGenerator
+        {
+            get
+            {
+                switch (CurrentGraphMode)
+                {
+                    case GraphMode.FlightEnvelope: return this.EnvelopeSurfGenerator;
+                    case GraphMode.AoACurves: return this.AoACurveGenerator;
+                    case GraphMode.VelocityCurves: return this.VelCurveGenerator;
+                    default: return null;
+                }
+            }
+        }
 
         public WindTunnel Parent { get; internal set; }
 
@@ -191,6 +207,8 @@ namespace KerbalWindTunnel
             }
         }
 
+        private Graphing.Graph grapher = new Graphing.Graph(graphWidth, graphHeight, axisWidth);
+
         internal const float AoAdelta = 0.1f / 180 * Mathf.PI;
 
         private List<cbItem> lstPlanets = new List<cbItem>();
@@ -355,9 +373,9 @@ namespace KerbalWindTunnel
                 body = newBody;
                 graphDirty = true;
                 graphRequested = false;
-                Graphing.EnvelopeSurf.Clear();
-                Graphing.AoACurve.Clear();
-                Graphing.VelCurve.Clear();
+                EnvelopeSurfGenerator.Clear();
+                AoACurveGenerator.Clear();
+                VelCurveGenerator.Clear();
                 this.conditionDetails = "";
 
                 if (vessel is VesselCache.SimulatedVessel releasable)
@@ -366,7 +384,7 @@ namespace KerbalWindTunnel
                 //this.vessel = new StockAero();
                 Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
                 selectedCrossHairVect = new Vector2(-1, -1);
-                maskConditions = Graphing.EnvelopeSurf.Conditions.Blank;
+                maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
             }
             GUILayout.EndHorizontal();
             GUILayout.Space(2);
@@ -375,9 +393,9 @@ namespace KerbalWindTunnel
             {
                 graphDirty = true;
                 graphRequested = false;
-                Graphing.EnvelopeSurf.Clear();
-                Graphing.AoACurve.Clear();
-                Graphing.VelCurve.Clear();
+                EnvelopeSurfGenerator.Clear();
+                AoACurveGenerator.Clear();
+                VelCurveGenerator.Clear();
                 this.conditionDetails = "";
 
                 if (vessel is VesselCache.SimulatedVessel releasable)
@@ -386,18 +404,17 @@ namespace KerbalWindTunnel
                 //this.vessel = new StockAero();
 
                 selectedCrossHairVect = new Vector2(-1, -1);
-                maskConditions = Graphing.EnvelopeSurf.Conditions.Blank;
+                maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
             }
 
             // Display selected point details.
             GUILayout.Label(this.conditionDetails);
-            if (CurrentGraphMode == GraphMode.AoACurves && Graphing.AoACurve.Status == CalculationManager.RunStatus.Completed)
+            if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == CalculationManager.RunStatus.Completed)
             {
-                Graphing.AoACurve.AoAPoint zeroPoint = new Graphing.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
+                DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
                 GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure));
             }
             
-
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
@@ -470,14 +487,14 @@ namespace KerbalWindTunnel
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    this.Altitude = ((graphHeight - crossHairs.y) / graphHeight) * (graphSettings.yTop - graphSettings.yBottom) + graphSettings.yBottom;
-                    this.Speed = (crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
+                    this.Altitude = ((graphHeight - crossHairs.y) / graphHeight) * (grapher.YMax - grapher.YMin) + grapher.YMin;
+                    this.Speed = (crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                     break;
                 case GraphMode.AoACurves:
-                    this.AoA = ((crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft) * Mathf.PI / 180;
+                    this.AoA = ((crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin) * Mathf.PI / 180;
                     break;
                 case GraphMode.VelocityCurves:
-                    this.Speed = (crossHairs.x / graphWidth) * (graphSettings.xRight - graphSettings.xLeft) + graphSettings.xLeft;
+                    this.Speed = (crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                     break;
             }
         }
@@ -487,12 +504,12 @@ namespace KerbalWindTunnel
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    return new Vector2((speed - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth,
-                        altitude / (graphSettings.yTop - graphSettings.yBottom) * graphHeight);
+                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth,
+                        altitude / (grapher.YMax - grapher.YMin) * graphHeight);
                 case GraphMode.AoACurves:
-                    return new Vector2(((aoa * 180 / Mathf.PI) - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth, 0);
+                    return new Vector2(((aoa * 180 / Mathf.PI) - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth, 0);
                 case GraphMode.VelocityCurves:
-                    return new Vector2((speed - graphSettings.xLeft) / (graphSettings.xRight - graphSettings.xLeft) * graphWidth, 0);
+                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth, 0);
                 default:
                     return new Vector2(-1, -1);
             }
@@ -500,18 +517,7 @@ namespace KerbalWindTunnel
 
         public void Cancel()
         {
-            switch (CurrentGraphMode)
-            {
-                case GraphMode.FlightEnvelope:
-                    Graphing.EnvelopeSurf.Cancel();
-                    break;
-                case GraphMode.AoACurves:
-                    Graphing.AoACurve.Cancel();
-                    break;
-                case GraphMode.VelocityCurves:
-                    Graphing.VelCurve.Cancel();
-                    break;
-            }
+            GraphGenerator.Cancel();
         }
 
         private string conditionDetails = "";
@@ -520,19 +526,7 @@ namespace KerbalWindTunnel
 
         public CalculationManager.RunStatus Status
         {
-            get
-            {
-                switch (CurrentGraphMode)
-                {
-                    case GraphMode.AoACurves:
-                        return Graphing.AoACurve.Status;
-                    case GraphMode.VelocityCurves:
-                        return Graphing.VelCurve.Status;
-                    case GraphMode.FlightEnvelope:
-                        return Graphing.EnvelopeSurf.Status;
-                }
-                return CalculationManager.RunStatus.PreStart;
-            }
+            get { return GraphGenerator.Status; }
         }
 
         internal override void Awake()
@@ -558,7 +552,8 @@ namespace KerbalWindTunnel
         internal override void OnDestroy()
         {
             base.OnDestroy();
-            Destroy(graphTex);
+            grapher.Dispose();
+            Destroy(maskTex);
         }
 
         private void BodyParseChildren(CelestialBody cbRoot, int Depth = 0)

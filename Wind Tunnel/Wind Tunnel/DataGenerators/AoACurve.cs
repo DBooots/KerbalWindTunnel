@@ -1,51 +1,28 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using UnityEngine;
+using KerbalWindTunnel.Graphing;
 
-namespace KerbalWindTunnel.Graphing
+namespace KerbalWindTunnel.DataGenerators
 {
-    public static class AoACurve
+    public class AoACurve : DataSetGenerator
     {
-        public static AoAPoint[] AoAPoints = new AoAPoint[0];
-        private static CalculationManager calculationManager = new CalculationManager();
-        public static CalculationManager.RunStatus Status
-        {
-            get
-            {
-                CalculationManager.RunStatus status = calculationManager.Status;
-                if (status == CalculationManager.RunStatus.Completed && !valuesSet)
-                    return CalculationManager.RunStatus.Running;
-                if (status == CalculationManager.RunStatus.PreStart && valuesSet)
-                    return CalculationManager.RunStatus.Completed;
-                return status;
-            }
-        }
-        public static float PercentComplete
-        {
-            get { return calculationManager.PercentComplete; }
-        }
-        private static bool valuesSet = false;
-        public static Conditions currentConditions = Conditions.Blank;
-        private static Dictionary<Conditions, AoAPoint[]> cache = new Dictionary<Conditions, AoAPoint[]>();
+        public AoAPoint[] AoAPoints = new AoAPoint[0];
+        public Conditions currentConditions = Conditions.Blank;
+        private Dictionary<Conditions, AoAPoint[]> cache = new Dictionary<Conditions, AoAPoint[]>();
 
-        public static void Cancel()
+        public override void Clear()
         {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
-            valuesSet = false;
-        }
-        public static void Clear()
-        {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
+            base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
             AoAPoints = new AoAPoint[0];
         }
 
-        public static void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float lowerBound = -20f, float upperBound = 20f, float step = 0.5f)
+        public void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float lowerBound = -20f, float upperBound = 20f, float step = 0.5f)
         {
             Conditions newConditions = new Conditions(body, altitude, speed, lowerBound, upperBound, step);
             if (newConditions.Equals(currentConditions))
@@ -58,17 +35,29 @@ namespace KerbalWindTunnel.Graphing
 
             if (!cache.TryGetValue(newConditions, out AoAPoints))
             {
-                WindTunnel.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
+                WindTunnelWindow.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
             }
             else
             {
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }
 
-        private static IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
+        private void GenerateGraphs()
+        {
+            graphs.Clear();
+            float left = currentConditions.lowerBound * 180 / Mathf.PI;
+            float right = currentConditions.upperBound * 180 / Mathf.PI;
+            graphs.Add("Lift", new LineGraph(AoAPoints.Select(pt => pt.Lift).ToArray(), left, right) { Name = "Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Drag", new LineGraph(AoAPoints.Select(pt => pt.Drag).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Lift/Drag Ratio", new LineGraph(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Lift Slope", new LineGraph(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = Color.green });
+        }
+
+        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
         {
             int numPts = (int)Math.Ceiling((conditions.upperBound - conditions.lowerBound) / conditions.step);
             AoAPoint[] newAoAPoints = new AoAPoint[numPts + 1];
@@ -99,6 +88,7 @@ namespace KerbalWindTunnel.Graphing
                 cache.Add(conditions, newAoAPoints);
                 AoAPoints = newAoAPoints;
                 currentConditions = conditions;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }

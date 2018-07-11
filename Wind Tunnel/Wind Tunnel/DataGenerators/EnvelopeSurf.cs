@@ -1,53 +1,30 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using UnityEngine;
+using KerbalWindTunnel.Graphing;
+using KerbalWindTunnel.Extensions;
 
-namespace KerbalWindTunnel.Graphing
+namespace KerbalWindTunnel.DataGenerators
 {
-    public static class EnvelopeSurf
+    public class EnvelopeSurf : DataSetGenerator
     {
-        public static EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
-        private static CalculationManager calculationManager = new CalculationManager();
-        public static CalculationManager.RunStatus Status
-        {
-            get
-            {
-                CalculationManager.RunStatus status = calculationManager.Status;
-                if (status == CalculationManager.RunStatus.Completed && !valuesSet)
-                    return CalculationManager.RunStatus.Running;
-                if (status == CalculationManager.RunStatus.PreStart && valuesSet)
-                    return CalculationManager.RunStatus.Completed;
-                return status;
-            }
-        }
-        public static float PercentComplete
-        {
-            get { return calculationManager.PercentComplete; }
-        }
-        private static bool valuesSet = false;
-        public static Conditions currentConditions = Conditions.Blank;
-        private static Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
+        protected static readonly ColorMap Jet_Dark_Positive = new ColorMap(ColorMap.Jet_Dark) { Filter = (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v) };
 
-        public static void Cancel()
+        public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
+        public Conditions currentConditions = Conditions.Blank;
+        private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
+        
+        public override void Clear()
         {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
-            valuesSet = false;
-        }
-        public static void Clear()
-        {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
+            base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
             envelopePoints = new EnvelopePoint[0,0];
         }
 
-        public static void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
+        public void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
         {
             Conditions newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
             if (newConditions.Equals(currentConditions))
@@ -66,11 +43,37 @@ namespace KerbalWindTunnel.Graphing
             {
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }
 
-        private static IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
+        private void GenerateGraphs()
+        {
+            graphs.Clear();
+            float bottom = currentConditions.lowerBoundAltitude;
+            float top = currentConditions.upperBoundAltitude;
+            float left = currentConditions.lowerBoundSpeed;
+            float right = currentConditions.upperBoundSpeed;
+            SurfGraph newSurfGraph;
+            newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive };
+            float maxThrustExcess = newSurfGraph.ZMax;
+            newSurfGraph.ColorFunc = (x, y, z) => z / maxThrustExcess;
+            graphs.Add("Excess Thrust", newSurfGraph);
+            newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top) { Name = "Excess Acceleration", Unit = "g", StringFormat = "N2", Color = Jet_Dark_Positive };
+            float maxAccelExcess = newSurfGraph.ZMax;
+            newSurfGraph.ColorFunc = (x, y, z) => z / maxAccelExcess;
+            graphs.Add("Excess Acceleration", newSurfGraph);
+            graphs.Add("Thrust Available", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top) { Name = "Thrust Available", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphs.Add("Level AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_level * 180 / Mathf.PI), left, right, bottom, top) { Name = "Level AoA", Unit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Max Lift AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_max * 180 / Mathf.PI), left, right, bottom, top) { Name = "Max Lift AoA", Unit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Max Lift", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top) { Name = "Max Lift", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphs.Add("Lift/Drag Ratio", new SurfGraph(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Drag", new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag), left, right, bottom, top) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphs.Add("Lift Slope", new SurfGraph(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
+        }
+
+        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
         {
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
@@ -86,7 +89,7 @@ namespace KerbalWindTunnel.Graphing
                     //newAoAPoints[i] = new AoAPoint(vessel, conditions.body, conditions.altitude, conditions.speed, conditions.lowerBound + trueStep * i);
                     GenData genData = new GenData(vessel, conditions, conditions.lowerBoundSpeed + trueStepX * i, conditions.lowerBoundAltitude + trueStepY * j, solver, manager);
                     results[i, j] = genData.storeState;
-                    ThreadPool.QueueUserWorkItem(GenerateAoAPoint, genData);
+                    ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
                 }
             }
 
@@ -110,10 +113,12 @@ namespace KerbalWindTunnel.Graphing
                 cache.Add(conditions, newEnvelopePoints);
                 envelopePoints = newEnvelopePoints;
                 currentConditions = conditions;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }
-        private static void GenerateAoAPoint(object obj)
+
+        private static void GenerateSurfPoint(object obj)
         {
             GenData data = (GenData)obj;
             if (data.storeState.manager.Cancelled)
@@ -196,7 +201,7 @@ namespace KerbalWindTunnel.Graphing
                     liftforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
                     drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                     Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
-                    Accel_excess = (Thrust_excess / weight);
+                    Accel_excess = (Thrust_excess / vessel.Mass);
                     LDRatio = Mathf.Abs(weight / drag);
                     dLift = (vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level + WindTunnelWindow.AoAdelta) -
                         vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level)) / (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);

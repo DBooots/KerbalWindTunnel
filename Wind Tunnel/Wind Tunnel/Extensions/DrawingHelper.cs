@@ -34,6 +34,7 @@ namespace KerbalWindTunnel.Extensions
         */
         public static void DrawLine(ref Texture2D tex, int x1, int y1, int x2, int y2, Color col)
         {
+            int width = tex.width, height = tex.height;
             int dy = (y2 - y1);
             int dx = (x2 - x1);
             int stepx, stepy;
@@ -47,7 +48,8 @@ namespace KerbalWindTunnel.Extensions
 
             float fraction = 0;
 
-            tex.SetPixel(x1, y1, col);
+            if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height)
+                tex.SetPixel(x1, y1, col);
             if (dx > dy)
             {
                 fraction = dy - (dx >> 1);
@@ -60,7 +62,8 @@ namespace KerbalWindTunnel.Extensions
                     }
                     x1 += stepx;
                     fraction += dy;
-                    tex.SetPixel(x1, y1, col);
+                    if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height)
+                        tex.SetPixel(x1, y1, col);
                 }
             }
             else
@@ -75,7 +78,8 @@ namespace KerbalWindTunnel.Extensions
                     }
                     y1 += stepy;
                     fraction += dx;
-                    tex.SetPixel(x1, y1, col);
+                    if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height)
+                        tex.SetPixel(x1, y1, col);
                 }
             }
         }

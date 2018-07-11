@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using KerbalWindTunnel.Graphing;
+using KerbalWindTunnel.DataGenerators;
 using KerbalWindTunnel.Extensions;
 using UnityEngine;
 
@@ -30,21 +31,17 @@ namespace KerbalWindTunnel
                     case GraphMode.FlightEnvelope:
                         if (!graphRequested)
                         {
-                            EnvelopeSurf.Calculate(vessel, body, 0, 2000, 10, 0, 25000, 100);
+                            EnvelopeSurfGenerator.Calculate(vessel, body, 0, 2000, 10, 0, 25000, 100);
                             graphRequested = true;
                         }
-                        switch (EnvelopeSurf.Status)
+                        switch (EnvelopeSurfGenerator.Status)
                         {
                             case CalculationManager.RunStatus.PreStart:
                             case CalculationManager.RunStatus.Cancelled:
                             case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(EnvelopeSurf.PercentComplete);
+                                DrawProgressBar(EnvelopeSurfGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
-                                float bottom = EnvelopeSurf.currentConditions.lowerBoundAltitude;
-                                float top = EnvelopeSurf.currentConditions.upperBoundAltitude;
-                                float left = EnvelopeSurf.currentConditions.lowerBoundSpeed;
-                                float right = EnvelopeSurf.currentConditions.upperBoundSpeed;
                                 /*for (int x = 0; x <= EnvelopeSurf.envelopePoints.GetUpperBound(0); x++)
                                 {
                                     for (int y = 0; y <= EnvelopeSurf.envelopePoints.GetUpperBound(1); y++)
@@ -64,41 +61,47 @@ namespace KerbalWindTunnel
                                         }
                                     }
                                 }//*/
-                                if (showEnvelopeMask && !maskConditions.Equals(EnvelopeSurf.currentConditions))
-                                {
-                                    CreateSurfMask(EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Thrust_excess), Color.gray, f => !float.IsNaN(f) && !float.IsInfinity(f) && f > 0, 2);
-                                    maskConditions = EnvelopeSurf.currentConditions;
-                                }
+                                grapher.Clear();
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.ExcessThrust:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Thrust_excess), true); // Excess Thrust
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Excess Thrust"));
                                         break;
                                     case GraphSelect.ExcessAcceleration:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Accel_excess), true); // Excess Acceleration
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Excess Acceleration"));
                                         break;
                                     case GraphSelect.ThrustAvailable:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Thrust_available), true); // Thrust Available
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Thrust Available"));
                                         break;
                                     case GraphSelect.LevelFlightAoA:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.AoA_level * 180 / Mathf.PI)); // Level Flight AoA
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Level AoA"));
                                         break;
                                     case GraphSelect.MaxLiftAoA:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.AoA_max * 180 / Mathf.PI)); // Max Lift AoA
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Max Lift AoA"));
                                         break;
                                     case GraphSelect.MaxLiftForce:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.Lift_max)); // Max Lift Force
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Max Lift"));
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.LDRatio));
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Lift/Drag Ratio"));
                                         break;
                                     case GraphSelect.DragForce:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.drag));
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Drag"));
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        CreateSurfGraph(left, right, bottom, top, EnvelopeSurf.envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure));
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Lift Slope"));
                                         break;
                                 }
+                                grapher.RecalculateLimits();
+
+                                if (showEnvelopeMask && !maskConditions.Equals(EnvelopeSurfGenerator.currentConditions))
+                                {
+                                    ((SurfGraph)EnvelopeSurfGenerator.GetGraphableByName("Excess Thrust"))
+                                        .DrawMask(ref maskTex, grapher.XMin, grapher.XMax, grapher.YMin, grapher.YMax,
+                                        (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v), Color.grey, true, 2);
+                                    maskConditions = EnvelopeSurfGenerator.currentConditions;
+                                }
+
                                 graphDirty = false;
                                 break;
                         }
@@ -106,32 +109,31 @@ namespace KerbalWindTunnel
                     case GraphMode.AoACurves:
                         if (!graphRequested)
                         {
-                            AoACurve.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.PI / 180, 20f * Mathf.PI / 180, 0.5f * Mathf.PI / 180);
+                            AoACurveGenerator.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.PI / 180, 20f * Mathf.PI / 180, 0.5f * Mathf.PI / 180);
                             graphRequested = true;
                         }
-                        switch (AoACurve.Status)
+                        switch (AoACurveGenerator.Status)
                         {
                             case CalculationManager.RunStatus.PreStart:
                             case CalculationManager.RunStatus.Cancelled:
                             case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(EnvelopeSurf.PercentComplete);
+                                DrawProgressBar(AoACurveGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
-                                float left = AoACurve.currentConditions.lowerBound * 180 / Mathf.PI;
-                                float right = AoACurve.currentConditions.upperBound * 180 / Mathf.PI;
+                                grapher.Clear();
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.LiftForce:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.Lift).ToArray()); // Lift Force
+                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Lift"));
                                         break;
                                     case GraphSelect.DragForce:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.Drag).ToArray()); // Drag Force
+                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Drag"));
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.LDRatio).ToArray()); // Lift-Drag Ratio
+                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Lift/Drag Ratio"));
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        CreateLineGraph(left, right, AoACurve.AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
+                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Lift Slope"));
                                         break;
                                 }
                                 graphDirty = false;
@@ -141,38 +143,37 @@ namespace KerbalWindTunnel
                     case GraphMode.VelocityCurves:
                         if (!graphRequested)
                         {
-                            VelCurve.Calculate(vessel, body, Altitude, 0, 2000, 10);
+                            VelCurveGenerator.Calculate(vessel, body, Altitude, 0, 2000, 10);
                             graphRequested = true;
                         }
-                        switch (VelCurve.Status)
+                        switch (VelCurveGenerator.Status)
                         {
                             case CalculationManager.RunStatus.PreStart:
                             case CalculationManager.RunStatus.Cancelled:
                             case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(EnvelopeSurf.PercentComplete);
+                                DrawProgressBar(VelCurveGenerator.PercentComplete);
                                 break;
                             case CalculationManager.RunStatus.Completed:
-                                float left = VelCurve.currentConditions.lowerBound;
-                                float right = VelCurve.currentConditions.upperBound;
+                                grapher.Clear();
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.LevelFlightAoA:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => float.IsNaN(pt.AoA_level) ? float.PositiveInfinity : pt.AoA_level * 180 / Mathf.PI).ToArray()); // Level Flight AoA
+                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Level AoA"));
                                         break;
                                     case GraphSelect.MaxLiftAoA:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => float.IsNaN(pt.AoA_max) ? float.PositiveInfinity : pt.AoA_max * 180 / Mathf.PI).ToArray()); // Max Lift AoA
+                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Max Lift AoA"));
                                         break;
                                     case GraphSelect.ThrustAvailable:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.Thrust_available).ToArray()); // Thrust Available
+                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Thrust Available"));
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.LDRatio).ToArray());
+                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Lift/Drag Ratio"));
                                         break;
                                     case GraphSelect.DragForce:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.drag).ToArray());
+                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Drag"));
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        CreateLineGraph(left, right, VelCurve.VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray());
+                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Lift Slope"));
                                         break;
                                 }
                                 graphDirty = false;
@@ -184,9 +185,19 @@ namespace KerbalWindTunnel
                 }
 
                 if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
+                {
+                    selectedCrossHairVect = CrossHairsFromConditions(Altitude, Speed, AoA);
+                    SetConditionsFromGraph(selectedCrossHairVect);
                     conditionDetails = GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, CurrentGraphMode == GraphMode.AoACurves ? this.AoA : float.NaN, false);
+                }
                 else
                     conditionDetails = "";
+
+                if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
+                {
+                    grapher.Draw();
+                    DrawGraph();
+                }
             }
             else
             {
@@ -194,206 +205,11 @@ namespace KerbalWindTunnel
             }
         }
 
-        private static int ValueToPixel(int size, float value, float maxValue, float minValue = 0)
-        {
-            if (float.IsNaN(value))
-                return 0;
-            if (value >= maxValue || float.IsPositiveInfinity(value))
-                return size - 1;
-            if (value <= minValue || float.IsNegativeInfinity(value))
-                return 0;
-            float range = maxValue - minValue;
-            return Mathf.FloorToInt((value - minValue) / range * size);
-        }
-        private static float PixelToValue(int x, float[] values)
-        {
-            return PixelToValue(x, values.GetUpperBound(0) + 1, values);
-        }
-        private static float PixelToValue(int x, int length, float[] values)
-        {
-            float fraction = (float)x / (graphWidth - 1) * (length - 1);
-            int lIndx = Mathf.FloorToInt(fraction);
-            int rIndx = Mathf.CeilToInt(fraction);
-            if (lIndx == rIndx)
-                return values[lIndx];
-            return (values[rIndx] - values[lIndx]) * (fraction % 1) + values[lIndx];    //Mathf.Lerp(values[lIndx], values[rIndx], fraction % 1);
-        }
-        private static float PixelsToValue(int x, int y, float[,] values)
-        {
-            int xNum = values.GetUpperBound(0) + 1;
-            int yNum = values.GetUpperBound(1) + 1;
-            return PixelsToValue(x, y, xNum, yNum, values);
-        }
-        private static float PixelsToValue(int x, int y, int lengthX, int lengthY, float[,] values)
-        {
-            float fractionX = (float)x / (graphWidth - 1) * (lengthX - 1);
-            int lIndx = Mathf.FloorToInt(fractionX);
-            int rIndx = Mathf.CeilToInt(fractionX);
-
-            float fractionY = (float)y / (graphHeight - 1) * (lengthY - 1);
-            int lIndy = Mathf.FloorToInt(fractionY);
-            int rIndy = Mathf.CeilToInt(fractionY);
-
-            if (lIndx == rIndx && lIndy == rIndy)
-                return values[lIndx, lIndy];
-
-            float vX1, vX2;
-            if (lIndx == rIndx)
-            {
-                vX1 = values[lIndx, lIndy];
-                vX2 = values[lIndx, rIndy];
-            }
-            else
-            {
-                vX1 = (values[rIndx, lIndy] - values[lIndx, lIndy]) * (fractionX % 1) + values[lIndx, lIndy];
-                vX2 = (values[rIndx, rIndy] - values[lIndx, rIndy]) * (fractionX % 1) + values[lIndx, rIndy];
-            }
-            return (vX2 - vX1) * (fractionY % 1) + vX1;
-        }
-
-        private float[,] surfValues;
-        private void CreateSurfGraph(float xLeft, float xRight, float yBottom, float yTop, float[,] values)
-        {
-            CreateSurfGraph(xLeft, xRight, yBottom, yTop, values, false);
-        }
-        private void CreateSurfGraph(float xLeft, float xRight, float yBottom, float yTop, float[,] values, float maxValue, float minValue = float.NaN)
-        {
-            CreateSurfGraph(xLeft, xRight, yBottom, yTop, values, false, maxValue, minValue);
-        }
-        private void CreateSurfGraph(float xLeft, float xRight, float yBottom, float yTop, float[,] values, bool blankNegatives = false, float maxValue = float.NaN, float minValue = float.NaN)
-        {
-            surfValues = values;
-            int xNum = values.GetUpperBound(0) + 1;
-            int yNum = values.GetUpperBound(1) + 1;
-            float topRange;
-            if (float.IsNaN(maxValue))
-                topRange = values.Max(true);
-            else
-                topRange = maxValue;
-
-            for(int x = 0; x < graphWidth; x++)
-            {
-                for(int yg = 0; yg < graphHeight; yg++)
-                {
-                    int y = graphHeight - 1 - yg;
-                    float pixelValue = PixelsToValue(x, y, xNum, yNum, values);
-                    if (float.IsNaN(pixelValue) || float.IsInfinity(pixelValue) || (blankNegatives && pixelValue <= 0))
-                        graphTex.SetPixel(x, y, Color.black);
-                    else
-                        graphTex.SetPixel(x, y, ColorMapJetDark(pixelValue / topRange));
-                }
-            }
-
-/*#if DEBUG
-            byte[] PNG = graphTex.EncodeToPNG();
-            System.IO.File.WriteAllBytes(string.Format("{0}/DeltaVWorkingPlot.png", Resources.PathPlugin), PNG);
-#endif*/
-            graphTex.Apply();
-
-            this.graphSettings = new GraphSettings(xLeft, xRight, yBottom, yTop);
-            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
-            {
-                selectedCrossHairVect = CrossHairsFromConditions(Altitude, Speed, AoA);
-                SetConditionsFromGraph(selectedCrossHairVect);
-            }
-
-            CreateHorzAxis(this.graphSettings);
-            CreateVertAxis(this.graphSettings);
-
-            DrawGraph();
-        }
-
         Texture2D maskTex = new Texture2D(graphWidth, graphHeight, TextureFormat.ARGB32, false);
-        private void CreateSurfMask(float[,] values, Color lineColor, Func<float, bool> criteria, int maskWidth = 1)
-        {
-            int xNum = values.GetUpperBound(0) + 1;
-            int yNum = values.GetUpperBound(1) + 1;
-            for (int x = 0; x < graphWidth; x++)
-            {
-                for (int yg = 0; yg < graphHeight; yg++)
-                {
-                    int y = graphHeight - 1 - yg;
-                    float pixelValue = PixelsToValue(x, y, xNum, yNum, values);
-                    bool mask = false;
-                    if (!criteria(pixelValue))
-                    {
-                        for(int w = 1; w <= maskWidth; w++)
-                        {
-                            if ((x >= w && criteria(PixelsToValue(x - w, y, xNum, yNum, values))) ||
-                                (x <= graphWidth - 1 - w && criteria(PixelsToValue(x + w, y, xNum, yNum, values))) ||
-                                (y >= w && criteria(PixelsToValue(x, y - w, xNum, yNum, values))) ||
-                                (y <= graphHeight - 1 - w && criteria(PixelsToValue(x, y + w, xNum, yNum, values))))
-                            {
-                                mask = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (mask)
-                        maskTex.SetPixel(x, y, lineColor);
-                    else
-                        maskTex.SetPixel(x, y, Color.clear);
-                }
-            }
-
-            maskTex.Apply();
-        }
-
-        static Color[] blank = null;
-        private float[] lineValues;
-        private void CreateLineGraph(float xLeft, float xRight, float[] values)
-        {
-            lineValues = values;
-            int xNum = values.Length;
-            if (blank == null)
-            {
-                blank = graphTex.GetPixels();
-                for (int i = blank.Length - 1; i >= 0; i--)
-                    blank[i] = Color.black;
-            }
-
-            graphTex.SetPixels(blank);
-
-            float[] vs = values.Where(v => !float.IsInfinity(v)).ToArray();
-            if (vs.Length == 0)
-                vs = new float[] { float.NaN };
-            float max = vs.Max();
-            float min = vs.Min();
-            float majUnit = GetMajorUnit(max, min, false);
-            float maxH = max % majUnit == 0 ? max : Mathf.CeilToInt(Mathf.Max(max, 0) / majUnit * 1.05f) * majUnit;
-            float minH = min % majUnit == 0 ? min : Mathf.FloorToInt(Mathf.Min(min, 0) / majUnit * 1.05f) * majUnit;
-
-            float step = (xRight - xLeft) / (xNum - 1);
-            for (int i = 0; i < xNum - 1; i++)
-            {
-                int x1 = ValueToPixel(graphWidth, step * i + xLeft, xRight, xLeft);
-                int x2 = ValueToPixel(graphWidth, step * (i + 1) + xLeft, xRight, xLeft);
-                int y1 = ValueToPixel(graphHeight, values[i], maxH, minH);
-                int y2 = ValueToPixel(graphHeight, values[i + 1], maxH, minH);
-                DrawingHelper.DrawLine(ref graphTex, x1, y1, x2, y2, Color.green);
-            }
-
-            graphTex.Apply();
-
-            this.graphSettings = new GraphSettings(xLeft, xRight, min, max);
-            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
-            {
-                selectedCrossHairVect = CrossHairsFromConditions(Altitude, Speed, AoA);
-                SetConditionsFromGraph(selectedCrossHairVect);
-            }
-
-            CreateHorzAxis(this.graphSettings);
-            CreateVertAxis(this.graphSettings);
-
-            DrawGraph();
-        }
 
         public float GetGraphValue(int x, int y = -1)
         {
-            if (y == -1)
-                return PixelToValue(x, lineValues);
-            else
-                return PixelsToValue(x, y, surfValues);
+            return grapher.GetValueAt(x, y, 0);
         }
         public string GetConditionDetails(GraphMode mode, float altitude, float speed = float.NaN, float aoa = float.NaN)
         {
@@ -442,17 +258,12 @@ namespace KerbalWindTunnel
             }
         }
 
-        private GraphSettings graphSettings;
-
         private const int graphWidth = 500;
         private const int graphHeight = 400;
         private const int axisWidth = 10;
 
         internal readonly Vector2 PlotPosition = new Vector2(25, 155);
 
-        Texture2D graphTex = new Texture2D(graphWidth, graphHeight, TextureFormat.ARGB32, false);
-        Texture2D axisTexVert = new Texture2D(axisWidth, graphHeight, TextureFormat.ARGB32, false);
-        Texture2D axisTexHorz = new Texture2D(graphWidth, axisWidth, TextureFormat.ARGB32, false);
         GUIStyle hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
         GUIStyle vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
         Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
@@ -465,9 +276,9 @@ namespace KerbalWindTunnel
             GUILayout.BeginVertical();
 
             GUILayout.BeginHorizontal();
-            GUILayout.Box(axisTexVert, GUIStyle.none, GUILayout.Height(graphHeight), GUILayout.Width(axisWidth));
+            GUILayout.Box(grapher.vAxisTex, GUIStyle.none, GUILayout.Height(graphHeight), GUILayout.Width(axisWidth));
 
-            GUIContent graph = new GUIContent(graphTex);
+            GUIContent graph = new GUIContent(grapher.graphTex);
             graphRect = GUILayoutUtility.GetRect(graph, HighLogic.Skin.box, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
             GUI.Box(graphRect, graph);
             if (CurrentGraphMode == GraphMode.FlightEnvelope && showEnvelopeMask)
@@ -479,7 +290,7 @@ namespace KerbalWindTunnel
             GUILayout.Box("", GUIStyle.none, GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(5));
             GUILayout.BeginHorizontal();
             GUILayout.Box("", GUIStyle.none, GUILayout.Width(axisWidth + 4), GUILayout.Height(axisWidth));
-            GUILayout.Box(axisTexHorz, GUIStyle.none, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
+            GUILayout.Box(grapher.hAxisTex, GUIStyle.none, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
             GUILayout.EndHorizontal();
 
             GUILayout.Label("", GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(10));
@@ -494,16 +305,17 @@ namespace KerbalWindTunnel
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
-            for (int i = 0; i <= graphSettings.yMarks; i++)
+            for (int i = 0; i <= grapher.verticalAxis.TickCount; i++)
             {
-                GUI.Label(new Rect(5, 58 + graphHeight - ValueToPixel(graphHeight, i, graphSettings.yMarks), 40, 15),
-                    String.Format("{0}", graphSettings.yMajUnit * i + graphSettings.yBottom), vAxisMarks);
+
+                GUI.Label(new Rect(5, 58 + graphHeight - Mathf.RoundToInt(graphHeight / (float)grapher.verticalAxis.TickCount * i), 40, 15),
+                    grapher.verticalAxis.labels[i], vAxisMarks);
             }
 
-            for (int i = 0; i <= graphSettings.xMarks; i++)
+            for (int i = 0; i <= grapher.horizontalAxis.TickCount; i++)
             {
-                GUI.Label(new Rect(43 + ValueToPixel(graphWidth, i, graphSettings.xMarks), 80 + graphHeight, 40, 15),
-                    String.Format("{0}", graphSettings.xMajUnit * i + graphSettings.xLeft), hAxisMarks);
+                GUI.Label(new Rect(43 + Mathf.RoundToInt(graphWidth / (float)grapher.horizontalAxis.TickCount * i), 80 + graphHeight, 40, 15),
+                    grapher.horizontalAxis.labels[i], hAxisMarks);
             }
         }
 
@@ -524,185 +336,6 @@ namespace KerbalWindTunnel
             rectTemp.width = (float)Math.Ceiling(rectTemp.width = rectTemp.width * Scale);
             if (rectTemp.width <= 2) Style = StyleNarrow;
             GUI.Label(rectTemp, "", Style);
-        }
-
-        private void CreateVertAxis(GraphSettings graphSettings)
-        {
-            Color[] pixels = axisTexVert.GetPixels();
-            int nextLine = 0;
-            int index = 0;
-            
-            for(int yg = 0; yg < graphHeight; yg++)
-            {
-                Color rowColor;
-                if (yg == nextLine)
-                {
-                    rowColor = Color.white;
-                    index++;
-                    nextLine = ValueToPixel(graphHeight, index, graphSettings.yMarks, 0);
-                }
-                else
-                    rowColor = new Color(0, 0, 0, 0);
-                for (int x = 0; x < axisWidth - 1; x++)
-                {
-                    int gindex = x + axisWidth * yg;
-                    pixels[gindex] = rowColor;
-                }
-                pixels[axisWidth - 1 + axisWidth * yg] = Color.white;
-            }
-
-            axisTexVert.SetPixels(pixels);
-            axisTexVert.Apply();
-        }
-        private void CreateHorzAxis(GraphSettings graphSettings)
-        {
-            Color[] pixels = axisTexHorz.GetPixels();
-            int nextLine = 0;
-            int index = 0;
-
-            for (int x = 0; x < graphWidth; x++)
-            {
-                Color rowColor;
-                if (x == nextLine)
-                {
-                    rowColor = Color.white;
-                    index++;
-                    nextLine = ValueToPixel(graphWidth, index, graphSettings.xMarks, 0);
-                }
-                else
-                    rowColor = new Color(0, 0, 0, 0);
-                for (int yg = 0; yg < axisWidth - 1; yg++)
-                {
-                    int gindex = x + graphWidth * yg;
-                    pixels[gindex] = rowColor;
-                }
-                pixels[x + graphWidth * (axisWidth - 1)] = Color.white;
-            }
-
-            axisTexHorz.SetPixels(pixels);
-            axisTexHorz.Apply();
-        }
-
-        public static float GetMajorUnit(float range)
-        {
-            const float c = 18f / 11;
-            if (range < 0)
-                range = -range;
-            float oom = Mathf.Pow(10, Mathf.Floor(Mathf.Log10(range)));
-            float normVal = range / oom;
-            if (normVal > 5 * c)
-                return 2 * oom;
-            else if (normVal > 2.5f * c)
-                return oom;
-            else if (normVal > c)
-                return 0.5f * oom;
-            else
-                return 0.2f * oom;
-        }
-        public static float GetMajorUnit(float max, float min, bool forX)
-        {
-            if (Mathf.Sign(max) != Mathf.Sign(min))
-                return GetMajorUnit(max - min);
-            float c;
-            if (forX)
-                c = 12f / 7;
-            else
-                c = 40f / 21;
-            float range = Mathf.Max(max, -min);
-            if (range < 0)
-                range = -range;
-            float oom = Mathf.Pow(10, Mathf.Floor(Mathf.Log10(range)));
-            float normVal = range / oom;
-            if (normVal > 5 * c)
-                return 2 * oom;
-            else if (normVal > 2.5f * c)
-                return oom;
-            else if (normVal > c)
-                return 0.5f * oom;
-            else
-                return 0.2f * oom;
-        }
-
-        public static Color ColorMapJet(float value)
-        {
-            if (float.IsNaN(value))
-                return Color.black;
-
-            const float fractional = 1f / 3f;
-            const float mins = 128f / 255f;
-
-            if (value < fractional)
-            {
-                value = (value / fractional * (128 - 255) + 255) / 255;
-                return new Color(mins, 1, value, 1);
-            }
-            if (value < 2 * fractional)
-            {
-                value = ((value - fractional) / fractional * (255 - 128) + 128) / 255;
-                return new Color(value, 1, mins, 1);
-            }
-            value = ((value - 2 * fractional) / fractional * (128 - 255) + 255) / 255;
-            return new Color(1, value, mins, 1);
-        }
-        public static Color ColorMapJetDark(float value)
-        {
-            if (float.IsNaN(value))
-                return Color.black;
-
-            const float fractional = 0.25f;
-            const float mins = 128f / 255f;
-
-            if (value < fractional)
-            {
-                value = (value / fractional * (255 - 128) + 128) / 255;
-                return new Color(mins, value, 1, 1);
-            }
-            if (value < 2 * fractional)
-            {
-                value = ((value - fractional) / fractional * (128 - 255) + 255) / 255;
-                return new Color(mins, 1, value, 1);
-            }
-            if (value < 3 * fractional)
-            {
-                value = ((value - 2 * fractional) / fractional * (255 - 128) + 128) / 255;
-                return new Color(value, 1, mins, 1);
-            }
-            value = ((value - 3 * fractional) / fractional * (128 - 255) + 255) / 255;
-            return new Color(1, value, mins, 1);
-        }
-
-        private struct GraphSettings
-        {
-            public readonly float xLeft, xRight, yBottom, yTop;
-            public readonly float xMajUnit, yMajUnit;
-            public readonly int xMarks, yMarks;
-
-            public GraphSettings(float xLeft, float xRight, float yBottom, float yTop)
-            {
-                xMajUnit = GetMajorUnit(xRight, xLeft, true);
-                yMajUnit = GetMajorUnit(yTop, yBottom, false);
-                if (xLeft % xMajUnit == 0)
-                    this.xLeft = xLeft;
-                else
-                    this.xLeft = Mathf.Floor(Mathf.Min(xLeft, 0) / xMajUnit * 1.05f) * xMajUnit;
-                if (xRight % xMajUnit == 0)
-                    this.xRight = xRight;
-                else
-                    this.xRight = Mathf.Ceil(Mathf.Max(xRight, 0) / xMajUnit * 1.05f) * xMajUnit;
-                if (yBottom % yMajUnit == 0)
-                    this.yBottom = yBottom;
-                else
-                    this.yBottom = Mathf.Floor(Mathf.Min(yBottom, 0) / yMajUnit * 1.05f) * yMajUnit;
-                if (yTop % yMajUnit == 0)
-                    this.yTop = yTop;
-                else
-                    this.yTop = Mathf.Ceil(Mathf.Max(yTop, 0) / yMajUnit * 1.05f) * yMajUnit;
-
-                xMarks = Mathf.RoundToInt((this.xRight - this.xLeft) / this.xMajUnit);
-                //xMarks = Mathf.CeilToInt(Mathf.Max(xRight, 0) / xMajUnit * 1.05f) - Mathf.FloorToInt(Mathf.Min(xLeft, 0) / xMajUnit * 1.05f);
-                yMarks = Mathf.RoundToInt((this.yTop - this.yBottom) / this.yMajUnit);
-                //yMarks = Mathf.CeilToInt(Mathf.Max(yTop, 0) / yMajUnit * 1.05f) - Mathf.FloorToInt(Mathf.Min(yBottom, 0) / yMajUnit * 1.05f);
-            }
         }
     }
 }

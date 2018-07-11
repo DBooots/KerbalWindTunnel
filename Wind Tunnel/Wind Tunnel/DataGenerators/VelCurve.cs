@@ -2,52 +2,27 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using UnityEngine;
+using KerbalWindTunnel.Graphing;
 
-namespace KerbalWindTunnel.Graphing
+namespace KerbalWindTunnel.DataGenerators
 {
-    public static class VelCurve
+    public class VelCurve : DataSetGenerator
     {
-        public static VelPoint[] VelPoints = new VelPoint[0];
-        private static CalculationManager calculationManager = new CalculationManager();
-        public static CalculationManager.RunStatus Status
+        public VelPoint[] VelPoints = new VelPoint[0];
+        public Conditions currentConditions = Conditions.Blank;
+        private Dictionary<Conditions, VelPoint[]> cache = new Dictionary<Conditions, VelPoint[]>();
+        
+        public override void Clear()
         {
-            get
-            {
-                CalculationManager.RunStatus status = calculationManager.Status;
-                if (status == CalculationManager.RunStatus.Completed && !valuesSet)
-                    return CalculationManager.RunStatus.Running;
-                if (status == CalculationManager.RunStatus.PreStart && valuesSet)
-                    return CalculationManager.RunStatus.Completed;
-                return status;
-            }
-        }
-        public static float PercentComplete
-        {
-            get { return calculationManager.PercentComplete; }
-        }
-        private static bool valuesSet = false;
-        public static Conditions currentConditions = Conditions.Blank;
-        private static Dictionary<Conditions, VelPoint[]> cache = new Dictionary<Conditions, VelPoint[]>();
-
-        public static void Cancel()
-        {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
-            valuesSet = false;
-        }
-        public static void Clear()
-        {
-            calculationManager.Cancel();
-            calculationManager = new CalculationManager();
+            base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
             VelPoints = new VelPoint[0];
         }
 
-        public static void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float lowerBound = 0, float upperBound = 2000, float step = 50)
+        public void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float lowerBound = 0, float upperBound = 2000, float step = 50)
         {
             Conditions newConditions = new Conditions(body, altitude, lowerBound, upperBound, step);
             if (newConditions.Equals(currentConditions))
@@ -66,11 +41,28 @@ namespace KerbalWindTunnel.Graphing
             {
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }
 
-        private static IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
+        private void GenerateGraphs()
+        {
+            graphs.Clear();
+            float left = currentConditions.lowerBound;
+            float right = currentConditions.upperBound;
+            graphs.Add("Level AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_level * 180 / Mathf.PI).ToArray(), left, right) { Name = "Level AoA", Unit = "°", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Max Lift AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_max * 180 / Mathf.PI).ToArray(), left, right) { Name = "Max Lift AoA", Unit = "°", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Thrust Available", new LineGraph(VelPoints.Select(pt => pt.Thrust_available).ToArray(), left, right) { Name = "Thrust Available", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Lift/Drag Ratio", new LineGraph(VelPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Drag", new LineGraph(VelPoints.Select(pt => pt.drag).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Lift Slope", new LineGraph(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = Color.green });
+            graphs.Add("Excess Thrust", new LineGraph(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            //graphs.Add("Excess Acceleration", new LineGraph(VelPoints.Select(pt => pt.Accel_excess).ToArray(), left, right) { Name = "Excess Acceleration", Unit = "g", StringFormat = "N2", Color = Color.green });
+            //graphs.Add("Max Lift", new LineGraph(VelPoints.Select(pt => pt.Lift_max).ToArray(), left, right) { Name = "Max Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
+        }
+
+        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
         {
             int numPts = (int)Math.Ceiling((conditions.upperBound - conditions.lowerBound) / conditions.step);
             VelPoint[] newVelPoints = new VelPoint[numPts + 1];
@@ -101,6 +93,7 @@ namespace KerbalWindTunnel.Graphing
                 cache.Add(conditions, newVelPoints);
                 VelPoints = newVelPoints;
                 currentConditions = conditions;
+                GenerateGraphs();
                 valuesSet = true;
             }
         }

@@ -90,7 +90,7 @@ namespace KerbalWindTunnel
             highlightedParts.Add(part);
 
             part.SetHighlightType(Part.HighlightType.AlwaysOn);
-            part.SetHighlightColor(WindTunnelWindow.ColorMapJet(value));
+            part.SetHighlightColor(Graphing.ColorMap.Jet[value]);
             part.SetHighlight(true, false);
         }
 
