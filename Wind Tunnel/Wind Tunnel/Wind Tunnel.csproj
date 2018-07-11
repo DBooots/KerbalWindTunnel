@@ -70,7 +70,6 @@
     <Compile Include="DataGenerators\EnvelopeSurf.cs" />
     <Compile Include="Graphing\Graph.cs" />
     <Compile Include="DataGenerators\GraphGenerator.cs" />
-    <Compile Include="Graphing\Graphable.cs" />
     <Compile Include="Graphing\LineGraph.cs" />
     <Compile Include="Graphing\SurfGraph.cs" />
     <Compile Include="DataGenerators\VelCurve.cs" />
