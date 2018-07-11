@@ -47,8 +47,18 @@ namespace KerbalWindTunnel.RootSolvers
             get { return new RootSolverSettings(); }
         }
 
-        public RootSolverSettings(params RootSolverOption[] options)
+        public RootSolverSettings() { }
+        public RootSolverSettings(params RootSolverOption[] options) : this(RootSolverSettings.Default, options) { }
+        public RootSolverSettings(RootSolverSettings oldSettings, params RootSolverOption[] options)
         {
+            this.leftBound = oldSettings.leftBound;
+            this.rightBound = oldSettings.rightBound;
+            this.leftGuessBound = oldSettings.leftGuessBound;
+            this.rightGuessBound = oldSettings.rightGuessBound;
+            this.bestGuess = oldSettings.bestGuess;
+            this.shiftWithGuess = oldSettings.shiftWithGuess;
+            this.tolerance = oldSettings.tolerance;
+
             int count = options.Length;
             for (int i = 0; i < count; i++)
             {
@@ -104,16 +114,6 @@ namespace KerbalWindTunnel.RootSolvers
                         break;
                 }
             }
-        }
-        public RootSolverSettings(RootSolverSettings oldSettings, params RootSolverOption[] options) : this(options)
-        {
-            this.leftBound = oldSettings.leftBound;
-            this.rightBound = oldSettings.rightBound;
-            this.leftGuessBound = oldSettings.leftGuessBound;
-            this.rightGuessBound = oldSettings.rightGuessBound;
-            this.bestGuess = oldSettings.bestGuess;
-            this.shiftWithGuess = oldSettings.shiftWithGuess;
-            this.tolerance = oldSettings.tolerance;
         }
         public RootSolverSettings ApplyOption(RootSolverOption option)
         {
