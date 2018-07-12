@@ -44,6 +44,7 @@ namespace KerbalWindTunnel
             RootSolver.RightGuessBound(5 * Mathf.PI / 180),
             RootSolver.ShiftWithGuess(true),
             RootSolver.Tolerance(0.0001f));
+
         public RootSolver rootSolver = new RootSolvers.Brent();
         private AeroPredictor vessel = null;
         private CelestialBody body = Planetarium.fetch.CurrentMainBody;
@@ -89,14 +90,14 @@ namespace KerbalWindTunnel
 
         public readonly GraphSelect[][] selectFromIndex = new GraphSelect[][]{
             new GraphSelect[]{ GraphSelect.ExcessThrust, GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.LiftSlope, GraphSelect.ExcessAcceleration, GraphSelect.FuelBurn, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce },
-            new GraphSelect[]{ GraphSelect.LiftForce, GraphSelect.DragForce, GraphSelect.LiftDragRatio, GraphSelect.LiftSlope },
+            new GraphSelect[]{ GraphSelect.LiftForce, GraphSelect.DragForce, GraphSelect.LiftDragRatio, GraphSelect.LiftSlope, GraphSelect.PitchInput },
             new GraphSelect[]{ GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.DragForce, GraphSelect.LiftSlope, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce } };
 
         public readonly int[][] indexFromSelect = new int[][]
         {
-            new int[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0 },
-            new int[]{ 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 1 },
-            new int[]{ 0, 0, 1, 2, 4, 0, 0, 5, 6, 0, 3 } };
+            new int[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0 },
+            new int[]{ 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 1, 4 },
+            new int[]{ 0, 0, 1, 2, 4, 0, 0, 5, 6, 0, 3, 0 } };
 
         public enum GraphSelect
         {
@@ -112,6 +113,7 @@ namespace KerbalWindTunnel
 
             LiftForce = 9,
             DragForce = 10,
+            PitchInput = 11
             //LiftDragRatio = 2,
             //LiftSlope = 4
 
@@ -142,11 +144,11 @@ namespace KerbalWindTunnel
         private readonly string[] graphModes = new string[] { "Flight Envelope", "AoA Curves", "Velocity Curves" };
         private readonly string[][] graphSelections = new string[][] {
             new string[] { "Excess Thrust", "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Lift Slope", "Excess Acceleration" },
-            new string[] { "Lift Force", "Drag Force", "Lift/Drag Ratio", "Lift Slope" },
+            new string[] { "Lift Force", "Drag Force", "Lift/Drag Ratio", "Lift Slope", "Pitch Input" },
             new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Drag Force" }
         };
         private readonly string[] highliftModeStrings = new string[] { "Off", "Drag", "Lift" };
-        private readonly string[] graphUnits = new string[] { "{0:N0}kN", "{0:N2}°", "{0:N2}", "{0:N0}kN", "{0:N2}m^2/°", "{0:N2}g", "{0:N0}kg/s", "{0:N2}°", "{0:N0}kN", "{0:N0}kN", "{0:N0}kN" };
+        private readonly string[] graphUnits = new string[] { "{0:N0}kN", "{0:N2}°", "{0:N2}", "{0:N0}kN", "{0:N2}m^2/°", "{0:N2}g", "{0:N0}kg/s", "{0:N2}°", "{0:N0}kN", "{0:N0}kN", "{0:N0}kN", "{0:F3}" };
 
         private bool graphDirty = true;
         private bool graphRequested = false;

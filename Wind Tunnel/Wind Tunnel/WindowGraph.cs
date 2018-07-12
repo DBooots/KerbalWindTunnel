@@ -91,6 +91,9 @@ namespace KerbalWindTunnel
                                     case GraphSelect.LiftSlope:
                                         grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Lift Slope"));
                                         break;
+                                    case GraphSelect.PitchInput:
+                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Pitch Input"));
+                                        break;
                                 }
                                 grapher.RecalculateLimits();
 
@@ -135,6 +138,9 @@ namespace KerbalWindTunnel
                                     case GraphSelect.LiftSlope:
                                         grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Lift Slope"));
                                         break;
+                                    case GraphSelect.PitchInput:
+                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Pitch Input"));
+                                        break;
                                 }
                                 graphDirty = false;
                                 break;
@@ -174,6 +180,9 @@ namespace KerbalWindTunnel
                                         break;
                                     case GraphSelect.LiftSlope:
                                         grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Lift Slope"));
+                                        break;
+                                    case GraphSelect.PitchInput:
+                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Pitch Input"));
                                         break;
                                 }
                                 graphDirty = false;

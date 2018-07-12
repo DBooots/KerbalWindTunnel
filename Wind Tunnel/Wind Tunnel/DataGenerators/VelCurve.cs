@@ -58,6 +58,7 @@ namespace KerbalWindTunnel.DataGenerators
             graphs.Add("Drag", new LineGraph(VelPoints.Select(pt => pt.drag).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
             graphs.Add("Lift Slope", new LineGraph(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = Color.green });
             graphs.Add("Excess Thrust", new LineGraph(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Pitch Input", new LineGraph(VelPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input", Unit = "", StringFormat = "F3", Color = Color.green });
             //graphs.Add("Excess Acceleration", new LineGraph(VelPoints.Select(pt => pt.Accel_excess).ToArray(), left, right) { Name = "Excess Acceleration", Unit = "g", StringFormat = "N2", Color = Color.green });
             //graphs.Add("Max Lift", new LineGraph(VelPoints.Select(pt => pt.Lift_max).ToArray(), left, right) { Name = "Max Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
         }
