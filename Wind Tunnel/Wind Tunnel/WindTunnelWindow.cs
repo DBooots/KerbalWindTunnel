@@ -35,6 +35,8 @@ namespace KerbalWindTunnel
 
         public WindTunnel Parent { get; internal set; }
 
+        public static readonly float gAccel = (float)(Planetarium.fetch.Home.gravParameter / (Planetarium.fetch.Home.Radius * Planetarium.fetch.Home.Radius));
+
         public RootSolverSettings solverSettings = new RootSolverSettings(
             RootSolver.LeftBound(-15 * Mathf.PI / 180),
             RootSolver.RightBound(35 * Mathf.PI / 180),

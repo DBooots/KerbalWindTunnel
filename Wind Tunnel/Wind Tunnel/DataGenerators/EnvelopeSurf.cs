@@ -201,7 +201,7 @@ namespace KerbalWindTunnel.DataGenerators
                     liftforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
                     drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                     Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
-                    Accel_excess = (Thrust_excess / vessel.Mass);
+                    Accel_excess = (Thrust_excess / vessel.Mass / WindTunnelWindow.gAccel);
                     LDRatio = Mathf.Abs(weight / drag);
                     dLift = (vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level + WindTunnelWindow.AoAdelta) -
                         vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level)) / (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
