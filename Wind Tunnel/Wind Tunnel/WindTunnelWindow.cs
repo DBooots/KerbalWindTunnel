@@ -264,21 +264,21 @@ namespace KerbalWindTunnel
                 bool oxygenAvailable;
                 lock (body)
                 {
-                    atmPressure = (float)body.GetPressure(altitude);
-                    atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
-                    mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
+                    atmPressure = (float)body.GetPressure(Altitude);
+                    atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, Altitude);
+                    mach = (float)(Speed / body.GetSpeedOfSound(atmPressure, atmDensity));
                     oxygenAvailable = body.atmosphereContainsOxygen;
                 }
 
                 //Debug.Log("Aero Force (stock): " + stockVessel.GetAeroForce(body, speed, altitude, 2.847f * Mathf.PI / 180, mach));
                 //Debug.Log("Lift Force (stock): " + stockVessel.GetLiftForce(body, speed, altitude, 2.847f * Mathf.PI / 180));
 
-                VesselCache.SimulatedVessel testVessel = (VesselCache.SimulatedVessel)vessel;//VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+                VesselCache.SimulatedVessel testVessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
 
-                float weight = (float)(testVessel.Mass * body.gravParameter / ((body.Radius + altitude) * (body.Radius + altitude))); // TODO: Minus centrifugal force...
+                float weight = (float)(testVessel.Mass * body.gravParameter / ((body.Radius + Altitude) * (body.Radius + Altitude))); // TODO: Minus centrifugal force...
                 Vector3 thrustForce = testVessel.GetThrustForce(mach, atmDensity, atmPressure, oxygenAvailable);
 
-                Graphing.EnvelopeSurf.EnvelopePoint pt = new Graphing.EnvelopeSurf.EnvelopePoint(VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body)), body, altitude, speed, this.rootSolver, 0);
+                DataGenerators.EnvelopeSurf.EnvelopePoint pt = new DataGenerators.EnvelopeSurf.EnvelopePoint(VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body)), body, Altitude, Speed, this.rootSolver, 0);
                 Debug.Log("AoA Level:        " + pt.AoA_level * 180 / Mathf.PI);
                 Debug.Log("Thrust Available: " + pt.Thrust_available);
                 Debug.Log("Excess Thrust:    " + pt.Thrust_excess);
@@ -288,11 +288,13 @@ namespace KerbalWindTunnel
                 Debug.Log("Force:            " + pt.force);
                 Debug.Log("LiftForce:        " + pt.liftforce);
                 Debug.Log("");
-                Debug.Log("Aero Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetAeroForce(body, speed, altitude, pt.AoA_level, mach), pt.AoA_level));
-                Debug.Log("Lift Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetLiftForce(body, speed, altitude, pt.AoA_level), pt.AoA_level));
-                AeroPredictor stockVessel = new StockAero();
-                Debug.Log("Aero Force (stock): " + AeroPredictor.ToFlightFrame(stockVessel.GetAeroForce(body, speed, altitude, pt.AoA_level, mach), pt.AoA_level));
-                Debug.Log("Lift Force (stock): " + AeroPredictor.ToFlightFrame(stockVessel.GetLiftForce(body, speed, altitude, pt.AoA_level), pt.AoA_level));
+                AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, Speed, Altitude);
+                Debug.Log("Aero Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetAeroForce(conditions, pt.AoA_level, 0, out Vector3 torque), pt.AoA_level));
+                Debug.Log("Lift Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetLiftForce(conditions, pt.AoA_level, 0, out Vector3 lTorque), pt.AoA_level));
+                Debug.Log("Aero torque: " + torque);
+                Debug.Log("Lift torque: " + lTorque);
+                Debug.Log("Aero torque1:  " + testVessel.GetAeroTorque(conditions, pt.AoA_level, 1));
+                Debug.Log("Aero torque-1: " + testVessel.GetAeroTorque(conditions, pt.AoA_level, -1));
                 Debug.Log("");
             }//*/
 

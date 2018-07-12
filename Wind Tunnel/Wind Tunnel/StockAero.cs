@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using KerbalWindTunnel.RootSolvers;
 using UnityEngine;
 
 namespace KerbalWindTunnel
@@ -16,13 +17,13 @@ namespace KerbalWindTunnel
             }
         }
 
-        public override Vector3 GetAeroForce(CelestialBody body, float speed, float altitude, float AoA)
+        public override Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
-            return StockAeroUtil.SimAeroForce(body, EditorLogic.fetch.ship, InflowVect(AoA) * speed, altitude);
+            return StockAeroUtil.SimAeroForce(conditions.body, EditorLogic.fetch.ship, InflowVect(AoA) * conditions.speed, conditions.altitude);
         }
-        public override Vector3 GetLiftForce(CelestialBody body, float speed, float altitude, float AoA)
+        public override Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
-            return StockAeroUtil.SimLiftForce(body, EditorLogic.fetch.ship, InflowVect(AoA) * speed, altitude);
+            return StockAeroUtil.SimLiftForce(conditions.body, EditorLogic.fetch.ship, InflowVect(AoA) * conditions.speed, conditions.altitude);
         }
 
         public override Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
@@ -103,6 +104,16 @@ namespace KerbalWindTunnel
         public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
         {
             throw new NotImplementedException();
+        }
+
+        public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override float GetPitchInput(RootSolver solver, Conditions conditions, float AoA)
+        {
+            return 0;
         }
     }
 }

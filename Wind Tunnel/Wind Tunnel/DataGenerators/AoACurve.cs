@@ -127,25 +127,22 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float dynamicPressure;
             public readonly float dLift;
             public readonly float mach;
+            public readonly float pitchInput;
 
             public AoAPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA)
             {
                 this.altitude = altitude;
                 this.speed = speed;
+                AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, speed, altitude);
                 this.AoA = AoA;
-                float atmDensity, atmPressure;
-                lock (body)
-                {
-                    atmPressure = (float)body.GetPressure(altitude);
-                    atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
-                    this.mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
-                }
-                this.dynamicPressure = 0.0005f * atmDensity * speed * speed;
-                Vector3 force = AeroPredictor.ToFlightFrame(vessel.GetAeroForce(body, speed, altitude, AoA), AoA);
+                this.mach = conditions.mach;
+                this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
+                this.pitchInput = vessel.GetPitchInput(WindTunnelWindow.Instance.rootSolver, conditions, AoA);
+                Vector3 force = AeroPredictor.ToFlightFrame(vessel.GetAeroForce(conditions, AoA, pitchInput), AoA);
                 Lift = force.y;
                 Drag = -force.z;
                 LDRatio = Mathf.Abs(Lift / Drag);
-                dLift = (vessel.GetLiftForceMagnitude(body, speed, altitude, AoA + WindTunnelWindow.AoAdelta) - Lift) /
+                dLift = (vessel.GetLiftForceMagnitude(conditions, AoA + WindTunnelWindow.AoAdelta, pitchInput) - Lift) /
                     (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
             }
         }

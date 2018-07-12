@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using KerbalWindTunnel.RootSolvers;
 using Smooth.Pools;
 using UnityEngine;
 
@@ -8,101 +9,164 @@ namespace KerbalWindTunnel.VesselCache
 {
     public class SimulatedVessel : AeroPredictor
     {
+        public static bool accountForControls = false;
+
+        RootSolverSettings pitchInputSolverSettings = new RootSolverSettings(
+            RootSolver.LeftBound(-1),
+            RootSolver.RightBound(1),
+            RootSolver.LeftGuessBound(-0.25f),
+            RootSolver.RightGuessBound(0.25f),
+            RootSolver.ShiftWithGuess(true),
+            RootSolver.Tolerance(0.01f));
+
+        RootSolverSettings coarseAoASolverSettings = new RootSolverSettings(
+            WindTunnelWindow.Instance.solverSettings,
+            RootSolver.Tolerance(1 * Mathf.PI / 180));
+
+        RootSolverSettings fineAoASolverSettings = new RootSolverSettings(
+            WindTunnelWindow.Instance.solverSettings,
+            RootSolver.LeftGuessBound(-2 * Mathf.PI / 180),
+            RootSolver.RightGuessBound(2 * Mathf.PI / 180),
+            RootSolver.ShiftWithGuess(true));
+        
         public List<SimulatedPart> parts = new List<SimulatedPart>();
         public List<SimulatedLiftingSurface> surfaces = new List<SimulatedLiftingSurface>();
+        public List<SimulatedControlSurface> ctrls = new List<SimulatedControlSurface>();
         public List<SimulatedEngine> engines = new List<SimulatedEngine>();
 
         private int count;
         public float totalMass = 0;
+        public Vector3 CoM;
 
         private SimCurves simCurves;
 
         public override bool ThreadSafe { get { return true; } }
 
         public override float Mass { get { return totalMass; } }
-
-        public override Vector3 GetAeroForce(CelestialBody body, float speed, float altitude, float AoA)
-        {
-            float atmDensity, mach;
-            lock (body)
-            {
-                float atmPressure = (float)body.GetPressure(altitude);
-                atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
-                mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
-            }
-
-            float pseudoReDragMult;
-            lock (simCurves.DragCurvePseudoReynolds)
-                pseudoReDragMult = simCurves.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
-
-            return this.GetAeroForce(body, speed, altitude, AoA, mach, atmDensity, pseudoReDragMult);
-        }
-        public override Vector3 GetAeroForce(CelestialBody body, float speed, float altitude, float AoA, float mach)
-        {
-            float pseudoReDragMult, atmDensity;
-            lock (body)
-                atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
-            lock (simCurves.DragCurvePseudoReynolds)
-                pseudoReDragMult = simCurves.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
-
-            return this.GetAeroForce(body, speed, altitude, AoA, mach, atmDensity, pseudoReDragMult);
-        }
-        public override Vector3 GetAeroForce(CelestialBody body, float speed, float altitude, float AoA, float mach, float atmDensity)
-        {
-            float pseudoReDragMult;
-            lock (simCurves.DragCurvePseudoReynolds)
-                pseudoReDragMult = simCurves.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
-            return this.GetAeroForce(body, speed, altitude, AoA, mach, atmDensity, pseudoReDragMult);
-        }
-        public override Vector3 GetAeroForce(CelestialBody body, float speed, float altitude, float AoA, float mach, float atmDensity, float pseudoReDragMult)
+        public Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque)
         {
             Vector3 aeroForce = Vector3.zero;
             Vector3 inflow = InflowVect(AoA);
+            torque = Vector3.zero;
 
             for (int i = parts.Count - 1; i >= 0; i--)
             {
                 if (parts[i].shieldedFromAirstream)
                     continue;
-                aeroForce += parts[i].GetAero(inflow, mach, pseudoReDragMult);
+                aeroForce += parts[i].GetAero(inflow, conditions.mach, conditions.pseudoReDragMult, out Vector3 pTorque);
+                torque += pTorque;
             }
             for (int i = surfaces.Count - 1; i >= 0; i--)
             {
                 if (surfaces[i].part.shieldedFromAirstream)
                     continue;
-                aeroForce += surfaces[i].GetForce(inflow, mach);
+                aeroForce += surfaces[i].GetForce(inflow, conditions.mach, out Vector3 pTorque);
+                torque += pTorque;
             }
-            return aeroForce * 0.0005f * atmDensity * speed * speed;
-        }
-
-        public override Vector3 GetLiftForce(CelestialBody body, float speed, float altitude, float AoA)
-        {
-            float mach, atmDensity;
-            lock (body)
+            for (int i = ctrls.Count - 1; i >=0; i--)
             {
-                float atmPressure = (float)body.GetPressure(altitude);
-                atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
-                mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
+                if (ctrls[i].part.shieldedFromAirstream)
+                    continue;
+                aeroForce += ctrls[i].GetForce(inflow, conditions.mach, pitchInput, conditions.pseudoReDragMult, out Vector3 pTorque);
+                torque += pTorque;
             }
-            /*float atmPressure = simCurves.GetPressure(altitude);
-            float atmDensity = simCurves.GetDensity(altitude);
-            mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));*/
-
-            return this.GetLiftForce(body, speed, altitude, AoA, mach, atmDensity);
+            float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
+            torque *= Q;
+            return aeroForce * Q;
         }
-        public override Vector3 GetLiftForce(CelestialBody body, float speed, float altitude, float AoA, float mach, float atmDensity)
+        public override Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0)
+        {
+            return GetAeroForce(conditions, AoA, pitchInput, out _);
+        }
+        
+        public Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque)
         {
             Vector3 aeroForce = Vector3.zero;
             Vector3 inflow = InflowVect(AoA);
+            torque = Vector3.zero;
 
             for (int i = parts.Count - 1; i >= 0; i--)
             {
-                aeroForce += parts[i].GetLift(inflow, mach);
+                if (parts[i].shieldedFromAirstream)
+                    continue;
+                aeroForce += parts[i].GetLift(inflow, conditions.mach, out Vector3 pTorque);
+                torque += pTorque;
             }
             for (int i = surfaces.Count - 1; i >= 0; i--)
             {
-                aeroForce += surfaces[i].GetLift(inflow, mach);
+                if (surfaces[i].part.shieldedFromAirstream)
+                    continue;
+                aeroForce += surfaces[i].GetLift(inflow, conditions.mach, out Vector3 pTorque);
+                torque += pTorque;
             }
-            return aeroForce * 0.0005f * atmDensity * speed * speed;
+            for (int i = ctrls.Count - 1; i >= 0; i--)
+            {
+                if (ctrls[i].part.shieldedFromAirstream)
+                    continue;
+                aeroForce += ctrls[i].GetLift(inflow, conditions.mach, pitchInput, out Vector3 pTorque);
+                torque += pTorque;
+            }
+            float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
+            torque *= Q;
+            return aeroForce * Q;
+        }
+        public override Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput = 0)
+        {
+            return GetLiftForce(conditions, AoA, pitchInput, out _);
+        }
+
+        public override float GetAoA(RootSolver solver, Conditions conditions, float offsettingForce, bool useThrust = true)
+        {
+            return this.GetAoA(solver, conditions, offsettingForce, out _, useThrust);
+        }
+
+        // TODO: Add ITorqueProvider and thrust effect on torque
+        public override float GetAoA(RootSolver solver, Conditions conditions, float offsettingForce, out float pitchInput, bool useThrust = true)
+        {
+            Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
+
+            pitchInput = 0;
+            if (!accountForControls)
+                return solver.Solve(
+                    (aoa) => AeroPredictor.GetLiftForceMagnitude(this.GetLiftForce(conditions, aoa, 0) + thrustForce, aoa) - offsettingForce,
+                    0, WindTunnelWindow.Instance.solverSettings);
+
+            float pi = 0;
+            float approxAoA = solver.Solve(
+                (aoa) => AeroPredictor.GetLiftForceMagnitude(this.GetLiftForce(conditions, aoa, pi) + thrustForce, aoa) - offsettingForce,
+                0, coarseAoASolverSettings);
+            float result = solver.Solve((aoa) =>
+            {
+                float netF = -offsettingForce;
+                pi = solver.Solve((input) =>
+                {
+                    netF = AeroPredictor.GetLiftForceMagnitude(this.GetAeroForce(conditions, aoa, input, out Vector3 torque) + thrustForce, aoa) - offsettingForce;
+                    return torque.x;
+                }, pi, pitchInputSolverSettings);
+                return netF;
+            }, 0, fineAoASolverSettings);
+
+            pitchInput = pi;
+            return result;
+        }
+
+        // TODO: Add ITorqueProvider and thrust effect on torque
+        public override float GetPitchInput(RootSolver solver, Conditions conditions, float AoA)
+        {
+            float pi = solver.Solve((input) => this.GetAeroTorque(conditions, AoA, input).x,
+                0, pitchInputSolverSettings);
+            return pi;
+        }
+        
+        public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0)
+        {
+            GetAeroForce(conditions, AoA, pitchInput, out Vector3 torque);
+            return torque;
+        }
+        
+        public override void GetAeroCombined(Conditions conditions, float AoA, float pitchInput, out Vector3 forces, out Vector3 torques)
+        {
+            forces = GetAeroForce(conditions, AoA, pitchInput, out torques);
         }
 
         public override Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
@@ -114,7 +178,7 @@ namespace KerbalWindTunnel.VesselCache
             }
             return thrust;
         }
-
+        
         public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
         {
             float burnRate = 0;
@@ -148,6 +212,8 @@ namespace KerbalWindTunnel.VesselCache
             obj.parts.Clear();
             SimulatedLiftingSurface.Release(obj.surfaces);
             obj.surfaces.Clear();
+            SimulatedControlSurface.Release(obj.ctrls);
+            obj.ctrls.Clear();
             SimulatedEngine.Release(obj.engines);
             obj.engines.Clear();
         }
@@ -162,8 +228,10 @@ namespace KerbalWindTunnel.VesselCache
         private void Init(IShipconstruct v, SimCurves _simCurves)
         {
             totalMass = 0;
+            CoM = Vector3.zero;
 
             List<Part> oParts = v.Parts;
+            List<SimulatedPart> variableDragParts_ctrls = new List<SimulatedPart>();
             count = oParts.Count;
 
             if (HighLogic.LoadedSceneIsEditor)
@@ -206,6 +274,7 @@ namespace KerbalWindTunnel.VesselCache
                 SimulatedPart simulatedPart = SimulatedPart.Borrow(oParts[i]);
                 parts.Add(simulatedPart);
                 totalMass += simulatedPart.totalMass;
+                CoM += simulatedPart.totalMass * simulatedPart.CoM;
 
                 if (!oParts[i].ShieldedFromAirstream)
                 {
@@ -219,9 +288,20 @@ namespace KerbalWindTunnel.VesselCache
                 ModuleLiftingSurface liftingSurface = oParts[i].FindModuleImplementing<ModuleLiftingSurface>();
                 if (liftingSurface != null)
                 {
-                    surfaces.Add(SimulatedLiftingSurface.Borrow(liftingSurface, simulatedPart));
                     parts[i].hasLiftModule = true;
+                    if (liftingSurface is ModuleControlSurface ctrlSurface)
+                    {
+                        ctrls.Add(SimulatedControlSurface.Borrow(ctrlSurface, simulatedPart));
+                        variableDragParts_ctrls.Add(simulatedPart);
+                        if (ctrlSurface.ctrlSurfaceArea < 1)
+                            surfaces.Add(SimulatedLiftingSurface.Borrow(ctrlSurface, simulatedPart));
+                    }
+                    else
+                        surfaces.Add(SimulatedLiftingSurface.Borrow(liftingSurface, simulatedPart));
                 }
+
+                List<ITorqueProvider> torqueProviders = oParts[i].FindModulesImplementing<ITorqueProvider>();
+                // TODO: Add them to a list.
 
                 if(oParts[i].inverseStage > stage)
                 {
@@ -244,6 +324,16 @@ namespace KerbalWindTunnel.VesselCache
                     }
                 }
             }
+            CoM /= totalMass;
+
+            for (int i = 0; i < count; i++)
+            {
+                parts[i].CoM -= this.CoM;
+                parts[i].CoL -= this.CoM;
+                parts[i].CoP -= this.CoM;
+            }
+
+            parts.RemoveAll(part => variableDragParts_ctrls.Contains(part));
         }
 
         /*public static SimulatedVessel BorrowAndClone(SimulatedVessel v)
@@ -278,33 +368,6 @@ namespace KerbalWindTunnel.VesselCache
         public override AeroPredictor Clone()
         {
             return SimulatedVessel.BorrowAndClone(this);
-        }*/
-
-        /*public Vector3 Drag(Vector3 localVelocity, float dynamicPressurekPa, float mach)
-        {
-            Vector3 drag = Vector3.zero;
-
-            float dragFactor = dynamicPressurekPa * PhysicsGlobals.DragCubeMultiplier * PhysicsGlobals.DragMultiplier;
-
-            for (int i = 0; i < count; i++)
-            {
-                drag += parts[i].Drag(localVelocity, dragFactor, mach);
-            }
-
-            return -localVelocity.normalized * drag.magnitude;
-        }
-
-        public Vector3 Lift(Vector3 localVelocity, float dynamicPressurekPa, float mach)
-        {
-            Vector3 lift = Vector3.zero;
-
-            float liftFactor = dynamicPressurekPa * simCurves.LiftMachCurve.Evaluate(mach);
-
-            for (int i = 0; i < count; i++)
-            {
-                lift += parts[i].Lift(localVelocity, liftFactor);
-            }
-            return lift;
         }*/
     }
 }

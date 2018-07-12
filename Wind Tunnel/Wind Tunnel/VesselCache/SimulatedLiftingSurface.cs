@@ -28,7 +28,7 @@ namespace KerbalWindTunnel.VesselCache
 
         private static void Reset(SimulatedLiftingSurface surface) { }
 
-        public void Release()
+        virtual public void Release()
         {
             pool.Release(this);
         }
@@ -60,9 +60,12 @@ namespace KerbalWindTunnel.VesselCache
             this.deflectionLiftCoeff = surface.deflectionLiftCoeff;
             this.useInternalDragModel = surface.useInternalDragModel;
             this.part = part;
+
+            if (surface is ModuleControlSurface ctrl)
+                this.deflectionLiftCoeff *= (1 - ctrl.ctrlSurfaceArea);
         }
 
-        public Vector3 GetLift(Vector3 velocityVect, float mach)
+        virtual public Vector3 GetLift(Vector3 velocityVect, float mach)
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
             float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
@@ -73,8 +76,14 @@ namespace KerbalWindTunnel.VesselCache
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             return lift * 1000;
         }
+        virtual public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque)
+        {
+            Vector3 liftForce = GetLift(velocityVect, mach);
+            torque = Vector3.Cross(liftForce, part.CoL);
+            return liftForce;
+        }
 
-        public Vector3 GetForce(Vector3 velocityVect, float mach)
+        virtual public Vector3 GetForce(Vector3 velocityVect, float mach)
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
             float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
@@ -89,6 +98,26 @@ namespace KerbalWindTunnel.VesselCache
             lock (this.dragCurve)
                 drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
 
+            return (lift + drag) * 1000;
+        }
+        virtual public Vector3 GetForce(Vector3 velocityVect, float mach, out Vector3 torque)
+        {
+            float dot = Vector3.Dot(velocityVect, liftVector);
+            float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
+            Vector3 lift = Vector3.zero;
+            lock (this.liftCurve)
+                lift = -liftVector * Mathf.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+            if (perpendicularOnly)
+                lift = Vector3.ProjectOnPlane(lift, -velocityVect);
+            torque = Vector3.Cross(lift * 1000, part.CoL);
+            if (!useInternalDragModel)
+                return lift * 1000;
+
+            Vector3 drag = Vector3.zero;
+            lock (this.dragCurve)
+                drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
+
+            torque += Vector3.Cross(drag * 1000, part.CoP);
             return (lift + drag) * 1000;
         }
     }

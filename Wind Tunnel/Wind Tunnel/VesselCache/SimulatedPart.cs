@@ -7,7 +7,7 @@ namespace KerbalWindTunnel.VesselCache
 {
     public class SimulatedPart
     {
-        protected DragCubeList cubes = new DragCubeList();
+        protected internal DragCubeList cubes = new DragCubeList();
 
         public string name = "";
         public float totalMass = 0;
@@ -18,13 +18,14 @@ namespace KerbalWindTunnel.VesselCache
         private float minimum_drag;
         private float maximum_drag;
         private Vector3 dragReferenceVector;
-        private bool cubesNone;
+        internal bool cubesNone;
         private float bodyLiftMultiplier;
 
-        private SimCurves simCurves;
+        internal SimCurves simCurves;
 
         private Quaternion vesselToPart;
         private Quaternion partToVessel;
+        public Vector3 CoM, CoL, CoP;
 
         private static readonly Pool<SimulatedPart> pool = new Pool<SimulatedPart>(Create, Reset);
 
@@ -85,6 +86,10 @@ namespace KerbalWindTunnel.VesselCache
             dragModel = p.dragModel;
             cubesNone = p.DragCubes.None;
 
+            CoM = p.transform.TransformPoint(p.CoMOffset);
+            CoP = p.transform.TransformPoint(p.CoPOffset);
+            CoL = p.transform.TransformPoint(p.CoLOffset);
+
             switch (dragModel)
             {
                 case Part.DragModel.CYLINDRICAL:
@@ -125,6 +130,11 @@ namespace KerbalWindTunnel.VesselCache
 
         public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult)
         {
+            return GetAero(velocityVect, mach, pseudoReDragMult, out _);
+        }
+        public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult, out Vector3 torque)
+        {
+            torque = Vector3.zero;
             if (shieldedFromAirstream || noDrag)
                 return Vector3.zero;
             Vector3 dragVectorDirLocal = -(vesselToPart * velocityVect);
@@ -170,9 +180,16 @@ namespace KerbalWindTunnel.VesselCache
 
             drag *= PhysicsGlobals.DragMultiplier * pseudoReDragMult;
             //Debug.Log(name + ": " + drag.magnitude / pseudoReDragMult);
+            torque = Vector3.Cross(liftV, CoL) + Vector3.Cross(drag, CoP);
             return drag + liftV;
         }
 
+        public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque)
+        {
+            Vector3 lift = GetLift(velocityVect, mach);
+            torque = Vector3.Cross(lift, CoL);
+            return lift;
+        }
         public Vector3 GetLift(Vector3 velocityVect, float mach)
         {
             if (shieldedFromAirstream || hasLiftModule || cubesNone || dragModel != Part.DragModel.CUBE)

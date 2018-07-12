@@ -78,6 +78,7 @@
     <Compile Include="RootSolvers\RootSolver.cs" />
     <Compile Include="StockAero.cs" />
     <Compile Include="StockAeroUtil.cs" />
+    <Compile Include="VesselCache\SimulatedControlSurface.cs" />
     <Compile Include="WindowGraph.cs" />
     <Compile Include="AeroPredictor.cs" />
     <Compile Include="VesselCache\SimulatedLiftingSurface.cs" />

@@ -166,49 +166,41 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float dynamicPressure;
             public readonly float dLift;
             public readonly float drag;
+            public readonly float pitchInput;
 
             public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, RootSolvers.RootSolver solver, float AoA_guess = 0)
             {
                 this.altitude = altitude;
                 this.speed = speed;
-                float atmPressure, atmDensity, mach, gravParameter, radius;
-                bool oxygenAvailable;
+                AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, speed, altitude);
+                float gravParameter, radius;
                 lock (body)
                 {
-                    atmPressure = (float)body.GetPressure(altitude);
-                    atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
-                    mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
-                    oxygenAvailable = body.atmosphereContainsOxygen;
                     gravParameter = (float)body.gravParameter;
                     radius = (float)body.Radius;
                 }
-                this.mach = mach;
-                this.dynamicPressure = 0.0005f * atmDensity * speed * speed;
+                this.mach = conditions.mach;
+                this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
                 float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))); // TODO: Minus centrifugal force...
-                Vector3 thrustForce = vessel.GetThrustForce(mach, atmDensity, atmPressure, oxygenAvailable);
-                AoA_level = solver.Solve(
-                    (aoa) =>
-                        AeroPredictor.GetLiftForceMagnitude(
-                            vessel.GetLiftForce(body, speed, altitude, aoa, mach, atmDensity) + thrustForce, aoa)
-                        - weight,
-                    0, WindTunnelWindow.Instance.solverSettings);
+                Vector3 thrustForce = vessel.GetThrustForce(conditions);
+                AoA_level = vessel.GetAoA(solver, conditions, weight, out pitchInput, true);
                 AoA_max = float.NaN;
                 Lift_max = float.NaN;
                 Thrust_available = thrustForce.magnitude;
                 if (!float.IsNaN(AoA_level))
                 {
-                    force = vessel.GetAeroForce(body, speed, altitude, AoA_level, mach, atmDensity);
+                    force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
                     liftforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
                     drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                     Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
                     Accel_excess = (Thrust_excess / vessel.Mass / WindTunnelWindow.gAccel);
                     LDRatio = Mathf.Abs(weight / drag);
-                    dLift = (vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level + WindTunnelWindow.AoAdelta) -
-                        vessel.GetLiftForceMagnitude(body, speed, altitude, AoA_level)) / (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
+                    dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) -
+                        vessel.GetLiftForceMagnitude(conditions, AoA_level, pitchInput)) / (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
                 }
                 else
                 {
-                    force = vessel.GetAeroForce(body, speed, altitude, 30f * Mathf.PI / 180, mach, atmDensity);
+                    force = vessel.GetAeroForce(conditions, 30f * Mathf.PI / 180);
                     drag = AeroPredictor.GetDragForceMagnitude(force, 30f * Mathf.PI / 180);
                     liftforce = force; // vessel.GetLiftForce(body, speed, altitude, 30, mach, atmDensity);
                     Thrust_excess = float.NegativeInfinity;
