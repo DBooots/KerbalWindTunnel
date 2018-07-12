@@ -268,21 +268,31 @@ namespace KerbalWindTunnel.VesselCache
             if (parts.Capacity < count)
                 parts.Capacity = count;
 
+            bool lgWarning = false;
             int stage = 0;
             for (int i = 0; i < count; i++)
             {
+                ModuleWheels.ModuleWheelDeployment gear = oParts[i].FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
+                bool forcedRetract = !oParts[i].ShieldedFromAirstream && gear != null && gear.Position > 0;
+                float gearPosition = 0;
+
+                if (forcedRetract)
+                {
+                    gearPosition = gear.Position;
+                    oParts[i].DragCubes.SetCubeWeight("Retracted", 1);
+                    oParts[i].DragCubes.SetCubeWeight("Deployed", 0);
+                    lgWarning = true;
+                }
+
                 SimulatedPart simulatedPart = SimulatedPart.Borrow(oParts[i]);
                 parts.Add(simulatedPart);
                 totalMass += simulatedPart.totalMass;
                 CoM += simulatedPart.totalMass * simulatedPart.CoM;
 
-                if (!oParts[i].ShieldedFromAirstream)
+                if (forcedRetract)
                 {
-                    ModuleWheels.ModuleWheelDeployment gear = oParts[i].FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
-                    if (gear != null && gear.Position == gear.deployedPosition)
-                    {
-                        // Display a message on screen that drag may not be accurate.
-                    }
+                    oParts[i].DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
+                    oParts[i].DragCubes.SetCubeWeight("Deployed", gearPosition);
                 }
 
                 ModuleLiftingSurface liftingSurface = oParts[i].FindModuleImplementing<ModuleLiftingSurface>();
@@ -325,6 +335,9 @@ namespace KerbalWindTunnel.VesselCache
                 }
             }
             CoM /= totalMass;
+
+            if (lgWarning)
+                ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);
 
             for (int i = 0; i < count; i++)
             {
