@@ -13,6 +13,9 @@ namespace KerbalWindTunnel.Graphing
         public float ZMin { get; private set; }
         public float ZMax { get; private set; }
         public ColorMap Color { get; set; } = ColorMap.Jet_Dark;
+        public Func<float, float> XAxisScale { get; set; } = (v) => v;
+        public Func<float, float> YAxisScale { get; set; } = (v) => v;
+        public Func<float, float> ZAxisScale { get; set; } = (v) => v;
         public Graph.CoordsToColorFunc ColorFunc { get; set; }
         public bool Transpose { get; set; } = false;
         public string Unit { get; set; }

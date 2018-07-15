@@ -11,6 +11,8 @@ namespace KerbalWindTunnel.Graphing
         public float YMin { get; private set; }
         public float YMax { get; private set; }
         public ColorMap Color { get; set; } = new ColorMap(UnityEngine.Color.white);
+        public Func<float, float> XAxisScale { get; set; } = (v) => v;
+        public Func<float, float> YAxisScale { get; set; } = (v) => v;
         public Graph.CoordsToColorFunc ColorFunc { get; set; } = (x, y, z) => 0;
         public bool Transpose { get; set; } = false;
         public string Unit { get; set; }

@@ -106,13 +106,19 @@ namespace KerbalWindTunnel.Graphing
             {
                 if (graphs[i] is SurfGraph surf)
                 {
-                    if (surf.ZMin < this.ZMin || float.IsNaN(this.ZMin)) this.ZMin = surf.ZMin;
-                    if (surf.ZMax > this.ZMax || float.IsNaN(this.ZMax)) this.ZMax = surf.ZMax;
+                    float zMin = surf.ZAxisScale(surf.ZMin);
+                    float zMax = surf.ZAxisScale(surf.ZMax);
+                    if (zMin < this.ZMin || float.IsNaN(this.ZMin)) this.ZMin = zMin;
+                    if (zMax > this.ZMax || float.IsNaN(this.ZMax)) this.ZMax = zMax;
                 }
-                if (graphs[i].XMin < this.XMin || float.IsNaN(this.XMin)) this.XMin = graphs[i].XMin;
-                if (graphs[i].XMax > this.XMax || float.IsNaN(this.XMax)) this.XMax = graphs[i].XMax;
-                if (graphs[i].YMin < this.YMin || float.IsNaN(this.YMin)) this.YMin = graphs[i].YMin;
-                if (graphs[i].YMax > this.YMax || float.IsNaN(this.YMax)) this.YMax = graphs[i].YMax;
+                float xMin = graphs[i].XAxisScale(graphs[i].XMin);
+                float xMax = graphs[i].XAxisScale(graphs[i].XMax);
+                float yMin = graphs[i].YAxisScale(graphs[i].YMin);
+                float yMax = graphs[i].YAxisScale(graphs[i].YMax);
+                if (xMin < this.XMin || float.IsNaN(this.XMin)) this.XMin = xMin;
+                if (xMax > this.XMax || float.IsNaN(this.XMax)) this.XMax = xMax;
+                if (yMin < this.YMin || float.IsNaN(this.YMin)) this.YMin = yMin;
+                if (yMax > this.YMax || float.IsNaN(this.YMax)) this.YMax = yMax;
             }
 
             horizontalAxis = new Axis(XMin, XMax, true);
@@ -227,6 +233,8 @@ namespace KerbalWindTunnel.Graphing
         string StringFormat { get; }
         ColorMap Color { get; set; }
         Graph.CoordsToColorFunc ColorFunc { get; set; }
+        Func<float, float> XAxisScale { get; set; }
+        Func<float, float> YAxisScale { get; set; }
         void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop);
         float ValueAt(float x, float y);
         event EventHandler ValuesChanged;
