@@ -33,7 +33,7 @@ namespace KerbalWindTunnel.Graphing
         }
         public event EventHandler ValuesChanged;
 
-        public SurfGraph(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZAxis = false)
+        public SurfGraph(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false)
         {
             this._values = values;
             this.XMin = xLeft;
@@ -43,7 +43,7 @@ namespace KerbalWindTunnel.Graphing
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
             this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
-            if (scaleZAxis)
+            if (scaleZToAxis)
                 this.ZAxisScaler = (ZMax - ZMin) / (Axis.GetMax(ZMin, ZMax) - Axis.GetMin(ZMin, ZMax));
         }
         
