@@ -73,7 +73,7 @@ namespace KerbalWindTunnel.Graphing
                 labels.Add(string.Format("{0}", _min + MajorUnit * i));
         }
 
-        public void DrawAxis(ref Texture2D axisTex, Color color, bool inverted = false)
+        public void DrawAxis(ref Texture2D axisTex, Color color, bool clearBG = true, bool inverted = false)
         {
             int width = axisTex.width - 1;
             int height = axisTex.height - 1;
@@ -86,8 +86,10 @@ namespace KerbalWindTunnel.Graphing
             for (int a = 0; a <= major; a++)
             {
                 Color rowColor;
+                bool colorLine = false;
                 if (a == nextline)
                 {
+                    colorLine = true;
                     rowColor = color;
                     index++;
                     if (TickCount == 0)
@@ -97,12 +99,15 @@ namespace KerbalWindTunnel.Graphing
                 }
                 else
                     rowColor = Color.clear;
-                for (int b = 0; b <= minor; b++)
+                if (clearBG || colorLine)
                 {
-                    if (horizontal)
-                        axisTex.SetPixel(a, b, rowColor);
-                    else
-                        axisTex.SetPixel(b, a, rowColor);
+                    for (int b = 0; b <= minor; b++)
+                    {
+                        if (horizontal)
+                            axisTex.SetPixel(a, b, rowColor);
+                        else
+                            axisTex.SetPixel(b, a, rowColor);
+                    }
                 }
                 if (horizontal)
                     axisTex.SetPixel(a, inverted ? 0 : minor, color);
