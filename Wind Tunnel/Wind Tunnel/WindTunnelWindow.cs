@@ -460,12 +460,12 @@ namespace KerbalWindTunnel
             
             Vector2 vectMouse = Event.current.mousePosition;
 
-            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
+            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0 && Status == CalculationManager.RunStatus.Completed)
             {
-                if(graphRect.x + selectedCrossHairVect.x != vectMouse.x)
-                GUI.Box(new Rect(graphRect.x + selectedCrossHairVect.x, graphRect.y, 1, graphRect.height), "", styleSelectedCrossHair);
+                if (graphRect.x + selectedCrossHairVect.x != vectMouse.x || !graphRect.Contains(vectMouse))
+                    GUI.Box(new Rect(graphRect.x + selectedCrossHairVect.x, graphRect.y, 1, graphRect.height), "", styleSelectedCrossHair);
                 if (CurrentGraphMode == GraphMode.FlightEnvelope)
-                    if (graphRect.y + selectedCrossHairVect.y != vectMouse.y)
+                    if (graphRect.y + selectedCrossHairVect.y != vectMouse.y || !graphRect.Contains(vectMouse))
                         GUI.Box(new Rect(graphRect.x, graphRect.y + selectedCrossHairVect.y, graphRect.width, 1), "", styleSelectedCrossHair);
             }
 
@@ -499,14 +499,14 @@ namespace KerbalWindTunnel
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    this.Altitude = ((graphHeight - crossHairs.y) / graphHeight) * (grapher.YMax - grapher.YMin) + grapher.YMin;
-                    this.Speed = (crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin;
+                    this.Altitude = ((graphHeight - 1 - crossHairs.y) / (graphHeight - 1)) * (grapher.YMax - grapher.YMin) + grapher.YMin;
+                    this.Speed = (crossHairs.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                     break;
                 case GraphMode.AoACurves:
-                    this.AoA = ((crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin) * Mathf.PI / 180;
+                    this.AoA = ((crossHairs.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin) * Mathf.PI / 180;
                     break;
                 case GraphMode.VelocityCurves:
-                    this.Speed = (crossHairs.x / graphWidth) * (grapher.XMax - grapher.XMin) + grapher.XMin;
+                    this.Speed = (crossHairs.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                     break;
             }
         }
@@ -516,12 +516,12 @@ namespace KerbalWindTunnel
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth,
-                        altitude / (grapher.YMax - grapher.YMin) * graphHeight);
+                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * (graphWidth - 1),
+                        (1 - altitude / (grapher.YMax - grapher.YMin)) * (graphHeight - 1));
                 case GraphMode.AoACurves:
-                    return new Vector2(((aoa * 180 / Mathf.PI) - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth, 0);
+                    return new Vector2(((aoa * 180 / Mathf.PI) - grapher.XMin) / (grapher.XMax - grapher.XMin) * (graphWidth - 1), 0);
                 case GraphMode.VelocityCurves:
-                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * graphWidth, 0);
+                    return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * (graphWidth - 1), 0);
                 default:
                     return new Vector2(-1, -1);
             }

@@ -193,6 +193,12 @@ namespace KerbalWindTunnel
                         throw new ArgumentOutOfRangeException("graphMode");
                 }
 
+                if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
+                {
+                    grapher.Draw();
+                    DrawGraph();
+                }
+
                 if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)
                 {
                     selectedCrossHairVect = CrossHairsFromConditions(Altitude, Speed, AoA);
@@ -201,12 +207,6 @@ namespace KerbalWindTunnel
                 }
                 else
                     conditionDetails = "";
-
-                if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
-                {
-                    grapher.Draw();
-                    DrawGraph();
-                }
             }
             else
             {
@@ -229,7 +229,7 @@ namespace KerbalWindTunnel
             switch (mode)
             {
                 case GraphMode.FlightEnvelope:
-                    EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, Altitude, Speed, this.rootSolver, 0);
+                    EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, altitude, speed, this.rootSolver, 0);
                     if (setAoA)
                         this.AoA = conditionPtFE.AoA_level;
 
@@ -242,15 +242,15 @@ namespace KerbalWindTunnel
                         conditionPtFE.mach);
 
                 case GraphMode.AoACurves:
-                    AoACurve.AoAPoint conditionPtAoA = new AoACurve.AoAPoint(this.vessel, this.body, this.Altitude, this.Speed, this.AoA);
+                    AoACurve.AoAPoint conditionPtAoA = new AoACurve.AoAPoint(this.vessel, this.body, altitude, speed, aoa);
 
                     return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
-                        "Lift:\t{3:N0}kN\n" + "Drag:\t{4:N0}kN\n" + "Lift/Drag Ratio:\t{5:N2}",
+                        "Lift:\t{3:N0}kN\n" + "Drag:\t{4:N0}kN\n" + "Lift/Drag Ratio:\t{5:N2}\n" + "Pitch Input:\t{7:F3}",
                         conditionPtAoA.altitude, conditionPtAoA.speed, conditionPtAoA.AoA * 180 / Mathf.PI,
-                        conditionPtAoA.Lift, conditionPtAoA.Drag, conditionPtAoA.LDRatio, conditionPtAoA.mach);
+                        conditionPtAoA.Lift, conditionPtAoA.Drag, conditionPtAoA.LDRatio, conditionPtAoA.mach, conditionPtAoA.pitchInput);
 
                 case GraphMode.VelocityCurves:
-                    VelCurve.VelPoint conditionPtVel = new VelCurve.VelPoint(this.vessel, this.body, this.Altitude, Speed, this.rootSolver);
+                    VelCurve.VelPoint conditionPtVel = new VelCurve.VelPoint(this.vessel, this.body, altitude, speed, this.rootSolver);
                     if (setAoA)
                         this.AoA = conditionPtVel.AoA_level;
 
