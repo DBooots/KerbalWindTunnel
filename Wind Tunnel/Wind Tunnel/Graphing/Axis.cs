@@ -118,7 +118,7 @@ namespace KerbalWindTunnel.Graphing
             axisTex.Apply();
         }
 
-        public static float GetMajorUnit(float max, float min, bool forX)
+        public static float GetMajorUnit(float max, float min, bool forX = true)
         {
             if (Mathf.Sign(max) != Mathf.Sign(min))
                 return GetMajorUnit(max - min);
@@ -156,6 +156,34 @@ namespace KerbalWindTunnel.Graphing
                 return 0.5f * oom;
             else
                 return 0.2f * oom;
+        }
+        public static float GetMax(float min, float max, bool forX = true)
+        {
+            if (min > max)
+            {
+                float temp = min;
+                min = max;
+                max = temp;
+            }
+            float majorUnit = GetMajorUnit(max, min, forX);
+            if (max % majorUnit == 0)
+                return max;
+            else
+                return Mathf.Ceil(Mathf.Max(max, 0) / majorUnit * 1.05f) * majorUnit;
+        }
+        public static float GetMin(float min, float max, bool forX = true)
+        {
+            if (min > max)
+            {
+                float temp = min;
+                min = max;
+                max = temp;
+            }
+            float majorUnit = GetMajorUnit(max, min, forX);
+            if (min % majorUnit == 0)
+                return min;
+            else
+                return Mathf.Floor(Mathf.Min(min, 0) / majorUnit * 1.05f) * majorUnit;
         }
     }
 }
