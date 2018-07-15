@@ -25,6 +25,7 @@ namespace KerbalWindTunnel.Graphing
         public Axis horizontalAxis = new Axis(0, 0, true);
         public Axis verticalAxis = new Axis(0, 0, false);
         public Axis colorAxis = new Axis(0, 0);
+        public ColorMap dominantColorMap = ColorMap.Jet_Dark;
 
         private List<IGraphable> graphs = new List<IGraphable>();
         private bool graphDirty = true;
@@ -101,6 +102,7 @@ namespace KerbalWindTunnel.Graphing
         {
             float[] oldLimits = new float[] { XMin, XMax, YMin, YMax, ZMin, ZMax };
             XMin = XMax = YMin = YMax = ZMin = ZMax = float.NaN;
+            dominantColorMap = null;
 
             for (int i = 0; i < graphs.Count; i++)
             {
@@ -110,6 +112,8 @@ namespace KerbalWindTunnel.Graphing
                     float zMax = surf.ZAxisScale(surf.ZMax);
                     if (zMin < this.ZMin || float.IsNaN(this.ZMin)) this.ZMin = zMin;
                     if (zMax > this.ZMax || float.IsNaN(this.ZMax)) this.ZMax = zMax;
+                    if (dominantColorMap == null)
+                        dominantColorMap = surf.Color;
                 }
                 float xMin = graphs[i].XAxisScale(graphs[i].XMin);
                 float xMax = graphs[i].XAxisScale(graphs[i].XMax);
@@ -120,6 +124,9 @@ namespace KerbalWindTunnel.Graphing
                 if (yMin < this.YMin || float.IsNaN(this.YMin)) this.YMin = yMin;
                 if (yMax > this.YMax || float.IsNaN(this.YMax)) this.YMax = yMax;
             }
+            
+            if (dominantColorMap == null)
+                dominantColorMap = ColorMap.Jet_Dark;
 
             horizontalAxis = new Axis(XMin, XMax, true);
             verticalAxis = new Axis(YMin, YMax, false);
@@ -163,10 +170,11 @@ namespace KerbalWindTunnel.Graphing
             {
                 ClearTexture(ref hAxisTex);
                 ClearTexture(ref vAxisTex);
-                ClearTexture(ref cAxisTex);
+                //ClearTexture(ref cAxisTex);
                 horizontalAxis.DrawAxis(ref hAxisTex, UnityEngine.Color.white);
                 verticalAxis.DrawAxis(ref vAxisTex, UnityEngine.Color.white);
-                colorAxis.DrawAxis(ref cAxisTex, UnityEngine.Color.white);
+                DrawColorAxis(ref cAxisTex, dominantColorMap);
+                colorAxis.DrawAxis(ref cAxisTex, UnityEngine.Color.white, false);
                 axesDirty = false;
             }
             ClearTexture(ref graphTex);
@@ -208,6 +216,29 @@ namespace KerbalWindTunnel.Graphing
         public static explicit operator UnityEngine.Texture2D(Graph graph)
         {
             return graph.graphTex;
+        }
+
+        public void DrawColorAxis(ref UnityEngine.Texture2D axisTex, ColorMap colorMap)
+        {
+            int width = axisTex.width - 1;
+            int height = axisTex.height - 1;
+            bool horizontal = height <= width;
+            int major = horizontal ? width : height;
+            int minor = horizontal ? height : width;
+
+            for (int a = 0; a <= major; a++)
+            {
+                UnityEngine.Color rowColor = colorMap[(float)a / major];
+                for (int b = 0; b <= minor; b++)
+                {
+                    if (horizontal)
+                        axisTex.SetPixel(a, b, rowColor);
+                    else
+                        axisTex.SetPixel(b, a, rowColor);
+                }
+            }
+
+            axisTex.Apply();
         }
 
         public void Dispose()
