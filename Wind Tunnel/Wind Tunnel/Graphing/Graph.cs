@@ -38,7 +38,7 @@ namespace KerbalWindTunnel.Graphing
             this.graphTex = new UnityEngine.Texture2D(width, height, UnityEngine.TextureFormat.ARGB32, false);
             this.hAxisTex = new UnityEngine.Texture2D(width, axisWidth, UnityEngine.TextureFormat.ARGB32, false);
             this.vAxisTex = new UnityEngine.Texture2D(axisWidth, height, UnityEngine.TextureFormat.ARGB32, false);
-            this.cAxisTex = new UnityEngine.Texture2D(width, height, UnityEngine.TextureFormat.ARGB32, false);
+            this.cAxisTex = new UnityEngine.Texture2D(width, axisWidth, UnityEngine.TextureFormat.ARGB32, false);
         }
         public Graph(int width, int height, int axisHeight, IEnumerable<IGraphable> graphs) : this(width, height, axisHeight)
         {
