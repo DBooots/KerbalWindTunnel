@@ -170,8 +170,8 @@ namespace KerbalWindTunnel
             window = AddComponent<WindTunnelWindow>();
             window.WindowRect = new Rect(100, 200, 100, 100); //750, 600
             window.Parent = this;
-            window.Mach = WindTunnelSettings.defaultToMach;
-            window.Minimized = WindTunnelSettings.startMinimized;
+            window.Mach = WindTunnelSettings.DefaultToMach;
+            window.Minimized = WindTunnelSettings.StartMinimized;
         }
 
         internal bool ActivateBlizzyToolBar()
@@ -252,6 +252,8 @@ namespace KerbalWindTunnel
             base.OnDestroy();
 
             ClearPartHighlighting();
+
+            WindTunnelSettings.SaveSettings();
             
             //log.debug("Unregistering GameEvents.");
             GameEvents.onEditorShipModified.Remove(OnEditorShipModified);

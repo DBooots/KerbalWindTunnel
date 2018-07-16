@@ -52,7 +52,7 @@ namespace KerbalWindTunnel.DataGenerators
             float left = currentConditions.lowerBound * 180 / Mathf.PI;
             float right = currentConditions.upperBound * 180 / Mathf.PI;
             Func<AoAPoint, float> scale = (pt) => 1;
-            if (WindTunnelSettings.useCoefficients)
+            if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
             graphs.Add("Lift", new LineGraph(AoAPoints.Select(pt => pt.Lift * scale(pt)).ToArray(), left, right) { Name = "Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
             graphs.Add("Drag", new LineGraph(AoAPoints.Select(pt => pt.Drag * scale(pt)).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });

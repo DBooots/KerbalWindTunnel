@@ -52,7 +52,7 @@ namespace KerbalWindTunnel.DataGenerators
             float left = currentConditions.lowerBound;
             float right = currentConditions.upperBound;
             Func<VelPoint, float> scale = (pt) => 1;
-            if (WindTunnelSettings.useCoefficients)
+            if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
             graphs.Add("Level AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_level * 180 / Mathf.PI).ToArray(), left, right) { Name = "Level AoA", Unit = "°", StringFormat = "F2", Color = Color.green });
             graphs.Add("Max Lift AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_max * 180 / Mathf.PI).ToArray(), left, right) { Name = "Max Lift AoA", Unit = "°", StringFormat = "F2", Color = Color.green });

@@ -56,7 +56,7 @@ namespace KerbalWindTunnel.DataGenerators
             float left = currentConditions.lowerBoundSpeed;
             float right = currentConditions.upperBoundSpeed;
             Func<EnvelopePoint, float> scale = (pt) => 1;
-            if (WindTunnelSettings.useCoefficients)
+            if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
             SurfGraph newSurfGraph;
             newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive, ZAxisScale = (v) => v >= 0 ? v : 0 };
