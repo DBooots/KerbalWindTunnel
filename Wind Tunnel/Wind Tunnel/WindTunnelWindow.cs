@@ -152,6 +152,8 @@ namespace KerbalWindTunnel
 
         private bool graphDirty = true;
         private bool graphRequested = false;
+        public bool Minimized { get; set; } = false;
+
         private string altitudeStr = "0";
         private string speedStr = "0";
         private string aoaStr = "0";
@@ -220,6 +222,7 @@ namespace KerbalWindTunnel
         private int planetIndex = 0;
 
         private GUIStyle exitButton = new GUIStyle(HighLogic.Skin.button);
+        private GUIStyle downButton = new GUIStyle(HighLogic.Skin.button);
         private GUIStyle clearBox = new GUIStyle(HighLogic.Skin.box);
         private GUIStyle labelCentered = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
 
@@ -235,6 +238,7 @@ namespace KerbalWindTunnel
             hAxisMarks.normal.textColor = hAxisMarks.focused.textColor = hAxisMarks.hover.textColor = hAxisMarks.active.textColor = Color.white;
             vAxisMarks.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = Color.white;
             exitButton.normal.textColor = exitButton.focused.textColor = exitButton.hover.textColor = exitButton.active.textColor = Color.red;
+            downButton.normal = downButton.active;
             
             crossHair.SetPixel(0, 0, new Color32(255, 25, 255, 192));
             crossHair.Apply();
@@ -251,64 +255,83 @@ namespace KerbalWindTunnel
 
         internal override void DrawWindow(int id)
         {
+            if (GUI.Button(new Rect(this.WindowRect.width - 18, 2, 16, 16), "X", exitButton))
+            {
+                WindTunnel.Instance.CloseWindow();
+                return;
+            }
+
+            if (GUI.Button(new Rect(this.WindowRect.width - 36, 2, 16, 16), "▲", Minimized ? downButton : HighLogic.Skin.button))
+            {
+                Minimized = !Minimized;
+                if (Minimized)
+                {
+                    this.WindowRect.height = 100;
+                    this.WindowRect.width = 100;
+                }
+            }
+
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(graphWidth + 55 + axisWidth));
 
-            CurrentGraphMode = (GraphMode)GUILayout.SelectionGrid((int)CurrentGraphMode, graphModes, 3);
-
-            DrawGraph(CurrentGraphMode, CurrentGraphSelect);
-            /*if (GUILayout.Button("Test!"))
+            if (!Minimized)
             {
-                Debug.Log("Testing!");
+                CurrentGraphMode = (GraphMode)GUILayout.SelectionGrid((int)CurrentGraphMode, graphModes, 3);
 
-                float atmPressure, atmDensity, mach;
-                bool oxygenAvailable;
-                lock (body)
+                DrawGraph(CurrentGraphMode, CurrentGraphSelect);
+                /*if (GUILayout.Button("Test!"))
                 {
-                    atmPressure = (float)body.GetPressure(Altitude);
-                    atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, Altitude);
-                    mach = (float)(Speed / body.GetSpeedOfSound(atmPressure, atmDensity));
-                    oxygenAvailable = body.atmosphereContainsOxygen;
-                }
+                    Debug.Log("Testing!");
 
-                //Debug.Log("Aero Force (stock): " + stockVessel.GetAeroForce(body, speed, altitude, 2.847f * Mathf.PI / 180, mach));
-                //Debug.Log("Lift Force (stock): " + stockVessel.GetLiftForce(body, speed, altitude, 2.847f * Mathf.PI / 180));
+                    float atmPressure, atmDensity, mach;
+                    bool oxygenAvailable;
+                    lock (body)
+                    {
+                        atmPressure = (float)body.GetPressure(Altitude);
+                        atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, Altitude);
+                        mach = (float)(Speed / body.GetSpeedOfSound(atmPressure, atmDensity));
+                        oxygenAvailable = body.atmosphereContainsOxygen;
+                    }
 
-                VesselCache.SimulatedVessel testVessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+                    //Debug.Log("Aero Force (stock): " + stockVessel.GetAeroForce(body, speed, altitude, 2.847f * Mathf.PI / 180, mach));
+                    //Debug.Log("Lift Force (stock): " + stockVessel.GetLiftForce(body, speed, altitude, 2.847f * Mathf.PI / 180));
 
-                float weight = (float)(testVessel.Mass * body.gravParameter / ((body.Radius + Altitude) * (body.Radius + Altitude))); // TODO: Minus centrifugal force...
-                Vector3 thrustForce = testVessel.GetThrustForce(mach, atmDensity, atmPressure, oxygenAvailable);
+                    VesselCache.SimulatedVessel testVessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
 
-                DataGenerators.EnvelopeSurf.EnvelopePoint pt = new DataGenerators.EnvelopeSurf.EnvelopePoint(VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body)), body, Altitude, Speed, this.rootSolver, 0);
-                Debug.Log("AoA Level:        " + pt.AoA_level * 180 / Mathf.PI);
-                Debug.Log("Thrust Available: " + pt.Thrust_available);
-                Debug.Log("Excess Thrust:    " + pt.Thrust_excess);
-                Debug.Log("Excess Accel:     " + pt.Accel_excess);
-                Debug.Log("Speed:            " + pt.speed);
-                Debug.Log("Altitude:         " + pt.altitude);
-                Debug.Log("Force:            " + pt.force);
-                Debug.Log("LiftForce:        " + pt.liftforce);
-                Debug.Log("");
-                AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, Speed, Altitude);
-                Debug.Log("Aero Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetAeroForce(conditions, pt.AoA_level, 0, out Vector3 torque), pt.AoA_level));
-                Debug.Log("Lift Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetLiftForce(conditions, pt.AoA_level, 0, out Vector3 lTorque), pt.AoA_level));
-                Debug.Log("Aero torque: " + torque);
-                Debug.Log("Lift torque: " + lTorque);
-                Debug.Log("Aero torque1:  " + testVessel.GetAeroTorque(conditions, pt.AoA_level, 1));
-                Debug.Log("Aero torque-1: " + testVessel.GetAeroTorque(conditions, pt.AoA_level, -1));
-                Debug.Log("");
-            }//*/
+                    float weight = (float)(testVessel.Mass * body.gravParameter / ((body.Radius + Altitude) * (body.Radius + Altitude))); // TODO: Minus centrifugal force...
+                    Vector3 thrustForce = testVessel.GetThrustForce(mach, atmDensity, atmPressure, oxygenAvailable);
 
-            CurrentGraphSelect = selectFromIndex[(int)CurrentGraphMode][GUILayout.SelectionGrid(indexFromSelect[(int)CurrentGraphMode][(int)CurrentGraphSelect], graphSelections[(int)CurrentGraphMode], 3)];
+                    DataGenerators.EnvelopeSurf.EnvelopePoint pt = new DataGenerators.EnvelopeSurf.EnvelopePoint(VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body)), body, Altitude, Speed, this.rootSolver, 0);
+                    Debug.Log("AoA Level:        " + pt.AoA_level * 180 / Mathf.PI);
+                    Debug.Log("Thrust Available: " + pt.Thrust_available);
+                    Debug.Log("Excess Thrust:    " + pt.Thrust_excess);
+                    Debug.Log("Excess Accel:     " + pt.Accel_excess);
+                    Debug.Log("Speed:            " + pt.speed);
+                    Debug.Log("Altitude:         " + pt.altitude);
+                    Debug.Log("Force:            " + pt.force);
+                    Debug.Log("LiftForce:        " + pt.liftforce);
+                    Debug.Log("");
+                    AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, Speed, Altitude);
+                    Debug.Log("Aero Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetAeroForce(conditions, pt.AoA_level, 0, out Vector3 torque), pt.AoA_level));
+                    Debug.Log("Lift Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetLiftForce(conditions, pt.AoA_level, 0, out Vector3 lTorque), pt.AoA_level));
+                    Debug.Log("Aero torque: " + torque);
+                    Debug.Log("Lift torque: " + lTorque);
+                    Debug.Log("Aero torque1:  " + testVessel.GetAeroTorque(conditions, pt.AoA_level, 1));
+                    Debug.Log("Aero torque-1: " + testVessel.GetAeroTorque(conditions, pt.AoA_level, -1));
+                    Debug.Log("");
+                }//*/
 
-            if (CurrentGraphMode == GraphMode.AoACurves || CurrentGraphMode == GraphMode.VelocityCurves)
+                CurrentGraphSelect = selectFromIndex[(int)CurrentGraphMode][GUILayout.SelectionGrid(indexFromSelect[(int)CurrentGraphMode][(int)CurrentGraphSelect], graphSelections[(int)CurrentGraphMode], 3)];
+            }
+
+            if (Minimized || CurrentGraphMode == GraphMode.AoACurves || CurrentGraphMode == GraphMode.VelocityCurves)
             {
                 GUILayout.BeginHorizontal(GUILayout.Height(25), GUILayout.ExpandHeight(false));
                 GUILayout.Label("Altitude: ", GUILayout.Width(62));
                 altitudeStr = GUILayout.TextField(altitudeStr, GUILayout.Width(105), GUILayout.Height(22));
 
-                if (CurrentGraphMode == GraphMode.AoACurves)
+                if (CurrentGraphMode == GraphMode.AoACurves || Minimized)
                 {
                     Rect toggleRect = GUILayoutUtility.GetRect(new GUIContent(""), HighLogic.Skin.label, GUILayout.Width(20));
                     Mach = GUI.Toggle(toggleRect, Mach, "    ", new GUIStyle(HighLogic.Skin.toggle) { padding = new RectOffset(-6, -6, -6, -6) });
@@ -359,69 +382,74 @@ namespace KerbalWindTunnel
             }
             GUILayout.EndVertical();
 
-            GUILayout.BeginVertical(GUILayout.Width(200));
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("<"))
-                planetIndex -= 1;
-            GUILayout.Label(body.bodyName);
-            if (GUILayout.Button(">"))
-                planetIndex += 1;
-
-            if (planetIndex < 0)
-                planetIndex += lstPlanets.Count;
-            if (planetIndex >= lstPlanets.Count)
-                planetIndex -= lstPlanets.Count;
-
-            CelestialBody newBody = lstPlanets[planetIndex].CB;
-
-            if (newBody != body)
+            if (!Minimized)
             {
-                body = newBody;
-                graphDirty = true;
-                graphRequested = false;
-                EnvelopeSurfGenerator.Clear();
-                AoACurveGenerator.Clear();
-                VelCurveGenerator.Clear();
-                this.conditionDetails = "";
+                GUILayout.BeginVertical(GUILayout.Width(200));
 
-                if (vessel is VesselCache.SimulatedVessel releasable)
-                    releasable.Release();
-                this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
-                //this.vessel = new StockAero();
-                Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
-                selectedCrossHairVect = new Vector2(-1, -1);
-                maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("<"))
+                    planetIndex -= 1;
+                GUILayout.Label(body.bodyName);
+                if (GUILayout.Button(">"))
+                    planetIndex += 1;
+
+                if (planetIndex < 0)
+                    planetIndex += lstPlanets.Count;
+                if (planetIndex >= lstPlanets.Count)
+                    planetIndex -= lstPlanets.Count;
+
+                CelestialBody newBody = lstPlanets[planetIndex].CB;
+
+                if (newBody != body)
+                {
+                    body = newBody;
+                    graphDirty = true;
+                    graphRequested = false;
+                    EnvelopeSurfGenerator.Clear();
+                    AoACurveGenerator.Clear();
+                    VelCurveGenerator.Clear();
+                    this.conditionDetails = "";
+
+                    if (vessel is VesselCache.SimulatedVessel releasable)
+                        releasable.Release();
+                    this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+                    //this.vessel = new StockAero();
+                    Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                    selectedCrossHairVect = new Vector2(-1, -1);
+                    maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
+                }
+                GUILayout.EndHorizontal();
+
+                GUILayout.Space(2);
+
+                if (GUILayout.Button("Update Vessel", GUILayout.Height(25)))
+                {
+                    graphDirty = true;
+                    graphRequested = false;
+                    EnvelopeSurfGenerator.Clear();
+                    AoACurveGenerator.Clear();
+                    VelCurveGenerator.Clear();
+                    this.conditionDetails = "";
+
+                    if (vessel is VesselCache.SimulatedVessel releasable)
+                        releasable.Release();
+                    this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+                    //this.vessel = new StockAero();
+
+                    selectedCrossHairVect = new Vector2(-1, -1);
+                    maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
+                }
+
+                // Display selected point details.
+                GUILayout.Label(this.conditionDetails);
+                if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == CalculationManager.RunStatus.Completed)
+                {
+                    DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
+                    GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure));
+                }
+
+                GUILayout.EndVertical();
             }
-            GUILayout.EndHorizontal();
-            GUILayout.Space(2);
-
-            if (GUILayout.Button("Update Vessel", GUILayout.Height(25)))
-            {
-                graphDirty = true;
-                graphRequested = false;
-                EnvelopeSurfGenerator.Clear();
-                AoACurveGenerator.Clear();
-                VelCurveGenerator.Clear();
-                this.conditionDetails = "";
-
-                if (vessel is VesselCache.SimulatedVessel releasable)
-                    releasable.Release();
-                this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
-                //this.vessel = new StockAero();
-
-                selectedCrossHairVect = new Vector2(-1, -1);
-                maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
-            }
-
-            // Display selected point details.
-            GUILayout.Label(this.conditionDetails);
-            if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == CalculationManager.RunStatus.Completed)
-            {
-                DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
-                GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure));
-            }
-            
-            GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
@@ -454,9 +482,6 @@ namespace KerbalWindTunnel
                 GUILayout.EndHorizontal();
             }
             GUILayout.EndVertical();
-
-            if (GUI.Button(new Rect(this.WindowRect.width - 18, 2, 16, 16), "X", exitButton))
-                WindTunnel.Instance.CloseWindow();
             
             Vector2 vectMouse = Event.current.mousePosition;
 

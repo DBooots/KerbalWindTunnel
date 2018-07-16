@@ -166,7 +166,7 @@ namespace KerbalWindTunnel
             guiId = GUIUtility.GetControlID(FocusType.Passive);
 
             window = AddComponent<WindTunnelWindow>();
-            window.WindowRect = new Rect(100, 200, 750, 600);
+            window.WindowRect = new Rect(100, 200, 100, 100); //750, 600
             window.Parent = this;
         }
 
