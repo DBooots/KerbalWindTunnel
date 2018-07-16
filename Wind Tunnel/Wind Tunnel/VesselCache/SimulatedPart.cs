@@ -110,8 +110,25 @@ namespace KerbalWindTunnel.VesselCache
             simCurves = SimCurves.Borrow(null);
 
             //cubes = new DragCubeList();
+            ModuleWheels.ModuleWheelDeployment wheelDeployment = p.FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
+            bool forcedRetract = !shieldedFromAirstream && wheelDeployment != null && wheelDeployment.Position > 0;
+            float gearPosition = 0;
+
+            if(forcedRetract)
+            {
+                gearPosition = wheelDeployment.Position;
+                p.DragCubes.SetCubeWeight("Retracted", 1);
+                p.DragCubes.SetCubeWeight("Deployed", 0);
+            }
+
             lock (this.cubes)
                 CopyDragCubesList(p.DragCubes, cubes);
+
+            if (forcedRetract)
+            {
+                p.DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
+                p.DragCubes.SetCubeWeight("Deployed", gearPosition);
+            }
 
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
             // QuaternionD.LookRotation is not working...

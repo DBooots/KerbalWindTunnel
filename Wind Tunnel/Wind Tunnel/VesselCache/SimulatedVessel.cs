@@ -272,29 +272,20 @@ namespace KerbalWindTunnel.VesselCache
             int stage = 0;
             for (int i = 0; i < count; i++)
             {
-                ModuleWheels.ModuleWheelDeployment gear = oParts[i].FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
-                bool forcedRetract = !oParts[i].ShieldedFromAirstream && gear != null && gear.Position > 0;
-                float gearPosition = 0;
-
-                if (forcedRetract)
+                if (!lgWarning)
                 {
-                    gearPosition = gear.Position;
-                    oParts[i].DragCubes.SetCubeWeight("Retracted", 1);
-                    oParts[i].DragCubes.SetCubeWeight("Deployed", 0);
-                    lgWarning = true;
+                    ModuleWheels.ModuleWheelDeployment gear = oParts[i].FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
+                    bool forcedRetract = !oParts[i].ShieldedFromAirstream && gear != null && gear.Position > 0;
+
+                    if (forcedRetract)
+                        lgWarning = true;
                 }
 
                 SimulatedPart simulatedPart = SimulatedPart.Borrow(oParts[i]);
                 parts.Add(simulatedPart);
                 totalMass += simulatedPart.totalMass;
                 CoM += simulatedPart.totalMass * simulatedPart.CoM;
-
-                if (forcedRetract)
-                {
-                    oParts[i].DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
-                    oParts[i].DragCubes.SetCubeWeight("Deployed", gearPosition);
-                }
-
+                
                 ModuleLiftingSurface liftingSurface = oParts[i].FindModuleImplementing<ModuleLiftingSurface>();
                 if (liftingSurface != null)
                 {
