@@ -13,14 +13,20 @@ namespace KerbalWindTunnel
     {
         private bool showEnvelopeMask = true;
         private EnvelopeSurf.Conditions maskConditions = EnvelopeSurf.Conditions.Blank;
-        //private string[][] graphSelections = new string[][] {
-        //    new string[] { "Excess Thrust", "Excess Acceleration", "Thrust Available", "Level Flight AoA", "Max Lift AoA", "Max Lift Force" },
-        //    new string[] {"Lift Force", "Drag Force", "Lift-Drag Ratio" },
-        //    new string[]{"Level Flight AoA", "Max Lift AoA", "Thrust Available"}
         private float altitudeStep = 100;
         private float maxAltitude = 25000;
         private float speedStep = 10;
         private float maxSpeed = 2000;
+        private const int graphWidth = 500;
+        private const int graphHeight = 400;
+        private const int axisWidth = 10;
+
+        internal readonly Vector2 PlotPosition = new Vector2(25, 155);
+
+        private GUIStyle hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
+        private GUIStyle vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
+        private Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
+        private Rect cAxisRect = new Rect(0, 0, graphWidth, axisWidth);
 
         private void DrawGraph(GraphMode graphMode, GraphSelect graphSelect)
         {
@@ -270,18 +276,7 @@ namespace KerbalWindTunnel
                     return "";
             }
         }
-
-        private const int graphWidth = 500;
-        private const int graphHeight = 400;
-        private const int axisWidth = 10;
-
-        internal readonly Vector2 PlotPosition = new Vector2(25, 155);
-
-        GUIStyle hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
-        GUIStyle vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
-        Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
-        Rect cAxisRect = new Rect(0, 0, graphWidth, axisWidth);
-
+        
         private void DrawGraph()
         {
             GUILayout.Box("", GUIStyle.none, GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(5));
