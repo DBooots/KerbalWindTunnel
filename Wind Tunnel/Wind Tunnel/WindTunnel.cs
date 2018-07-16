@@ -21,8 +21,7 @@ namespace KerbalWindTunnel
         }
 
         public HighlightMode highlightMode = HighlightMode.Off;
-
-        private VesselCache.SimulatedVessel highlightingVessel = null;
+        
         private Vector2[] highlightingData;
         private Vector2 maxHighlights;
         private Vector2 minHighlights;
@@ -52,8 +51,6 @@ namespace KerbalWindTunnel
             this.aoa = aoa;
 
             ClearPartHighlighting();
-
-            ReleaseHighlightingVessel();
 
             if (highlightMode == HighlightMode.Off)
                 return;
@@ -94,13 +91,6 @@ namespace KerbalWindTunnel
             part.SetHighlight(true, false);
         }
 
-        private void ReleaseHighlightingVessel()
-        {
-            if (highlightingVessel != null)
-                highlightingVessel.Release();
-            highlightingVessel = null;
-        }
-
         private void ClearPartHighlighting()
         {
             for (int i = highlightedParts.Count - 1; i >= 0; i--)
@@ -119,8 +109,6 @@ namespace KerbalWindTunnel
                 mach = speed / (float)body.GetSpeedOfSound(body.GetPressure(altitude), atmDensity);
             }
 
-            highlightingVessel = VesselCache.SimulatedVessel.Borrow(ship, VesselCache.SimCurves.Borrow(body));
-
             int count = ship.parts.Count;
             highlightingData = new Vector2[count];
 
@@ -132,9 +120,20 @@ namespace KerbalWindTunnel
 
             for (int i = 0; i < count; i++)
             {
+                VesselCache.SimulatedPart simPart = VesselCache.SimulatedPart.Borrow(ship.parts[i]);
+                Vector3 partForce = simPart.GetAero(inflow, mach, pseudoReDragMult);
+
+                ModuleLiftingSurface liftingSurface = ship.parts[i].FindModuleImplementing<ModuleLiftingSurface>();
+                if (liftingSurface != null)
+                {
+                    VesselCache.SimulatedLiftingSurface simLiftSurf = VesselCache.SimulatedLiftingSurface.Borrow(liftingSurface, simPart);
+                    partForce += simLiftSurf.GetForce(inflow, mach);
+                    simLiftSurf.Release();
+                }
+                simPart.Release();
                 //Vector3 partForce = highlightingVessel.parts[i].GetAero(inflow, mach, pseudoReDragMult);
-                Vector3 partForce = StockAeroUtil.SimAeroForce(body, new ShipConstruct("test", "", new List<Part>() { EditorLogic.fetch.ship.parts[i] }), inflow * speed, altitude);
-                partForce = (Quaternion.AngleAxis((aoa * 180 / Mathf.PI), Vector3.left) * partForce);
+                //Vector3 partForce = StockAeroUtil.SimAeroForce(body, new ShipConstruct("test", "", new List<Part>() { EditorLogic.fetch.ship.parts[i] }), inflow * speed, altitude);
+                partForce = AeroPredictor.ToFlightFrame(partForce, aoa);  // (Quaternion.AngleAxis((aoa * 180 / Mathf.PI), Vector3.left) * partForce);
                 maxHighlights.x = Mathf.Max(Mathf.Abs(partForce.z), maxHighlights.x);
                 maxHighlights.y = Mathf.Max(Mathf.Abs(partForce.y), maxHighlights.y);
                 minHighlights.x = Mathf.Min(Mathf.Abs(partForce.z), minHighlights.x);
@@ -146,7 +145,6 @@ namespace KerbalWindTunnel
 
         private void OnEditorShipModified(ShipConstruct ship)
         {
-            ReleaseHighlightingVessel();
             UpdateHighlighting(this.highlightMode, this.body, this.altitude, this.speed, this.aoa);
         }
 
