@@ -271,6 +271,12 @@ namespace KerbalWindTunnel
                 }
             }
 
+            if (GUI.Button(new Rect(this.WindowRect.width - 54, 2, 16, 16), "S"))
+            {
+                settingsDialog = SpawnDialog();
+                this.Visible = false;
+            }
+
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(graphWidth + 55 + axisWidth));

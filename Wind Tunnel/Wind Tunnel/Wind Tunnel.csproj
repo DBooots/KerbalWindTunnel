@@ -89,6 +89,7 @@
     <Compile Include="VesselCache\SimulatedVessel.cs" />
     <Compile Include="WindTunnel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WindTunnelSettingsDialog.cs" />
     <Compile Include="WindTunnelWindow.cs" />
   </ItemGroup>
   <ItemGroup>

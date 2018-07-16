@@ -152,6 +152,8 @@ namespace KerbalWindTunnel
         {
             base.Awake();
 
+            WindTunnelSettings.InitializeSettings();
+
             if (Instance)
                 Destroy(Instance);
             Instance = this;
