@@ -35,6 +35,9 @@ namespace KerbalWindTunnel
 
         public WindTunnel Parent { get; internal set; }
 
+        bool inputLocked = false;
+        const string lockID = "KWTLock";
+
         public static readonly float gAccel = (float)(Planetarium.fetch.Home.gravParameter / (Planetarium.fetch.Home.Radius * Planetarium.fetch.Home.Radius));
 
         public RootSolverSettings solverSettings = new RootSolverSettings(
@@ -252,6 +255,30 @@ namespace KerbalWindTunnel
             clearTex.SetPixel(0, 0, Color.clear);
             clearTex.Apply();
             clearBox.normal.background = clearTex;
+
+            onWindowVisibleChanged += (MonoBehaviourWindow sender, bool visible) => { if (inputLocked && !visible && sender == this) { EditorLogic.fetch.Unlock(lockID); inputLocked = false; } };
+        }
+
+        internal override void Update()
+        {
+            base.Update();
+            
+            if (this.WindowRect.Contains(Event.current.mousePosition))
+            {
+                if (!inputLocked)
+                {
+                    EditorLogic.fetch.Lock(false, false, false, lockID);
+                    inputLocked = true;
+                }
+            }
+            else
+            {
+                if (inputLocked)
+                {
+                    EditorLogic.fetch.Unlock(lockID);
+                    inputLocked = false;
+                }
+            }
         }
 
         internal override void DrawWindow(int id)

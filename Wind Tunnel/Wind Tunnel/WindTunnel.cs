@@ -252,6 +252,7 @@ namespace KerbalWindTunnel
             base.OnDestroy();
 
             ClearPartHighlighting();
+            window.Visible = false; // Triggers unlocking.
 
             WindTunnelSettings.SaveSettings();
             
