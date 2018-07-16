@@ -155,8 +155,8 @@ namespace KerbalWindTunnel
         public bool Minimized { get; set; } = false;
 
         private string altitudeStr = "0";
-        private string speedStr = "0";
-        private string aoaStr = "0";
+        private string speedStr = "100.0";
+        private string aoaStr = "0.00";
         private float _altitude = 0;
         public float Altitude
         {
@@ -177,7 +177,7 @@ namespace KerbalWindTunnel
                 if (Mach)
                     speedStr = (value / (float)body.GetSpeedOfSound(body.GetPressure(Altitude), Extensions.KSPClassExtensions.GetDensity(body, Altitude))).ToString("F3");
                 else
-                    speedStr = value.ToString("F2");
+                    speedStr = value.ToString("F1");
             }
         }
         private float _aoa = 0;
@@ -187,7 +187,7 @@ namespace KerbalWindTunnel
             private set
             {
                 _aoa = value;
-                aoaStr = (value * 180 / Mathf.PI).ToString("F3");
+                aoaStr = (value * 180 / Mathf.PI).ToString("F2");
             }
         }
         private bool _mach = false;
@@ -206,7 +206,7 @@ namespace KerbalWindTunnel
                     if (value)
                         speedStr = (Speed / speedOfSound).ToString("F3");
                     else
-                        speedStr = Speed.ToString("F2");
+                        speedStr = Speed.ToString("F1");
 
                     _mach = value;
                 }
@@ -515,7 +515,7 @@ namespace KerbalWindTunnel
             {
                 GUI.Box(new Rect(vectMouse.x, cAxisRect.y, 1, cAxisRect.height), "", stylePlotCrossHair);
                 float showValue = (vectMouse.x - cAxisRect.x) / (cAxisRect.width - 1) * (grapher.colorAxis.Max - grapher.colorAxis.Min) + grapher.colorAxis.Min;
-                GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format("{0}", showValue), SkinsLibrary.CurrentTooltip);
+                GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
             }
         }
 
