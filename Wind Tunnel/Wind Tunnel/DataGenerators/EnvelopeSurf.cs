@@ -84,20 +84,10 @@ namespace KerbalWindTunnel.DataGenerators
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
             EnvelopePoint[,] newEnvelopePoints = new EnvelopePoint[numPtsX + 1, numPtsY + 1];
-            float trueStepX = (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / numPtsX;
-            float trueStepY = (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / numPtsY;
             CalculationManager.State[,] results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
-
-            for (int j = 0; j <= numPtsY; j++)
-            {
-                for (int i = 0; i <= numPtsX; i++)
-                {
-                    //newAoAPoints[i] = new AoAPoint(vessel, conditions.body, conditions.altitude, conditions.speed, conditions.lowerBound + trueStep * i);
-                    GenData genData = new GenData(vessel, conditions, conditions.lowerBoundSpeed + trueStepX * i, conditions.lowerBoundAltitude + trueStepY * j, solver, manager);
-                    results[i, j] = genData.storeState;
-                    ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
-                }
-            }
+            
+            GenData rootData = new GenData(vessel, conditions, 0, 0, solver, manager);
+            ThreadPool.QueueUserWorkItem(SetupInBackground, rootData);
 
             while (!manager.Completed)
             {
@@ -106,6 +96,8 @@ namespace KerbalWindTunnel.DataGenerators
                     yield break;
                 yield return 0;
             }
+
+            results = (CalculationManager.State[,])rootData.storeState.Result;
 
             for (int j = 0; j <= numPtsY; j++)
             {
@@ -122,6 +114,35 @@ namespace KerbalWindTunnel.DataGenerators
                 GenerateGraphs();
                 valuesSet = true;
             }
+        }
+
+        private static void SetupInBackground(object obj)
+        {
+            GenData rootData = (GenData)obj;
+            Conditions conditions = rootData.conditions;
+            CalculationManager manager = rootData.storeState.manager;
+
+            int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
+            int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
+            float trueStepX = (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / numPtsX;
+            float trueStepY = (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / numPtsY;
+            CalculationManager.State[,] results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
+
+            for (int j = 0; j <= numPtsY; j++)
+            {
+                for (int i = 0; i <= numPtsX; i++)
+                {
+                    if (rootData.storeState.manager.Cancelled)
+                        return;
+                    GenData genData = new GenData(rootData.vessel, conditions, conditions.lowerBoundSpeed + trueStepX * i, conditions.lowerBoundAltitude + trueStepY * j, rootData.solver, manager);
+                    results[i, j] = genData.storeState;
+                    ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
+                }
+            }
+
+            if (rootData.storeState.manager.Cancelled)
+                return;
+            rootData.storeState.StoreResult(results);
         }
 
         private static void GenerateSurfPoint(object obj)
