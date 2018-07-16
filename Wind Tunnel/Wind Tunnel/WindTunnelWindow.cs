@@ -623,6 +623,8 @@ namespace KerbalWindTunnel
         internal override void OnDestroy()
         {
             base.OnDestroy();
+            if (inputLocked)
+                EditorLogic.fetch.Unlock(lockID);
             grapher.Dispose();
             Destroy(maskTex);
         }
