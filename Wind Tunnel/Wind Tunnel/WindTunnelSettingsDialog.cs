@@ -15,7 +15,7 @@ namespace KerbalWindTunnel
             }
         }
         [Persistent]
-        public bool useCoefficients = false;
+        public bool useCoefficients;
 
         public static bool DefaultToMach
         {
@@ -27,7 +27,7 @@ namespace KerbalWindTunnel
             }
         }
         [Persistent]
-        public bool defaultToMach = false;
+        public bool defaultToMach;
 
         public static bool StartMinimized
         {
@@ -39,7 +39,7 @@ namespace KerbalWindTunnel
             }
         }
         [Persistent]
-        public bool startMinimized = false;
+        public bool startMinimized;
 
         private static bool settingsChanged = false;
         private static bool settingsLoaded = false;
@@ -66,7 +66,6 @@ namespace KerbalWindTunnel
                 return;
             }
             ConfigNode.LoadObjectFromConfig(this, settingsNode[0]);
-            Debug.Log(string.Format("KWTSettings: {0}, {1}, {2}", UseCoefficients, DefaultToMach, StartMinimized));
         }
 
         public static void SaveSettings()
@@ -82,7 +81,7 @@ namespace KerbalWindTunnel
 
             ConfigNode save = new ConfigNode();
             save.AddNode(data);
-            save.Save("GameData/WindTunnel/WindTunnelSettings.cfg");
+            save.Save("GameData/WindTunnel/KerbalWindTunnelSettings.cfg");
         }
     }
 
