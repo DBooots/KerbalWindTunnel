@@ -35,6 +35,8 @@ namespace KerbalWindTunnel
 
         public WindTunnel Parent { get; internal set; }
 
+        DropDownList ddlPlanet;
+
         bool inputLocked = false;
         const string lockID = "KWTLock";
 
@@ -222,7 +224,6 @@ namespace KerbalWindTunnel
 
         private List<cbItem> lstPlanets = new List<cbItem>();
         private CelestialBody cbStar;
-        private int planetIndex = 0;
 
         private GUIStyle exitButton = new GUIStyle(HighLogic.Skin.button);
         private GUIStyle downButton = new GUIStyle(HighLogic.Skin.button);
@@ -420,40 +421,8 @@ namespace KerbalWindTunnel
             {
                 GUILayout.BeginVertical(GUILayout.Width(200));
 
-                GUILayout.BeginHorizontal();
-                if (GUILayout.Button("<"))
-                    planetIndex -= 1;
-                GUILayout.Label(body.bodyName);
-                if (GUILayout.Button(">"))
-                    planetIndex += 1;
-
-                if (planetIndex < 0)
-                    planetIndex += lstPlanets.Count;
-                if (planetIndex >= lstPlanets.Count)
-                    planetIndex -= lstPlanets.Count;
-
-                CelestialBody newBody = lstPlanets[planetIndex].CB;
-
-                if (newBody != body)
-                {
-                    body = newBody;
-                    graphDirty = true;
-                    graphRequested = false;
-                    EnvelopeSurfGenerator.Clear();
-                    AoACurveGenerator.Clear();
-                    VelCurveGenerator.Clear();
-                    this.conditionDetails = "";
-
-                    if (vessel is VesselCache.SimulatedVessel releasable)
-                        releasable.Release();
-                    this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
-                    //this.vessel = new StockAero();
-                    Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
-                    selectedCrossHairVect = new Vector2(-1, -1);
-                    maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
-                }
-                GUILayout.EndHorizontal();
-
+                ddlPlanet.DrawButton();
+                
                 GUILayout.Space(2);
 
                 if (GUILayout.Button("Update Vessel", GUILayout.Height(25)))
@@ -609,15 +578,53 @@ namespace KerbalWindTunnel
             Instance = this;
 
             // Fetch Celestial Bodies per TransferWindowPlanner method:
-            foreach (CelestialBody body in FlightGlobals.Bodies)
-                lstPlanets.Add(new cbItem(body));
-
             cbStar = FlightGlobals.Bodies.FirstOrDefault(x => x.referenceBody == x.referenceBody);
             BodyParseChildren(cbStar);
             // Filter to only include planets with Atmospheres
-            lstPlanets = lstPlanets.FindAll(x => x.CB.atmosphere == true);
-            planetIndex = lstPlanets.FindIndex(x => x.CB == FlightGlobals.GetHomeBody());
+            lstPlanets.RemoveAll(x => x.CB.atmosphere != true);
+            
+            int planetIndex = lstPlanets.FindIndex(x => x.CB == FlightGlobals.GetHomeBody());
             body = lstPlanets[planetIndex].CB;
+
+            ddlPlanet = new DropDownList(lstPlanets.Select(p => p.NameFormatted), planetIndex, this);
+            ddlPlanet.OnSelectionChanged += OnPlanetSelected;
+            ddlManager.AddDDL(ddlPlanet);
+        }
+
+        internal override void OnGUIOnceOnly()
+        {
+            GUIStyle glyphStyle = new GUIStyle(HighLogic.Skin.button) { alignment = TextAnchor.MiddleCenter };
+            GUIStyle blank = new GUIStyle();
+            glyphStyle.active.background = blank.active.background;
+            glyphStyle.focused.background = blank.focused.background;
+            glyphStyle.hover.background = blank.hover.background;
+            glyphStyle.normal.background = blank.normal.background;
+            ddlManager.DropDownGlyphs = new GUIContentWithStyle("▼", glyphStyle);
+            ddlManager.DropDownSeparators = new GUIContentWithStyle("|", glyphStyle);
+        }
+        
+        private void OnPlanetSelected(DropDownList sender, int OldIndex, int NewIndex)
+        {
+            CelestialBody newBody = lstPlanets[NewIndex].CB;
+
+            if (newBody == body)
+                return;
+
+            body = newBody;
+            graphDirty = true;
+            graphRequested = false;
+            EnvelopeSurfGenerator.Clear();
+            AoACurveGenerator.Clear();
+            VelCurveGenerator.Clear();
+            this.conditionDetails = "";
+
+            if (vessel is VesselCache.SimulatedVessel releasable)
+                releasable.Release();
+            this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+            //this.vessel = new StockAero();
+            Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+            selectedCrossHairVect = new Vector2(-1, -1);
+            maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
         }
 
         internal override void OnDestroy()
@@ -631,13 +638,14 @@ namespace KerbalWindTunnel
 
         private void BodyParseChildren(CelestialBody cbRoot, int Depth = 0)
         {
-            foreach (cbItem item in lstPlanets.Where(x => x.Parent == cbRoot).OrderBy(x => x.SemiMajorRadius))
+            List<cbItem> bodies = FlightGlobals.Bodies.Select(p => (cbItem)p).ToList();
+            foreach (cbItem item in bodies.Where(x => x.Parent == cbRoot).OrderBy(x => x.SemiMajorRadius))
             {
                 item.Depth = Depth;
                 if (item.CB != cbStar)
                 {
                     lstPlanets.Add(item);
-                    if (lstPlanets.Where(x => x.Parent == item.CB).Count() > 1)
+                    if (bodies.Where(x => x.Parent == item.CB).Count() > 1)
                     {
                         BodyParseChildren(item.CB, Depth + 1);
                     }
@@ -662,6 +670,11 @@ namespace KerbalWindTunnel
             internal string NameFormatted { get { return new string(' ', Depth * 4) + Name; } }
             internal double SemiMajorRadius { get; private set; }
             internal CelestialBody Parent { get { return CB.referenceBody; } }
+
+            public static implicit operator cbItem(CelestialBody body)
+            {
+                return new cbItem(body);
+            }
         }
     }
 }
