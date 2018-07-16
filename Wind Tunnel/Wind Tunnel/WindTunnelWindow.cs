@@ -625,6 +625,40 @@ namespace KerbalWindTunnel
             Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
             selectedCrossHairVect = new Vector2(-1, -1);
             maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
+            
+            switch (body.name.ToLower())
+            {
+                case "laythe":
+                default:
+                case "kerbin":
+                    maxAltitude = 25000;
+                    maxSpeed = 2300;
+                    altitudeStep = 100;
+                    speedStep = 10;
+                    break;
+                case "eve":
+                    maxAltitude = 35000;
+                    maxSpeed = 3300;
+                    altitudeStep = 100;
+                    speedStep = 15;
+                    break;
+                case "duna":
+                    maxAltitude = 10000;
+                    maxSpeed = 1000;
+                    altitudeStep = 100;
+                    speedStep = 10;
+                    break;
+                /*case "laythe":
+                    maxAltitude = 20000;
+                    maxSpeed = 2000;
+                    break;*/
+                case "jool":
+                    maxAltitude = 200000;
+                    maxSpeed = 7000;
+                    altitudeStep = 1000;
+                    speedStep = 35;
+                    break;
+            }
         }
 
         internal override void OnDestroy()

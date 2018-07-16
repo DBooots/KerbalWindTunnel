@@ -17,6 +17,10 @@ namespace KerbalWindTunnel
         //    new string[] { "Excess Thrust", "Excess Acceleration", "Thrust Available", "Level Flight AoA", "Max Lift AoA", "Max Lift Force" },
         //    new string[] {"Lift Force", "Drag Force", "Lift-Drag Ratio" },
         //    new string[]{"Level Flight AoA", "Max Lift AoA", "Thrust Available"}
+        private float altitudeStep = 100;
+        private float maxAltitude = 25000;
+        private float speedStep = 10;
+        private float maxSpeed = 2000;
 
         private void DrawGraph(GraphMode graphMode, GraphSelect graphSelect)
         {
@@ -31,7 +35,7 @@ namespace KerbalWindTunnel
                     case GraphMode.FlightEnvelope:
                         if (!graphRequested)
                         {
-                            EnvelopeSurfGenerator.Calculate(vessel, body, 0, 2000, 10, 0, 25000, 100);
+                            EnvelopeSurfGenerator.Calculate(vessel, body, 0, maxSpeed, speedStep, 0, maxAltitude, altitudeStep);
                             graphRequested = true;
                         }
                         switch (EnvelopeSurfGenerator.Status)
@@ -149,7 +153,7 @@ namespace KerbalWindTunnel
                     case GraphMode.VelocityCurves:
                         if (!graphRequested)
                         {
-                            VelCurveGenerator.Calculate(vessel, body, Altitude, 0, 2000, 10);
+                            VelCurveGenerator.Calculate(vessel, body, Altitude, 0, maxSpeed, speedStep);
                             graphRequested = true;
                         }
                         switch (VelCurveGenerator.Status)
