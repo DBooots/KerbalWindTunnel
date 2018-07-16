@@ -263,8 +263,8 @@ namespace KerbalWindTunnel
         internal override void Update()
         {
             base.Update();
-            
-            if (this.WindowRect.Contains(Event.current.mousePosition))
+
+            if (Visible && this.WindowRect.Contains(Event.current.mousePosition))
             {
                 if (!inputLocked)
                 {
