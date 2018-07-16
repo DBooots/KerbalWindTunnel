@@ -500,7 +500,7 @@ namespace KerbalWindTunnel
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("AoA (deg): ");
-                aoaStr = GUILayout.TextField(aoaStr);
+                aoaStr = GUILayout.TextField(aoaStr, GUILayout.Width(132));
                 if (GUILayout.Button("Apply"))
                 {
                     if (float.TryParse(aoaStr, out float tempAoA))
@@ -549,7 +549,7 @@ namespace KerbalWindTunnel
             {
                 GUI.Box(new Rect(vectMouse.x, cAxisRect.y, 1, cAxisRect.height), "", stylePlotCrossHair);
                 float showValue = (vectMouse.x - cAxisRect.x) / (cAxisRect.width - 1) * (grapher.colorAxis.Max - grapher.colorAxis.Min) + grapher.colorAxis.Min;
-                GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
+                GUI.Label(new Rect(vectMouse.x + 5, cAxisRect.y - 15, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
             }
         }
 
