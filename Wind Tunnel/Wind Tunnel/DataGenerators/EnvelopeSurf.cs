@@ -55,6 +55,9 @@ namespace KerbalWindTunnel.DataGenerators
             float top = currentConditions.upperBoundAltitude;
             float left = currentConditions.lowerBoundSpeed;
             float right = currentConditions.upperBoundSpeed;
+            Func<EnvelopePoint, float> scale = (pt) => 1;
+            if (WindTunnelSettings.useCoefficients)
+                scale = (pt) => 1 / pt.dynamicPressure;
             SurfGraph newSurfGraph;
             newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive, ZAxisScale = (v) => v >= 0 ? v : 0 };
             float maxThrustExcess = newSurfGraph.ZMax;
@@ -71,7 +74,7 @@ namespace KerbalWindTunnel.DataGenerators
             graphs.Add("Max Lift AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_max * 180 / Mathf.PI), left, right, bottom, top, true) { Name = "Max Lift AoA", Unit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphs.Add("Max Lift", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true) { Name = "Max Lift", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
             graphs.Add("Lift/Drag Ratio", new SurfGraph(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphs.Add("Drag", new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag), left, right, bottom, top, true) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphs.Add("Drag", new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
             graphs.Add("Lift Slope", new SurfGraph(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
             graphs.Add("Pitch Input", new SurfGraph(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true) { Name = "Pitch Input", Unit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
         }

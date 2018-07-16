@@ -170,6 +170,8 @@ namespace KerbalWindTunnel
             window = AddComponent<WindTunnelWindow>();
             window.WindowRect = new Rect(100, 200, 100, 100); //750, 600
             window.Parent = this;
+            window.Mach = WindTunnelSettings.defaultToMach;
+            window.Minimized = WindTunnelSettings.startMinimized;
         }
 
         internal bool ActivateBlizzyToolBar()

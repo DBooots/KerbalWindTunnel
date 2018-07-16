@@ -51,8 +51,11 @@ namespace KerbalWindTunnel.DataGenerators
             graphs.Clear();
             float left = currentConditions.lowerBound * 180 / Mathf.PI;
             float right = currentConditions.upperBound * 180 / Mathf.PI;
-            graphs.Add("Lift", new LineGraph(AoAPoints.Select(pt => pt.Lift).ToArray(), left, right) { Name = "Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
-            graphs.Add("Drag", new LineGraph(AoAPoints.Select(pt => pt.Drag).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            Func<AoAPoint, float> scale = (pt) => 1;
+            if (WindTunnelSettings.useCoefficients)
+                scale = (pt) => 1 / pt.dynamicPressure;
+            graphs.Add("Lift", new LineGraph(AoAPoints.Select(pt => pt.Lift * scale(pt)).ToArray(), left, right) { Name = "Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Drag", new LineGraph(AoAPoints.Select(pt => pt.Drag * scale(pt)).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
             graphs.Add("Lift/Drag Ratio", new LineGraph(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = Color.green });
             graphs.Add("Lift Slope", new LineGraph(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = Color.green });
             graphs.Add("Pitch Input", new LineGraph(AoAPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input", Unit = "", StringFormat = "F2", Color = Color.green });

@@ -161,7 +161,7 @@ namespace KerbalWindTunnel
         public float Altitude
         {
             get { return _altitude; }
-            private set
+            set
             {
                 _altitude = value;
                 altitudeStr = value.ToString("F0");
@@ -171,7 +171,7 @@ namespace KerbalWindTunnel
         public float Speed
         {
             get { return _speed; }
-            private set
+            set
             {
                 _speed = value;
                 if (Mach)
@@ -184,7 +184,7 @@ namespace KerbalWindTunnel
         public float AoA
         {
             get { return _aoa; }
-            private set
+            set
             {
                 _aoa = value;
                 aoaStr = (value * 180 / Mathf.PI).ToString("F2");
@@ -194,7 +194,7 @@ namespace KerbalWindTunnel
         public bool Mach
         {
             get { return _mach; }
-            private set
+            set
             {
                 if (value != _mach)
                 {
@@ -235,6 +235,7 @@ namespace KerbalWindTunnel
         internal override void Start()
         {
             base.Start();
+
             hAxisMarks.normal.textColor = hAxisMarks.focused.textColor = hAxisMarks.hover.textColor = hAxisMarks.active.textColor = Color.white;
             vAxisMarks.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = Color.white;
             exitButton.normal.textColor = exitButton.focused.textColor = exitButton.hover.textColor = exitButton.active.textColor = Color.red;
