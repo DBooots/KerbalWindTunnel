@@ -61,7 +61,14 @@ namespace KerbalWindTunnel.DataGenerators
             graphs.Add("Drag", new LineGraph(AoAPoints.Select(pt => pt.Drag * scale(pt)).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
             graphs.Add("Lift/Drag Ratio", new LineGraph(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = Color.green });
             graphs.Add("Lift Slope", new LineGraph(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = Color.green });
-            graphs.Add("Pitch Input", new LineGraph(AoAPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input", Unit = "", StringFormat = "F2", Color = Color.green });
+            IGraphable[] pitch = new IGraphable[] { new LineGraph(AoAPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input (Wet)", Unit = "", StringFormat = "F2", Color = Color.green }, new LineGraph(AoAPoints.Select(pt => pt.pitchInput_dry).ToArray(), left, right) { Name = "Pitch Input (Dry)", Unit = "", StringFormat = "F2", Color = Color.yellow } };
+            graphs.Add("Pitch Input (Wet)", pitch[0]);
+            graphs.Add("Pitch Input (Dry)", pitch[1]);
+            graphs.Add("Pitch Input", new GraphableCollection(pitch) { Name = "Pitch Input" });
+            IGraphable[] torque = new IGraphable[] { new LineGraph(AoAPoints.Select(pt => pt.torque).ToArray(), left, right) { Name = "Torque (Wet)", Unit = "kNm", StringFormat = "N0", Color = Color.green }, new LineGraph(AoAPoints.Select(pt => pt.torque_dry).ToArray(), left, right) { Name = "Torque (Dry)", Unit = "kNm", StringFormat = "N0", Color = Color.yellow } };
+            graphs.Add("Torque (Wet)", torque[0]);
+            graphs.Add("Torque (Dry)", torque[1]);
+            graphs.Add("Torque", new GraphableCollection(torque) { Name = "Torque" });
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
@@ -136,6 +143,9 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float dLift;
             public readonly float mach;
             public readonly float pitchInput;
+            public readonly float pitchInput_dry;
+            public readonly float torque;
+            public readonly float torque_dry;
 
             public AoAPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA)
             {
@@ -146,7 +156,10 @@ namespace KerbalWindTunnel.DataGenerators
                 this.mach = conditions.mach;
                 this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
                 this.pitchInput = vessel.GetPitchInput(WindTunnelWindow.Instance.rootSolver, conditions, AoA);
+                this.pitchInput_dry = vessel.GetPitchInput(WindTunnelWindow.Instance.rootSolver, conditions, AoA, true);
                 Vector3 force = AeroPredictor.ToFlightFrame(vessel.GetAeroForce(conditions, AoA, pitchInput), AoA);
+                torque = vessel.GetAeroTorque(conditions, AoA).x;
+                torque_dry = vessel.GetAeroTorque(conditions, AoA, 0, true).x;
                 Lift = force.y;
                 Drag = -force.z;
                 LDRatio = Mathf.Abs(Lift / Drag);
