@@ -632,15 +632,15 @@ namespace KerbalWindTunnel
                 default:
                 case "kerbin":
                     maxAltitude = 25000;
-                    maxSpeed = 2300;
+                    maxSpeed = 2500;
                     altitudeStep = 100;
                     speedStep = 10;
                     break;
                 case "eve":
                     maxAltitude = 35000;
-                    maxSpeed = 3300;
+                    maxSpeed = 3500;
                     altitudeStep = 100;
-                    speedStep = 15;
+                    speedStep = 14;
                     break;
                 case "duna":
                     maxAltitude = 10000;
