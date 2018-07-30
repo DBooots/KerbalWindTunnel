@@ -153,7 +153,6 @@ namespace KerbalWindTunnel
             new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Drag Force" }
         };
         private readonly string[] highliftModeStrings = new string[] { "Off", "Drag", "Lift" };
-        private readonly string[] graphUnits = new string[] { "{0:N0}kN", "{0:N2}°", "{0:N2}", "{0:N0}kN", "{0:N2}m^2/°", "{0:N2}g", "{0:N0}kg/s", "{0:N2}°", "{0:N0}kN", "{0:N0}kN", "{0:N0}kN", "{0:F3}" };
 
         private bool graphDirty = true;
         private bool graphRequested = false;
@@ -504,7 +503,14 @@ namespace KerbalWindTunnel
                     GUI.Box(new Rect(graphRect.x, vectMouse.y, graphRect.width, 1), "", stylePlotCrossHair);
 
                 float showValue = GetGraphValue((int)(vectMouse.x - graphRect.x), CurrentGraphMode == GraphMode.FlightEnvelope ? (int)(graphHeight - (vectMouse.y - graphRect.y)) : -1);
-                GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
+                //GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
+                GUIContent labelContent = new GUIContent(grapher.GetFormattedValueAtPixel((int)(vectMouse.x - graphRect.x), (int)(vectMouse.y - graphRect.y)));
+                Vector2 labelSize = SkinsLibrary.CurrentTooltip.CalcSize(labelContent);
+                if (labelSize.x < 80)
+                    labelSize.x = 80;
+                if (labelSize.y < 15)
+                    labelSize.y = 15;
+                GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, labelSize.x, labelSize.y), labelContent, SkinsLibrary.CurrentTooltip);
 
                 if(Event.current.type == EventType.MouseDown && Event.current.button == 0)
                 {
@@ -518,7 +524,10 @@ namespace KerbalWindTunnel
             {
                 GUI.Box(new Rect(vectMouse.x, cAxisRect.y, 1, cAxisRect.height), "", stylePlotCrossHair);
                 float showValue = (vectMouse.x - cAxisRect.x) / (cAxisRect.width - 1) * (grapher.colorAxis.Max - grapher.colorAxis.Min) + grapher.colorAxis.Min;
-                GUI.Label(new Rect(vectMouse.x + 5, cAxisRect.y - 15, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
+                //GUI.Label(new Rect(vectMouse.x + 5, cAxisRect.y - 15, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
+                GUI.Label(new Rect(vectMouse.x + 5, cAxisRect.y - 15, 80, 15),
+                    String.Format("{0:" + ((Graphing.Graphable)(grapher[grapher.dominantColorMapIndex])).StringFormat + "}{1}", showValue, ((Graphing.Graphable)(grapher[grapher.dominantColorMapIndex])).Unit),
+                    SkinsLibrary.CurrentTooltip);
             }
         }
 
