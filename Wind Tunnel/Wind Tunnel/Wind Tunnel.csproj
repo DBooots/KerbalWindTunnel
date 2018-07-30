@@ -68,7 +68,8 @@
     <Compile Include="Graphing\Axis.cs" />
     <Compile Include="Graphing\ColorMap.cs" />
     <Compile Include="DataGenerators\EnvelopeSurf.cs" />
-    <Compile Include="Graphing\Graph.cs" />
+    <Compile Include="Graphing\GraphableCollection.cs" />
+    <Compile Include="Graphing\Grapher.cs" />
     <Compile Include="DataGenerators\GraphGenerator.cs" />
     <Compile Include="Graphing\LineGraph.cs" />
     <Compile Include="Graphing\SurfGraph.cs" />

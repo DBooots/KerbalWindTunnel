@@ -3,20 +3,8 @@ using System.Linq;
 
 namespace KerbalWindTunnel.Graphing
 {
-    class LineGraph : IGraphable
+    class LineGraph : Graphable
     {
-        public string Name { get; set; } = "";
-        public float XMin { get; private set; }
-        public float XMax { get; private set; }
-        public float YMin { get; private set; }
-        public float YMax { get; private set; }
-        public ColorMap Color { get; set; } = new ColorMap(UnityEngine.Color.white);
-        public Func<float, float> XAxisScale { get; set; } = (v) => v;
-        public Func<float, float> YAxisScale { get; set; } = (v) => v;
-        public Graph.CoordsToColorFunc ColorFunc { get; set; } = (x, y, z) => 0;
-        public bool Transpose { get; set; } = false;
-        public string Unit { get; set; }
-        public string StringFormat { get; set; } = "G";
         public UnityEngine.Vector2[] _values;
         public UnityEngine.Vector2[] Values
         {
@@ -59,10 +47,9 @@ namespace KerbalWindTunnel.Graphing
                         break;
                 }
 
-                ValuesChanged?.Invoke(this, null);
+                OnValuesChanged(null);
             }
         }
-        public event EventHandler ValuesChanged;
         private bool sorted = false;
         private bool equalSteps = false;
 
@@ -75,7 +62,7 @@ namespace KerbalWindTunnel.Graphing
             this.Values = values;
         }
         
-        public void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
+        public override void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
         {
             float xRange = xRight - xLeft;
             float yRange = yTop - yBottom;
@@ -100,7 +87,7 @@ namespace KerbalWindTunnel.Graphing
             texture.Apply();
         }
 
-        public float ValueAt(float x, float y)
+        public override float ValueAt(float x, float y)
         {
             if (Transpose) x = y;
 
@@ -178,7 +165,7 @@ namespace KerbalWindTunnel.Graphing
             this.sorted = true;
             this.equalSteps = true;
 
-            ValuesChanged?.Invoke(this, null);
+            OnValuesChanged(null);
         }
         public void SetValues(UnityEngine.Vector2[] values)
         {

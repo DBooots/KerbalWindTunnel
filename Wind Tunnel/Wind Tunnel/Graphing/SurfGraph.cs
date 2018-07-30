@@ -3,24 +3,11 @@ using KerbalWindTunnel.Extensions;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class SurfGraph : IGraphable
+    public class SurfGraph : Graphable3
     {
-        public string Name { get; set; } = "";
-        public float XMin { get; private set; }
-        public float XMax { get; private set; }
-        public float YMin { get; private set; }
-        public float YMax { get; private set; }
-        public float ZMin { get; private set; }
-        public float ZMax { get; private set; }
-        public float ZAxisScaler { get; set; } = 1;
-        public ColorMap Color { get; set; } = ColorMap.Jet_Dark;
-        public Func<float, float> XAxisScale { get; set; } = (v) => v;
-        public Func<float, float> YAxisScale { get; set; } = (v) => v;
-        public Func<float, float> ZAxisScale { get; set; } = (v) => v;
-        public Graph.CoordsToColorFunc ColorFunc { get; set; }
-        public bool Transpose { get; set; } = false;
-        public string Unit { get; set; }
-        public string StringFormat { get; set; } = "G";
+        
+        public override ColorMap Color { get; set; } = ColorMap.Jet_Dark;
+        
         private float[,] _values;
         public float[,] Values
         {
@@ -28,10 +15,9 @@ namespace KerbalWindTunnel.Graphing
             set
             {
                 _values = value;
-                ValuesChanged?.Invoke(this, null);
+                OnValuesChanged(null);
             }
         }
-        public event EventHandler ValuesChanged;
 
         public SurfGraph(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false)
         {
@@ -47,7 +33,7 @@ namespace KerbalWindTunnel.Graphing
                 this.ZAxisScaler = (ZMax - ZMin) / (Axis.GetMax(ZMin, ZMax) - Axis.GetMin(ZMin, ZMax));
         }
         
-        public void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
+        public override void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
         {
             int width = texture.width - 1;
             int height = texture.height - 1;
@@ -70,7 +56,7 @@ namespace KerbalWindTunnel.Graphing
             texture.Apply();
         }
 
-        public float ValueAt(float x, float y)
+        public override float ValueAt(float x, float y)
         {
             if (Transpose)
             {
@@ -207,7 +193,7 @@ namespace KerbalWindTunnel.Graphing
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
             this._values = values;
-            ValuesChanged?.Invoke(this, null);
+            OnValuesChanged(null);
         }
     }
 }
