@@ -218,7 +218,7 @@ namespace KerbalWindTunnel
             }
         }
 
-        private Graphing.Graph grapher = new Graphing.Graph(graphWidth, graphHeight, axisWidth);
+        private Graphing.Grapher grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth);
 
         internal const float AoAdelta = 0.1f / 180 * Mathf.PI;
 

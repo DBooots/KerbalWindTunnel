@@ -17,9 +17,9 @@ namespace KerbalWindTunnel
         private float maxAltitude = 25000;
         private float speedStep = 10;
         private float maxSpeed = 2000;
-        private const int graphWidth = 500;
-        private const int graphHeight = 400;
-        private const int axisWidth = 10;
+        public const int graphWidth = 500;
+        public const int graphHeight = 400;
+        public const int axisWidth = 10;
 
         internal readonly Vector2 PlotPosition = new Vector2(25, 155);
 
@@ -205,7 +205,7 @@ namespace KerbalWindTunnel
 
                 if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
                 {
-                    grapher.Draw();
+                    grapher.DrawGraphs();
                     DrawGraph();
                 }
 
@@ -228,7 +228,7 @@ namespace KerbalWindTunnel
 
         public float GetGraphValue(int x, int y = -1)
         {
-            return grapher.GetValueAt(x, y, 0);
+            return grapher.ValueAtPixel(x, y, 0);
         }
         public string GetConditionDetails(GraphMode mode, float altitude, float speed = float.NaN, float aoa = float.NaN)
         {
