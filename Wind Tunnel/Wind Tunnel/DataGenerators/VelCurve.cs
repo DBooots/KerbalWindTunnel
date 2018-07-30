@@ -177,6 +177,17 @@ namespace KerbalWindTunnel.DataGenerators
                     dLift = 0;
                 }
             }
+
+            public override string ToString()
+            {
+                return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{7:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
+                        "Excess Thrust:\t{3:N0}kN\n" +
+                        "Max Lift AoA:\t{4:N2}°\n" + "Lift/Drag Ratio:\t{6:N0}\n" + "Available Thrust:\t{5:N0}kN",
+                        altitude, speed, AoA_level * 180 / Mathf.PI,
+                        Thrust_excess,
+                        AoA_max * 180 / Mathf.PI, Thrust_available, LDRatio,
+                        mach);
+            }
         }
 
         public struct Conditions : IEquatable<Conditions>

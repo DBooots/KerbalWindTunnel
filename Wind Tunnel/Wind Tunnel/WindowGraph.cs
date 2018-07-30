@@ -242,35 +242,17 @@ namespace KerbalWindTunnel
                     EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, altitude, speed, this.rootSolver, 0);
                     if (setAoA)
                         this.AoA = conditionPtFE.AoA_level;
-
-                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{9:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
-                        "Excess Thrust:\t{3:N0}kN\n" + "Excess Acceleration:\t{4:N2}g\n" + "Max Lift Force:\t{5:N0}kN\n" +
-                        "Max Lift AoA:\t{6:N2}°\n" + "Lift/Drag Ratio:\t{8:N2}\n" + "Available Thrust:\t{7:N0}kN",
-                        conditionPtFE.altitude, conditionPtFE.speed, conditionPtFE.AoA_level * 180 / Mathf.PI,
-                        conditionPtFE.Thrust_excess, conditionPtFE.Accel_excess, conditionPtFE.Lift_max,
-                        conditionPtFE.AoA_max * 180 / Mathf.PI, conditionPtFE.Thrust_available, conditionPtFE.LDRatio,
-                        conditionPtFE.mach);
+                    return conditionPtFE.ToString();
 
                 case GraphMode.AoACurves:
                     AoACurve.AoAPoint conditionPtAoA = new AoACurve.AoAPoint(this.vessel, this.body, altitude, speed, aoa);
-
-                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
-                        "Lift:\t{3:N0}kN\n" + "Drag:\t{4:N0}kN\n" + "Lift/Drag Ratio:\t{5:N2}\n" + "Pitch Input:\t{7:F3}",
-                        conditionPtAoA.altitude, conditionPtAoA.speed, conditionPtAoA.AoA * 180 / Mathf.PI,
-                        conditionPtAoA.Lift, conditionPtAoA.Drag, conditionPtAoA.LDRatio, conditionPtAoA.mach, conditionPtAoA.pitchInput);
+                    return conditionPtAoA.ToString();
 
                 case GraphMode.VelocityCurves:
                     VelCurve.VelPoint conditionPtVel = new VelCurve.VelPoint(this.vessel, this.body, altitude, speed, this.rootSolver);
                     if (setAoA)
                         this.AoA = conditionPtVel.AoA_level;
-
-                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{7:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
-                        "Excess Thrust:\t{3:N0}kN\n" +
-                        "Max Lift AoA:\t{4:N2}°\n" + "Lift/Drag Ratio:\t{6:N0}\n" + "Available Thrust:\t{5:N0}kN",
-                        conditionPtVel.altitude, conditionPtVel.speed, conditionPtVel.AoA_level * 180 / Mathf.PI,
-                        conditionPtVel.Thrust_excess,
-                        conditionPtVel.AoA_max * 180 / Mathf.PI, conditionPtVel.Thrust_available, conditionPtVel.LDRatio,
-                        conditionPtVel.mach);
+                    return conditionPtVel.ToString();
 
                 default:
                     return "";

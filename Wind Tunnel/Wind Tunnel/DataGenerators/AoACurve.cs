@@ -149,6 +149,14 @@ namespace KerbalWindTunnel.DataGenerators
                 dLift = (vessel.GetLiftForceMagnitude(conditions, AoA + WindTunnelWindow.AoAdelta, pitchInput) - Lift) /
                     (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
             }
+
+            public override string ToString()
+            {
+                return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
+                        "Lift:\t{3:N0}kN\n" + "Drag:\t{4:N0}kN\n" + "Lift/Drag Ratio:\t{5:N2}\n" + "Pitch Input:\t{7:F3}",
+                        altitude, speed, AoA * 180 / Mathf.PI,
+                        Lift, Drag, LDRatio, mach, pitchInput);
+            }
         }
 
         public struct Conditions : IEquatable<Conditions>
