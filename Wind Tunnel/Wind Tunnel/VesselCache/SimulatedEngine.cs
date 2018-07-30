@@ -11,6 +11,8 @@ namespace KerbalWindTunnel.VesselCache
     {
         private static readonly Pool<SimulatedEngine> pool = new Pool<SimulatedEngine>(Create, Reset);
 
+        public SimulatedVessel vessel;
+
         public bool atmChangeFlow;
         public bool useAtmCurve;
         public FloatCurve atmCurve;

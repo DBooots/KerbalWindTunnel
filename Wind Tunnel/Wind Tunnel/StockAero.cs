@@ -106,12 +106,12 @@ namespace KerbalWindTunnel
             throw new NotImplementedException();
         }
 
-        public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0)
+        public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0, bool dryTorque = false)
         {
             throw new NotImplementedException();
         }
 
-        public override float GetPitchInput(RootSolver solver, Conditions conditions, float AoA)
+        public override float GetPitchInput(RootSolver solver, Conditions conditions, float AoA, bool dryTorque = false)
         {
             return 0;
         }

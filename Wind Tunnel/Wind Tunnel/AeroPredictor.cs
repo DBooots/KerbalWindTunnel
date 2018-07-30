@@ -9,31 +9,31 @@ namespace KerbalWindTunnel
 
         public abstract float Mass { get; }
 
-        public virtual float GetAoA(RootSolvers.RootSolver solver, Conditions conditions, float offsettingForce, bool useThrust = true)
+        public virtual float GetAoA(RootSolvers.RootSolver solver, Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false)
         {
             Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
             return solver.Solve(
                     (aoa) =>
                         GetLiftForceMagnitude(
-                            this.GetLiftForce(conditions, aoa, GetPitchInput(solver, conditions, aoa)) + thrustForce, aoa)
+                            this.GetLiftForce(conditions, aoa, GetPitchInput(solver, conditions, aoa, dryTorque)) + thrustForce, aoa)
                         - offsettingForce,
                     0, WindTunnelWindow.Instance.solverSettings);
         }
-        public virtual float GetAoA(RootSolvers.RootSolver solver, Conditions conditions, float offsettingForce, out float pitchInput, bool useThrust = true)
+        public virtual float GetAoA(RootSolvers.RootSolver solver, Conditions conditions, float offsettingForce, out float pitchInput, bool useThrust = true, bool dryTorque = false)
         {
             Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
             float pi = 0;
             float result = solver.Solve(
                     (aoa) =>
                         GetLiftForceMagnitude(
-                            this.GetLiftForce(conditions, aoa, pi = GetPitchInput(solver, conditions, aoa)) + thrustForce, aoa)
+                            this.GetLiftForce(conditions, aoa, pi = GetPitchInput(solver, conditions, aoa, dryTorque)) + thrustForce, aoa)
                         - offsettingForce,
                     0, WindTunnelWindow.Instance.solverSettings);
             pitchInput = pi;
             return result;
         }
 
-        public abstract float GetPitchInput(RootSolvers.RootSolver solver, Conditions conditions, float AoA);
+        public abstract float GetPitchInput(RootSolvers.RootSolver solver, Conditions conditions, float AoA, bool dryTorque = false);
         
         public abstract Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0);
 
@@ -42,9 +42,9 @@ namespace KerbalWindTunnel
             return GetAeroForce(conditions, AoA, pitchInput);
         }
 
-        public abstract Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0);
+        public abstract Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0, bool dryTorque = false);
         
-        public virtual void GetAeroCombined(Conditions conditions, float AoA, float pitchInput, out Vector3 forces, out Vector3 torques)
+        public virtual void GetAeroCombined(Conditions conditions, float AoA, float pitchInput, out Vector3 forces, out Vector3 torques, bool dryTorque = false)
         {
             forces = GetAeroForce(conditions, AoA, pitchInput);
             torques = GetAeroTorque(conditions, AoA, pitchInput);

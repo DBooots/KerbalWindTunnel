@@ -9,8 +9,11 @@ namespace KerbalWindTunnel.VesselCache
     {
         protected internal DragCubeList cubes = new DragCubeList();
 
+        public SimulatedVessel vessel;
+
         public string name = "";
         public float totalMass = 0;
+        public float dryMass = 0;
         public bool shieldedFromAirstream;
         public bool noDrag;
         public bool hasLiftModule;
@@ -64,9 +67,10 @@ namespace KerbalWindTunnel.VesselCache
             obj.simCurves.Release();
         }
 
-        public static SimulatedPart Borrow(Part p)
+        public static SimulatedPart Borrow(Part p, SimulatedVessel vessel)
         {
             SimulatedPart part = pool.Borrow();
+            part.vessel = vessel;
             part.Init(p);
             return part;
         }
@@ -78,6 +82,7 @@ namespace KerbalWindTunnel.VesselCache
 
             //totalMass = rigidbody == null ? 0 : rigidbody.mass; // TODO : check if we need to use this or the one without the childMass
             totalMass = p.mass + p.GetResourceMass();
+            dryMass = p.mass;
             shieldedFromAirstream = p.ShieldedFromAirstream;
 
             noDrag = rigidbody == null && !PhysicsGlobals.ApplyDragToNonPhysicsParts;
@@ -149,7 +154,7 @@ namespace KerbalWindTunnel.VesselCache
         {
             return GetAero(velocityVect, mach, pseudoReDragMult, out _);
         }
-        public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult, out Vector3 torque)
+        public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult, out Vector3 torque, bool dryTorque = false)
         {
             torque = Vector3.zero;
             if (shieldedFromAirstream || noDrag)
@@ -197,14 +202,20 @@ namespace KerbalWindTunnel.VesselCache
 
             drag *= PhysicsGlobals.DragMultiplier * pseudoReDragMult;
             //Debug.Log(name + ": " + drag.magnitude / pseudoReDragMult);
-            torque = Vector3.Cross(liftV, CoL) + Vector3.Cross(drag, CoP);
+            if (vessel != null)
+                torque = Vector3.Cross(liftV, CoL - (dryTorque ? vessel.CoM_dry : vessel.CoM)) + Vector3.Cross(drag, CoP - (dryTorque ? vessel.CoM_dry : vessel.CoM));
+            else
+                torque = Vector3.Cross(liftV, CoL) + Vector3.Cross(drag, CoP);
             return drag + liftV;
         }
 
-        public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque)
+        public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque, bool dryTorque = false)
         {
             Vector3 lift = GetLift(velocityVect, mach);
-            torque = Vector3.Cross(lift, CoL);
+            if (vessel != null)
+                torque = Vector3.Cross(lift, CoL - (dryTorque ? vessel.CoM_dry : vessel.CoM));
+            else
+                torque = Vector3.Cross(lift, CoL);
             return lift;
         }
         public Vector3 GetLift(Vector3 velocityVect, float mach)

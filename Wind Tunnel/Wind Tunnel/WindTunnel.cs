@@ -120,7 +120,7 @@ namespace KerbalWindTunnel
 
             for (int i = 0; i < count; i++)
             {
-                VesselCache.SimulatedPart simPart = VesselCache.SimulatedPart.Borrow(ship.parts[i]);
+                VesselCache.SimulatedPart simPart = VesselCache.SimulatedPart.Borrow(ship.parts[i], null);
                 Vector3 partForce = simPart.GetAero(inflow, mach, pseudoReDragMult);
 
                 ModuleLiftingSurface liftingSurface = ship.parts[i].FindModuleImplementing<ModuleLiftingSurface>();
