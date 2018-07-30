@@ -448,7 +448,7 @@ namespace KerbalWindTunnel
                 if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == CalculationManager.RunStatus.Completed)
                 {
                     DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
-                    GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure));
+                    GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°\nCL_Alpha_avg:\t{1:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure, AoACurveGenerator.AverageLiftSlope));
                 }
 
                 GUILayout.EndVertical();

@@ -12,6 +12,7 @@ namespace KerbalWindTunnel.DataGenerators
     {
         public AoAPoint[] AoAPoints = new AoAPoint[0];
         public Conditions currentConditions = Conditions.Blank;
+        public float AverageLiftSlope { get; private set; } = -1;
         private Dictionary<Conditions, AoAPoint[]> cache = new Dictionary<Conditions, AoAPoint[]>();
 
         public override void Clear()
@@ -20,6 +21,7 @@ namespace KerbalWindTunnel.DataGenerators
             currentConditions = Conditions.Blank;
             cache.Clear();
             AoAPoints = new AoAPoint[0];
+            AverageLiftSlope = -1;
         }
 
         public void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float lowerBound = -20f, float upperBound = 20f, float step = 0.5f)
@@ -39,6 +41,7 @@ namespace KerbalWindTunnel.DataGenerators
             }
             else
             {
+                AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
                 GenerateGraphs();
@@ -91,6 +94,7 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 cache.Add(conditions, newAoAPoints);
                 AoAPoints = newAoAPoints;
+                AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
                 currentConditions = conditions;
                 GenerateGraphs();
                 valuesSet = true;
