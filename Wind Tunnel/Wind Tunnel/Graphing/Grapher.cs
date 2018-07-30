@@ -33,7 +33,7 @@ namespace KerbalWindTunnel.Graphing
         public Grapher(int width, int height, int axisHeight, IEnumerable<IGraphable> graphs) : this(width, height, axisHeight)
         {
             foreach (IGraphable g in graphs)
-                AddGraph(g);
+                Add(g);
         }
         
         public override bool RecalculateLimits()

@@ -75,34 +75,34 @@ namespace KerbalWindTunnel
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.ExcessThrust:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Excess Thrust"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Excess Thrust"));
                                         break;
                                     case GraphSelect.ExcessAcceleration:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Excess Acceleration"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Excess Acceleration"));
                                         break;
                                     case GraphSelect.ThrustAvailable:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Thrust Available"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Thrust Available"));
                                         break;
                                     case GraphSelect.LevelFlightAoA:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Level AoA"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Level AoA"));
                                         break;
                                     case GraphSelect.MaxLiftAoA:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Max Lift AoA"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Max Lift AoA"));
                                         break;
                                     case GraphSelect.MaxLiftForce:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Max Lift"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Max Lift"));
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Lift/Drag Ratio"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Lift/Drag Ratio"));
                                         break;
                                     case GraphSelect.DragForce:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Drag"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Drag"));
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Lift Slope"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Lift Slope"));
                                         break;
                                     case GraphSelect.PitchInput:
-                                        grapher.AddGraph(EnvelopeSurfGenerator.GetGraphableByName("Pitch Input"));
+                                        grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Pitch Input"));
                                         break;
                                 }
                                 grapher.RecalculateLimits();
@@ -137,19 +137,19 @@ namespace KerbalWindTunnel
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.LiftForce:
-                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Lift"));
+                                        grapher.Add(AoACurveGenerator.GetGraphableByName("Lift"));
                                         break;
                                     case GraphSelect.DragForce:
-                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Drag"));
+                                        grapher.Add(AoACurveGenerator.GetGraphableByName("Drag"));
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Lift/Drag Ratio"));
+                                        grapher.Add(AoACurveGenerator.GetGraphableByName("Lift/Drag Ratio"));
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Lift Slope"));
+                                        grapher.Add(AoACurveGenerator.GetGraphableByName("Lift Slope"));
                                         break;
                                     case GraphSelect.PitchInput:
-                                        grapher.AddGraph(AoACurveGenerator.GetGraphableByName("Pitch Input"));
+                                        grapher.Add(AoACurveGenerator.GetGraphableByName("Pitch Input"));
                                         break;
                                 }
                                 graphDirty = false;
@@ -174,25 +174,25 @@ namespace KerbalWindTunnel
                                 switch (graphSelect)
                                 {
                                     case GraphSelect.LevelFlightAoA:
-                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Level AoA"));
+                                        grapher.Add(VelCurveGenerator.GetGraphableByName("Level AoA"));
                                         break;
                                     case GraphSelect.MaxLiftAoA:
-                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Max Lift AoA"));
+                                        grapher.Add(VelCurveGenerator.GetGraphableByName("Max Lift AoA"));
                                         break;
                                     case GraphSelect.ThrustAvailable:
-                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Thrust Available"));
+                                        grapher.Add(VelCurveGenerator.GetGraphableByName("Thrust Available"));
                                         break;
                                     case GraphSelect.LiftDragRatio:
-                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Lift/Drag Ratio"));
+                                        grapher.Add(VelCurveGenerator.GetGraphableByName("Lift/Drag Ratio"));
                                         break;
                                     case GraphSelect.DragForce:
-                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Drag"));
+                                        grapher.Add(VelCurveGenerator.GetGraphableByName("Drag"));
                                         break;
                                     case GraphSelect.LiftSlope:
-                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Lift Slope"));
+                                        grapher.Add(VelCurveGenerator.GetGraphableByName("Lift Slope"));
                                         break;
                                     case GraphSelect.PitchInput:
-                                        grapher.AddGraph(VelCurveGenerator.GetGraphableByName("Pitch Input"));
+                                        grapher.Add(VelCurveGenerator.GetGraphableByName("Pitch Input"));
                                         break;
                                 }
                                 graphDirty = false;

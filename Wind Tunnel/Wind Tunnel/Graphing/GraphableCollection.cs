@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class GraphableCollection : DataGenerators.IGraphableProvider, IGraphable
+    public class GraphableCollection : DataGenerators.IGraphableProvider, IGraphable, IList<IGraphable>
     {
         public string Name { get; set; } = "";
         public virtual float XMin { get; protected set; } = float.NaN;
@@ -21,11 +22,30 @@ namespace KerbalWindTunnel.Graphing
 
         public virtual List<IGraphable> Graphables { get { return graphs.ToList(); } }
 
+        public int Count { get { return graphs.Count; } }
+
+        bool ICollection<IGraphable>.IsReadOnly => false;
+
+        public IGraphable this[int index]
+        {
+            get
+            {
+                return graphs[index];
+            }
+            set
+            {
+                graphs[index].ValuesChanged -= ValuesChangedSubscriber;
+                graphs[index] = value;
+                graphs[index].ValuesChanged += ValuesChangedSubscriber;
+                OnValuesChanged(null);
+            }
+        }
+
         public GraphableCollection() { }
         public GraphableCollection(IEnumerable<IGraphable> graphs)
         {
             foreach (IGraphable g in graphs)
-                AddGraph(g);
+                Add(g);
         }
 
         public virtual void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
@@ -97,15 +117,19 @@ namespace KerbalWindTunnel.Graphing
         }
 
 
-        public virtual IGraphable FindGraph(Predicate<IGraphable> predicate)
+        public virtual IGraphable Find(Predicate<IGraphable> predicate)
         {
             return graphs.Find(predicate);
+        }
+        public virtual List<IGraphable> FindAll(Predicate<IGraphable> predicate)
+        {
+            return graphs.FindAll(predicate);
         }
 
         public virtual void Clear()
         {
             for (int i = graphs.Count - 1; i >= 0; i--)
-                RemoveGraphAt(i);
+                RemoveAt(i);
             OnValuesChanged(null);
         }
 
@@ -114,27 +138,31 @@ namespace KerbalWindTunnel.Graphing
             return graphs.IndexOf(graphable);
         }
 
-        public virtual void AddGraph(IGraphable newGraph)
+        public virtual void Add(IGraphable newGraph)
         {
             graphs.Add(newGraph);
             newGraph.ValuesChanged += ValuesChangedSubscriber;
             OnValuesChanged(null);
         }
 
-        public virtual void InsertGraph(int index, IGraphable newGraph)
+        public virtual void Insert(int index, IGraphable newGraph)
         {
             graphs.Insert(index, newGraph);
             newGraph.ValuesChanged += ValuesChangedSubscriber;
             OnValuesChanged(null);
         }
 
-        public virtual void RemoveGraph(IGraphable graph)
+        public virtual bool Remove(IGraphable graph)
         {
-            graphs.Remove(graph);
-            graph.ValuesChanged -= ValuesChangedSubscriber;
-            OnValuesChanged(null);
+            bool val = graphs.Remove(graph);
+            if (val)
+            {
+                graph.ValuesChanged -= ValuesChangedSubscriber;
+                OnValuesChanged(null);
+            }
+            return val;
         }
-        public virtual void RemoveGraphAt(int index)
+        public virtual void RemoveAt(int index)
         {
             IGraphable graphable = graphs[index];
             graphs.RemoveAt(index);
@@ -143,6 +171,26 @@ namespace KerbalWindTunnel.Graphing
         }
 
         protected virtual void ValuesChangedSubscriber(object sender, EventArgs e) { }
+
+        public bool Contains(IGraphable item)
+        {
+            return graphs.Contains(item);
+        }
+
+        public void CopyTo(IGraphable[] array, int arrayIndex)
+        {
+            graphs.CopyTo(array, arrayIndex);
+        }
+
+        public IEnumerator<IGraphable> GetEnumerator()
+        {
+            return Graphables.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return Graphables.GetEnumerator();
+        }
     }
 
     public class GraphableCollection3 : GraphableCollection, IGraphable3
