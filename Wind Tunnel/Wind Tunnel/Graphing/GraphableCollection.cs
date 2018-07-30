@@ -92,17 +92,50 @@ namespace KerbalWindTunnel.Graphing
             return graphs[index].ValueAt(x, y);
         }
 
-        public string GetFormattedValueAt(float x, float y)
+        public string GetFormattedValueAt(float x, float y, bool withName = false) { return GetFormattedValueAt(x, y, -1, withName); }
+        public string GetFormattedValueAt(float x, float y, int index = -1, bool withName = false)
         {
             if (graphs.Count == 0)
                 return "";
 
-            string returnValue = graphs[0].GetFormattedValueAt(x, y);
+            if (index >= 0)
+                return graphs[index].GetFormattedValueAt(x, y, withName);
+
+            if (graphs.Count > 1)
+                withName = true;
+
+            string returnValue = graphs[0].GetFormattedValueAt(x, y, withName);
             for (int i = 1; i < graphs.Count; i++)
             {
-                returnValue += String.Format("\n{0}", graphs[i].GetFormattedValueAt(x, y));
+                returnValue += String.Format("\n{0}", graphs[i].GetFormattedValueAt(x, y, withName));
+            }
+            if (withName)
+            {
+                string nameSubstring = GetNameSubstring();
+                if (nameSubstring != "")
+                    return returnValue.Replace(nameSubstring, "");
             }
             return returnValue;
+        }
+
+        private string GetNameSubstring()
+        {
+            if (graphs.Count < 2)
+                return "";
+            int maxL = graphs[0].Name.Length;
+            int commonL = 0;
+            while (commonL < maxL && graphs[1].Name.StartsWith(graphs[0].Name.Substring(0, commonL + 1)))
+                commonL++;
+            string nameSubstring =  graphs[0].Name.Substring(0, commonL);
+            if (nameSubstring.EndsWith("("))
+                nameSubstring = nameSubstring.Substring(0, nameSubstring.Length - 1);
+            
+            for(int i = 2; i < graphs.Count; i++)
+            {
+                if (!graphs[i].Name.StartsWith(nameSubstring))
+                    return "";
+            }
+            return nameSubstring;
         }
 
         protected virtual void OnValuesChanged(EventArgs eventArgs)
@@ -201,6 +234,7 @@ namespace KerbalWindTunnel.Graphing
         public Func<float, float> ZAxisScale { get; set; } = (v) => v;
 
         public ColorMap dominantColorMap = ColorMap.Jet_Dark;
+        public int dominantColorMapIndex = -1;
 
         public GraphableCollection3() : base() { }
         public GraphableCollection3(IEnumerable<IGraphable> graphs) : base(graphs) { }
@@ -220,7 +254,10 @@ namespace KerbalWindTunnel.Graphing
                     if (zMin < this.ZMin || float.IsNaN(this.ZMin)) this.ZMin = zMin;
                     if (zMax > this.ZMax || float.IsNaN(this.ZMax)) this.ZMax = zMax;
                     if (dominantColorMap == null)
+                    {
                         dominantColorMap = surf.Color;
+                        dominantColorMapIndex = i;
+                    }
                 }
                 float xMin = graphs[i].XAxisScale(graphs[i].XMin);
                 float xMax = graphs[i].XAxisScale(graphs[i].XMax);

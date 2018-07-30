@@ -109,7 +109,7 @@ namespace KerbalWindTunnel.Graphing
             return ValueAt(xVal, yVal, index);
         }
 
-        public string GetFormattedValueAtPixel(int xPix, int yPix)
+        public string GetFormattedValueAtPixel(int xPix, int yPix, int index = -1)
         {
             if (graphs.Count == 0)
                 return "";
@@ -117,7 +117,7 @@ namespace KerbalWindTunnel.Graphing
             float xVal = xPix / (float)(graphTex.width - 1) * (XMax - XMin) + XMin;
             float yVal = yPix / (float)(graphTex.height - 1) * (YMax - YMin) + YMin;
 
-            return GetFormattedValueAt(xVal, yVal);
+            return GetFormattedValueAt(xVal, yVal, index, false);
         }
 
         public static explicit operator UnityEngine.Texture2D(Grapher graph)
@@ -180,7 +180,7 @@ namespace KerbalWindTunnel.Graphing
         Func<float, float> YAxisScale { get; set; }
         void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop);
         float ValueAt(float x, float y);
-        string GetFormattedValueAt(float x, float y);
+        string GetFormattedValueAt(float x, float y, bool withName = false);
         event EventHandler ValuesChanged;
     }
     public interface IGraphable3 : IGraphable
@@ -214,9 +214,9 @@ namespace KerbalWindTunnel.Graphing
             ValuesChanged?.Invoke(this, eventArgs);
         }
 
-        public virtual string GetFormattedValueAt(float x, float y)
+        public virtual string GetFormattedValueAt(float x, float y, bool withName = false)
         {
-            return String.Format("{2}{0:" + StringFormat + "}{1}", ValueAt(x, y), Unit, Name != "" ? Name + ": " : "");
+            return String.Format("{2}{0:" + StringFormat + "}{1}", ValueAt(x, y), Unit, withName && Name != "" ? Name + ": " : "");
         }
     }
     public abstract class Graphable3 : Graphable, IGraphable3
