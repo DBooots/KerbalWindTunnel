@@ -232,6 +232,7 @@ namespace KerbalWindTunnel
         Texture2D crossHair = new Texture2D(1, 1);
         Texture2D selectedCrossHair = new Texture2D(1, 1);
         Texture2D clearTex = new Texture2D(1, 1);
+        Texture2D settingsTex = GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
 
         Vector2 selectedCrossHairVect = new Vector2(-1, -1);
 
@@ -299,11 +300,13 @@ namespace KerbalWindTunnel
                 }
             }
 
-            if (GUI.Button(new Rect(this.WindowRect.width - 54, 2, 16, 16), "S"))
+            
+            if (GUI.Button(new Rect(this.WindowRect.width - 54, 2, 16, 16), ""))
             {
                 settingsDialog = SpawnDialog();
                 this.Visible = false;
             }
+            GUI.Label(new Rect(this.WindowRect.width - 54, 2, 16, 16), settingsTex, GUIStyle.none);
 
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();

@@ -37,10 +37,11 @@ namespace KerbalWindTunnel
         internal static IButton blizzyToolbarButton = null;
         private int guiId;
         private bool appLauncherEventSet = false;
-        private const string iconPath = "WindTunnel/Textures/Icon";
-        private const string iconPath_off = "WindTunnel/Textures/Icon_off";
-        private const string iconPath_blizzy = "WindTunnel/Textures/blizzy_Icon";
-        private const string iconPath_blizzy_off = "WindTunnel/Textures/blizzy_Icon_off";
+        private const string iconPath = "WindTunnel/Textures/KWT_Icon_on";
+        private const string iconPath_off = "WindTunnel/Textures/KWT_Icon";
+        private const string iconPath_blizzy = "WindTunnel/Textures/KWT_Icon_blizzy_on";
+        private const string iconPath_blizzy_off = "WindTunnel/Textures/KWT_Icon_blizzy";
+        internal const string iconPath_settings = "WindTunnel/Textures/KWT_settings";
 
         public void UpdateHighlighting(HighlightMode highlightMode, CelestialBody body, float altitude, float speed, float aoa)
         {
@@ -181,7 +182,7 @@ namespace KerbalWindTunnel
                 if (!ToolbarManager.ToolbarAvailable) return false;
                 if (HighLogic.LoadedScene != GameScenes.EDITOR && HighLogic.LoadedScene != GameScenes.FLIGHT) return true;
                 blizzyToolbarButton = ToolbarManager.Instance.add("ReCoupler", "ReCoupler");
-                blizzyToolbarButton.TexturePath = iconPath_blizzy;
+                blizzyToolbarButton.TexturePath = iconPath_blizzy_off;
                 blizzyToolbarButton.ToolTip = "ReCoupler";
                 blizzyToolbarButton.Visible = true;
                 blizzyToolbarButton.OnClick += (e) =>
@@ -207,7 +208,7 @@ namespace KerbalWindTunnel
                 null,
                 null,
                 ApplicationLauncher.AppScenes.VAB | ApplicationLauncher.AppScenes.SPH | ApplicationLauncher.AppScenes.FLIGHT,
-                GameDatabase.Instance.GetTexture(iconPath, false));
+                GameDatabase.Instance.GetTexture(iconPath_off, false));
         }
 
         public void CloseWindow()
@@ -230,9 +231,9 @@ namespace KerbalWindTunnel
         {
             window.Visible = true;
             if (appButton != null)
-                appButton.SetTexture(GameDatabase.Instance.GetTexture(iconPath_off, false));
+                appButton.SetTexture(GameDatabase.Instance.GetTexture(iconPath, false));
             if (blizzyToolbarButton != null)
-                blizzyToolbarButton.TexturePath = iconPath_blizzy_off;
+                blizzyToolbarButton.TexturePath = iconPath_blizzy;
         }
         public void OnButtonFalse()
         {
@@ -242,9 +243,9 @@ namespace KerbalWindTunnel
             ClearPartHighlighting();
 
             if (appButton != null)
-                appButton.SetTexture(GameDatabase.Instance.GetTexture(iconPath, false));
+                appButton.SetTexture(GameDatabase.Instance.GetTexture(iconPath_off, false));
             if (blizzyToolbarButton != null)
-                blizzyToolbarButton.TexturePath = iconPath_blizzy;
+                blizzyToolbarButton.TexturePath = iconPath_blizzy_off;
         }
 
         internal override void OnDestroy()
