@@ -232,7 +232,7 @@ namespace KerbalWindTunnel
         Texture2D crossHair = new Texture2D(1, 1);
         Texture2D selectedCrossHair = new Texture2D(1, 1);
         Texture2D clearTex = new Texture2D(1, 1);
-        Texture2D settingsTex = GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
+        Texture2D settingsTex = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
 
         Vector2 selectedCrossHairVect = new Vector2(-1, -1);
 
@@ -256,6 +256,8 @@ namespace KerbalWindTunnel
             clearTex.SetPixel(0, 0, Color.clear);
             clearTex.Apply();
             clearBox.normal.background = clearTex;
+
+            settingsTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_settings));
 
             onWindowVisibleChanged += (MonoBehaviourWindow sender, bool visible) => { if (inputLocked && !visible && sender == this) { EditorLogic.fetch.Unlock(lockID); inputLocked = false; } };
         }

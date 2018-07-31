@@ -37,11 +37,17 @@ namespace KerbalWindTunnel
         internal static IButton blizzyToolbarButton = null;
         private int guiId;
         private bool appLauncherEventSet = false;
-        private const string iconPath = "WindTunnel/Textures/KWT_Icon_on";
-        private const string iconPath_off = "WindTunnel/Textures/KWT_Icon";
-        private const string iconPath_blizzy = "WindTunnel/Textures/KWT_Icon_blizzy_on";
-        private const string iconPath_blizzy_off = "WindTunnel/Textures/KWT_Icon_blizzy";
-        internal const string iconPath_settings = "WindTunnel/Textures/KWT_settings";
+        public const string texPath = "GameData/WindTunnel/Textures/";
+        private const string iconPath = "KWT_Icon_on.png";
+        private const string iconPath_off = "KWT_Icon.png";
+        private const string iconPath_blizzy = "KWT_Icon_blizzy_on.png";
+        private const string iconPath_blizzy_off = "KWT_Icon_blizzy.png";
+        internal const string iconPath_settings = "KWT_settings.png";
+
+        private Texture2D icon_on = new Texture2D(38, 38, TextureFormat.ARGB32, false);
+        private Texture2D icon = new Texture2D(38, 38, TextureFormat.ARGB32, false);
+        private Texture2D icon_blizzy_on = new Texture2D(24, 24, TextureFormat.ARGB32, false);
+        private Texture2D icon_blizzy = new Texture2D(24, 24, TextureFormat.ARGB32, false);
         
         Graphing.ColorMap dragMap = new Graphing.ColorMap(v => new Color(1, 0, 0, v));
         Graphing.ColorMap liftMap = new Graphing.ColorMap(v => new Color(0, 1, 0, v));
@@ -174,6 +180,11 @@ namespace KerbalWindTunnel
                 Destroy(Instance);
             Instance = this;
 
+            icon.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath_off));
+            icon_on.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath));
+            icon_blizzy.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath_blizzy_off));
+            icon_blizzy_on.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath_blizzy));
+
             GameEvents.onEditorShipModified.Add(OnEditorShipModified);
             if (!ActivateBlizzyToolBar())
             {
@@ -223,7 +234,7 @@ namespace KerbalWindTunnel
                 null,
                 null,
                 ApplicationLauncher.AppScenes.VAB | ApplicationLauncher.AppScenes.SPH | ApplicationLauncher.AppScenes.FLIGHT,
-                GameDatabase.Instance.GetTexture(iconPath_off, false));
+                icon);
         }
 
         public void CloseWindow()
@@ -246,7 +257,7 @@ namespace KerbalWindTunnel
         {
             window.Visible = true;
             if (appButton != null)
-                appButton.SetTexture(GameDatabase.Instance.GetTexture(iconPath, false));
+                appButton.SetTexture(icon_on);
             if (blizzyToolbarButton != null)
                 blizzyToolbarButton.TexturePath = iconPath_blizzy;
         }
@@ -258,7 +269,7 @@ namespace KerbalWindTunnel
             ClearPartHighlighting();
 
             if (appButton != null)
-                appButton.SetTexture(GameDatabase.Instance.GetTexture(iconPath_off, false));
+                appButton.SetTexture(icon);
             if (blizzyToolbarButton != null)
                 blizzyToolbarButton.TexturePath = iconPath_blizzy_off;
         }
@@ -267,6 +278,11 @@ namespace KerbalWindTunnel
         {
             base.OnDestroy();
 
+            Destroy(icon);
+            Destroy(icon_on);
+            Destroy(icon_blizzy);
+            Destroy(icon_blizzy_on);
+            
             ClearPartHighlighting();
 
             WindTunnelSettings.SaveSettings();
