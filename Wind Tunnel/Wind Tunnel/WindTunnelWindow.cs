@@ -460,9 +460,11 @@ namespace KerbalWindTunnel
             GUILayout.Label("Part Highlighting: ");
             WindTunnel.HighlightMode newhighlightMode = (WindTunnel.HighlightMode)GUILayout.SelectionGrid((int)WindTunnel.Instance.highlightMode, highliftModeStrings, 3);
 
-            if(newhighlightMode != WindTunnel.Instance.highlightMode)
+            if(newhighlightMode != Parent.highlightMode)
             {
                 Parent.UpdateHighlighting(newhighlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                if (newhighlightMode == WindTunnel.HighlightMode.Off)
+                    this.WindowRect.height = 100;
             }
 
             GUILayout.EndHorizontal();
@@ -520,6 +522,9 @@ namespace KerbalWindTunnel
                     selectedCrossHairVect = vectMouse - graphRect.position;
                     SetConditionsFromGraph(selectedCrossHairVect);
                     conditionDetails = GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, this.AoA, true);
+
+                    if (Parent.highlightMode != WindTunnel.HighlightMode.Off)
+                        Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
                 }
             }
             if(CurrentGraphMode == GraphMode.FlightEnvelope && cAxisRect.Contains(vectMouse) && Status == CalculationManager.RunStatus.Completed)
