@@ -42,6 +42,9 @@ namespace KerbalWindTunnel
         private const string iconPath_blizzy = "WindTunnel/Textures/KWT_Icon_blizzy_on";
         private const string iconPath_blizzy_off = "WindTunnel/Textures/KWT_Icon_blizzy";
         internal const string iconPath_settings = "WindTunnel/Textures/KWT_settings";
+        
+        Graphing.ColorMap dragMap = new Graphing.ColorMap(v => new Color(1, 0, 0, v));
+        Graphing.ColorMap liftMap = new Graphing.ColorMap(v => new Color(0, 1, 0, v));
 
         public void UpdateHighlighting(HighlightMode highlightMode, CelestialBody body, float altitude, float speed, float aoa)
         {
@@ -88,7 +91,19 @@ namespace KerbalWindTunnel
             highlightedParts.Add(part);
 
             part.SetHighlightType(Part.HighlightType.AlwaysOn);
-            part.SetHighlightColor(Graphing.ColorMap.Jet[value]);
+            if (WindTunnelSettings.UseSingleColorHighlighting)
+                switch (highlightMode)
+                {
+                    case HighlightMode.Lift:
+                        part.SetHighlightColor(liftMap[value]);
+                        break;
+                    case HighlightMode.Drag:
+                    default:
+                        part.SetHighlightColor(dragMap[value]);
+                        break;
+                }
+            else
+                part.SetHighlightColor(Graphing.ColorMap.Jet[value]);
             part.SetHighlight(true, false);
         }
 

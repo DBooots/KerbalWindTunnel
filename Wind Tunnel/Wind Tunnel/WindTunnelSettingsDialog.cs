@@ -41,6 +41,18 @@ namespace KerbalWindTunnel
         [Persistent]
         public bool startMinimized;
 
+        public static bool UseSingleColorHighlighting
+        {
+            get { return Instance.useSingleColorHighlighting; }
+            set
+            {
+                Instance.useSingleColorHighlighting = value;
+                settingsChanged = true;
+            }
+        }
+        [Persistent]
+        public bool useSingleColorHighlighting;
+
         private static bool settingsChanged = false;
         private static bool settingsLoaded = false;
 
@@ -99,6 +111,7 @@ namespace KerbalWindTunnel
                         WindTunnelSettings.UseCoefficients = !WindTunnelSettings.UseCoefficients; }),
                 new DialogGUIToggle(WindTunnelSettings.DefaultToMach, "Default to speed as Mach", delegate (bool b) { WindTunnelSettings.DefaultToMach = !WindTunnelSettings.DefaultToMach; }),
                 new DialogGUIToggle(WindTunnelSettings.StartMinimized, "Start minimized", delegate (bool b) { WindTunnelSettings.StartMinimized = !WindTunnelSettings.StartMinimized; }),
+                new DialogGUIToggle(WindTunnelSettings.UseSingleColorHighlighting, "Use simple part highlighting", delegate (bool b) {WindTunnelSettings.UseSingleColorHighlighting = !WindTunnelSettings.UseSingleColorHighlighting; }),
                 new DialogGUIButton("Accept", delegate { WindTunnelWindow.Instance.Visible = true; settingsDialog.Dismiss(); })
             };
 
