@@ -30,10 +30,9 @@ namespace KerbalWindTunnel.Graphing
             this.vAxisTex = new UnityEngine.Texture2D(axisWidth, height, UnityEngine.TextureFormat.ARGB32, false);
             this.cAxisTex = new UnityEngine.Texture2D(width, axisWidth, UnityEngine.TextureFormat.ARGB32, false);
         }
-        public Grapher(int width, int height, int axisHeight, IEnumerable<IGraphable> graphs) : this(width, height, axisHeight)
+        public Grapher(int width, int height, int axisWidth, IEnumerable<IGraphable> graphs) : this(width, height, axisWidth)
         {
-            foreach (IGraphable g in graphs)
-                Add(g);
+            AddRange(graphs);
         }
         
         public override bool RecalculateLimits()
@@ -118,6 +117,11 @@ namespace KerbalWindTunnel.Graphing
             float yVal = yPix / (float)(graphTex.height - 1) * (YMax - YMin) + YMin;
 
             return GetFormattedValueAt(xVal, yVal, index, false);
+        }
+
+        public void SetCollection(IEnumerable<IGraphable> newCollection)
+        {
+            this.Graphables = newCollection.ToList();
         }
 
         public static explicit operator UnityEngine.Texture2D(Grapher graph)

@@ -5,7 +5,6 @@ namespace KerbalWindTunnel.Graphing
 {
     public class SurfGraph : Graphable3
     {
-        
         public override ColorMap Color { get; set; } = ColorMap.Jet_Dark;
         
         private float[,] _values;

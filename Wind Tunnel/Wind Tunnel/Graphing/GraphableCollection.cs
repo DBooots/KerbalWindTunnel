@@ -20,7 +20,20 @@ namespace KerbalWindTunnel.Graphing
 
         public event EventHandler ValuesChanged;
 
-        public virtual List<IGraphable> Graphables { get { return graphs.ToList(); } }
+        public virtual List<IGraphable> Graphables
+        {
+            get { return graphs.ToList(); }
+            set
+            {
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    graphs[i].ValuesChanged -= ValuesChangedSubscriber;
+                graphs.Clear();
+                //for (int i = value.Count - 1; i >= 0; i--)
+                //    value[i].ValuesChanged += ValuesChangedSubscriber;
+                //graphs = value;
+                AddRange(value);
+            }
+        }
 
         public int Count { get { return graphs.Count; } }
 
@@ -34,6 +47,8 @@ namespace KerbalWindTunnel.Graphing
             }
             set
             {
+                if (value == null)
+                    return;
                 graphs[index].ValuesChanged -= ValuesChangedSubscriber;
                 graphs[index] = value;
                 graphs[index].ValuesChanged += ValuesChangedSubscriber;
@@ -42,10 +57,13 @@ namespace KerbalWindTunnel.Graphing
         }
 
         public GraphableCollection() { }
+        public GraphableCollection(IGraphable graph)
+        {
+            Add(graph);
+        }
         public GraphableCollection(IEnumerable<IGraphable> graphs)
         {
-            foreach (IGraphable g in graphs)
-                Add(g);
+            AddRange(graphs);
         }
 
         public virtual void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
@@ -104,10 +122,14 @@ namespace KerbalWindTunnel.Graphing
             if (graphs.Count > 1)
                 withName = true;
 
-            string returnValue = graphs[0].GetFormattedValueAt(x, y, withName);
-            for (int i = 1; i < graphs.Count; i++)
+            string returnValue = "";
+            for (int i = 0; i < graphs.Count; i++)
             {
-                returnValue += String.Format("\n{0}", graphs[i].GetFormattedValueAt(x, y, withName));
+                string graphValue = graphs[i].GetFormattedValueAt(x, y, withName);
+                if (graphValue != "" && i > 0)
+                    returnValue += String.Format("\n{0}", graphValue);
+                else
+                    returnValue += String.Format("{0}", graphValue);
             }
             if (withName)
             {
@@ -162,7 +184,8 @@ namespace KerbalWindTunnel.Graphing
         public virtual void Clear()
         {
             for (int i = graphs.Count - 1; i >= 0; i--)
-                RemoveAt(i);
+                graphs[i].ValuesChanged -= ValuesChangedSubscriber;
+            graphs.Clear();
             OnValuesChanged(null);
         }
 
@@ -173,13 +196,30 @@ namespace KerbalWindTunnel.Graphing
 
         public virtual void Add(IGraphable newGraph)
         {
+            if (newGraph == null)
+                return;
             graphs.Add(newGraph);
             newGraph.ValuesChanged += ValuesChangedSubscriber;
             OnValuesChanged(null);
         }
 
+        public virtual void AddRange(IEnumerable<IGraphable> newGraphs)
+        {
+            IEnumerator<IGraphable> enumerator = newGraphs.GetEnumerator();
+            while(enumerator.MoveNext())
+            {
+                if (enumerator.Current == null)
+                    continue;
+                graphs.Add(enumerator.Current);
+                enumerator.Current.ValuesChanged += ValuesChangedSubscriber;
+            }
+            OnValuesChanged(null);
+        }
+
         public virtual void Insert(int index, IGraphable newGraph)
         {
+            if (newGraph == null)
+                return;
             graphs.Insert(index, newGraph);
             newGraph.ValuesChanged += ValuesChangedSubscriber;
             OnValuesChanged(null);
@@ -237,6 +277,7 @@ namespace KerbalWindTunnel.Graphing
         public int dominantColorMapIndex = -1;
 
         public GraphableCollection3() : base() { }
+        public GraphableCollection3(IGraphable graph) : base(graph) { }
         public GraphableCollection3(IEnumerable<IGraphable> graphs) : base(graphs) { }
 
         public override bool RecalculateLimits()
