@@ -309,12 +309,12 @@ namespace KerbalWindTunnel
         {
             //GUI.Label(new Rect(PlotPosition.x, PlotPosition.y + graphHeight / 2 - 30, graphWidth + 45, 20), "Calculating... (" + percentComplete * 100 + "%)");
             GUILayout.Label(String.Format("Calculating... ({0:N1}%)", percentComplete * 100), labelCentered, GUILayout.Height(graphHeight + 66), GUILayout.Width(graphWidth));
-            Rect rectBar = new Rect(PlotPosition.x, PlotPosition.y + 292 / 2 - 10, 292 + 45, 20);
+            //Rect rectBar = new Rect(PlotPosition.x, PlotPosition.y + 292 / 2 - 10, 292 + 45, 20);
             //blnReturn = Drawing.DrawBar(styleBack, out rectBar, Width);
-            GUI.Button(rectBar, "");
+            //GUI.Button(rectBar, "");
 
-            if ((rectBar.width * percentComplete) > 1)
-                DrawBarScaled(rectBar, new GUIStyle(), new GUIStyle(), percentComplete);
+            //if ((rectBar.width * percentComplete) > 1)
+                //DrawBarScaled(rectBar, new GUIStyle(), new GUIStyle(), percentComplete);
         }
         internal static void DrawBarScaled(Rect rectStart, GUIStyle Style, GUIStyle StyleNarrow, float Scale)
         {
