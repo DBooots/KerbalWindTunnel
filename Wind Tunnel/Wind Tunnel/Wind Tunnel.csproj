@@ -72,6 +72,7 @@
     <Compile Include="Graphing\Grapher.cs" />
     <Compile Include="DataGenerators\GraphGenerator.cs" />
     <Compile Include="Graphing\LineGraph.cs" />
+    <Compile Include="Graphing\OutlineMask.cs" />
     <Compile Include="Graphing\SurfGraph.cs" />
     <Compile Include="DataGenerators\VelCurve.cs" />
     <Compile Include="RootSolvers\Bisect.cs" />
