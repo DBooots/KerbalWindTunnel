@@ -506,7 +506,7 @@ namespace KerbalWindTunnel
 
                 float showValue = GetGraphValue((int)(vectMouse.x - graphRect.x), CurrentGraphMode == GraphMode.FlightEnvelope ? (int)(graphHeight - (vectMouse.y - graphRect.y)) : -1);
                 //GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
-                GUIContent labelContent = new GUIContent(grapher.GetFormattedValueAtPixel((int)(vectMouse.x - graphRect.x), (int)(vectMouse.y - graphRect.y)));
+                GUIContent labelContent = new GUIContent(grapher.GetFormattedValueAtPixel((int)(vectMouse.x - graphRect.x), (int)(graphHeight - (vectMouse.y - graphRect.y))));
                 Vector2 labelSize = SkinsLibrary.CurrentTooltip.CalcSize(labelContent);
                 if (labelSize.x < 80)
                     labelSize.x = 80;
