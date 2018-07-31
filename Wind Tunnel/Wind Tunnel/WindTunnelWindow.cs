@@ -674,9 +674,13 @@ namespace KerbalWindTunnel
         internal override void OnDestroy()
         {
             base.OnDestroy();
+            grapher.Dispose();
+            Destroy(crossHair);
+            Destroy(selectedCrossHair);
+            Destroy(clearTex);
+            Destroy(settingsTex);
             if (inputLocked)
                 EditorLogic.fetch.Unlock(lockID);
-            grapher.Dispose();
         }
 
         private void BodyParseChildren(CelestialBody cbRoot, int Depth = 0)
