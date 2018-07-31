@@ -53,6 +53,18 @@ namespace KerbalWindTunnel
         [Persistent]
         public bool useSingleColorHighlighting;
 
+        public static bool ShowEnvelopeMask
+        {
+            get { return Instance.showEnvelopeMask; }
+            set
+            {
+                Instance.showEnvelopeMask = value;
+                settingsChanged = true;
+            }
+        }
+        [Persistent]
+        public bool showEnvelopeMask = true;
+
         private static bool settingsChanged = false;
         private static bool settingsLoaded = false;
 
@@ -112,6 +124,7 @@ namespace KerbalWindTunnel
                 new DialogGUIToggle(WindTunnelSettings.DefaultToMach, "Default to speed as Mach", delegate (bool b) { WindTunnelSettings.DefaultToMach = !WindTunnelSettings.DefaultToMach; }),
                 new DialogGUIToggle(WindTunnelSettings.StartMinimized, "Start minimized", delegate (bool b) { WindTunnelSettings.StartMinimized = !WindTunnelSettings.StartMinimized; }),
                 new DialogGUIToggle(WindTunnelSettings.UseSingleColorHighlighting, "Use simple part highlighting", delegate (bool b) {WindTunnelSettings.UseSingleColorHighlighting = !WindTunnelSettings.UseSingleColorHighlighting; }),
+                new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline on graphs", delegate (bool b) {WindTunnelSettings.ShowEnvelopeMask = !WindTunnelSettings.ShowEnvelopeMask; }),
                 new DialogGUIButton("Accept", delegate { WindTunnelWindow.Instance.Visible = true; settingsDialog.Dismiss(); })
             };
 

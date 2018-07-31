@@ -103,9 +103,8 @@ namespace KerbalWindTunnel
                                         grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Pitch Input"));
                                         break;
                                 }
-                                if (CurrentGraphSelect != GraphSelect.ExcessThrust && CurrentGraphSelect != GraphSelect.ExcessAcceleration)
+                                if (WindTunnelSettings.ShowEnvelopeMask && CurrentGraphSelect != GraphSelect.ExcessThrust && CurrentGraphSelect != GraphSelect.ExcessAcceleration)
                                     grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Envelope Mask"));
-                                grapher.RecalculateLimits();
 
                                 graphDirty = false;
                                 break;
