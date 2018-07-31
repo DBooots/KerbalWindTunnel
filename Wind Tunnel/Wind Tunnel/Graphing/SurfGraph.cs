@@ -29,7 +29,12 @@ namespace KerbalWindTunnel.Graphing
             this.ZMax = values.Max(true);
             this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
             if (scaleZToAxis)
-                this.ZAxisScaler = (ZMax - ZMin) / (Axis.GetMax(ZMin, ZMax) - Axis.GetMin(ZMin, ZMax));
+            {
+                float axisMax = Axis.GetMax(ZMin, ZMax);
+                float axisMin = Axis.GetMin(ZMin, ZMax);
+                //this.ZAxisScaler = (ZMax - ZMin) / (Axis.GetMax(ZMin, ZMax) - Axis.GetMin(ZMin, ZMax));
+                this.ColorFunc = (x, y, z) => (z - axisMin) / (axisMax - axisMin);
+            }
         }
         
         public override void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
