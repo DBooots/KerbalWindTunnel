@@ -77,6 +77,7 @@ namespace KerbalWindTunnel.DataGenerators
             graphs.Add("Drag", new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
             graphs.Add("Lift Slope", new SurfGraph(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
             graphs.Add("Pitch Input", new SurfGraph(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true) { Name = "Pitch Input", Unit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Envelope Mask", new OutlineMask(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Envelope Mask", Unit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)

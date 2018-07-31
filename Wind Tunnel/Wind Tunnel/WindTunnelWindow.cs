@@ -439,7 +439,6 @@ namespace KerbalWindTunnel
                     //this.vessel = new StockAero();
 
                     selectedCrossHairVect = new Vector2(-1, -1);
-                    maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
                 }
 
                 // Display selected point details.
@@ -633,7 +632,6 @@ namespace KerbalWindTunnel
             //this.vessel = new StockAero();
             Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
             selectedCrossHairVect = new Vector2(-1, -1);
-            maskConditions = DataGenerators.EnvelopeSurf.Conditions.Blank;
             
             switch (body.name.ToLower())
             {
@@ -676,7 +674,6 @@ namespace KerbalWindTunnel
             if (inputLocked)
                 EditorLogic.fetch.Unlock(lockID);
             grapher.Dispose();
-            Destroy(maskTex);
         }
 
         private void BodyParseChildren(CelestialBody cbRoot, int Depth = 0)

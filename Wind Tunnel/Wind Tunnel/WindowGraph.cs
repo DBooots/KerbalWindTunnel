@@ -11,8 +11,6 @@ namespace KerbalWindTunnel
 {
     public partial class WindTunnelWindow
     {
-        private bool showEnvelopeMask = true;
-        private EnvelopeSurf.Conditions maskConditions = EnvelopeSurf.Conditions.Blank;
         private float altitudeStep = 100;
         private float maxAltitude = 25000;
         private float speedStep = 10;
@@ -105,15 +103,9 @@ namespace KerbalWindTunnel
                                         grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Pitch Input"));
                                         break;
                                 }
+                                if (CurrentGraphSelect != GraphSelect.ExcessThrust && CurrentGraphSelect != GraphSelect.ExcessAcceleration)
+                                    grapher.Add(EnvelopeSurfGenerator.GetGraphableByName("Envelope Mask"));
                                 grapher.RecalculateLimits();
-
-                                if (showEnvelopeMask && !maskConditions.Equals(EnvelopeSurfGenerator.currentConditions))
-                                {
-                                    ((SurfGraph)EnvelopeSurfGenerator.GetGraphableByName("Excess Thrust"))
-                                        .DrawMask(ref maskTex, grapher.XMin, grapher.XMax, grapher.YMin, grapher.YMax,
-                                        (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v), Color.grey, true, 2);
-                                    maskConditions = EnvelopeSurfGenerator.currentConditions;
-                                }
 
                                 graphDirty = false;
                                 break;
@@ -224,8 +216,6 @@ namespace KerbalWindTunnel
             }
         }
 
-        Texture2D maskTex = new Texture2D(graphWidth, graphHeight, TextureFormat.ARGB32, false);
-
         public float GetGraphValue(int x, int y = -1)
         {
             return grapher.ValueAtPixel(x, y, 0);
@@ -272,9 +262,6 @@ namespace KerbalWindTunnel
             GUIContent graph = new GUIContent(grapher.graphTex);
             graphRect = GUILayoutUtility.GetRect(graph, HighLogic.Skin.box, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
             GUI.Box(graphRect, graph);
-            if (CurrentGraphMode == GraphMode.FlightEnvelope && showEnvelopeMask)
-                GUI.Box(graphRect, maskTex, clearBox);
-            //GUILayout.Box(graphTex, GUILayout.Height(graphHeight), GUILayout.Width(graphWidth));
 
             GUILayout.EndHorizontal();
 
@@ -293,8 +280,6 @@ namespace KerbalWindTunnel
                 GUIContent cAxis = new GUIContent(grapher.cAxisTex);
                 cAxisRect = GUILayoutUtility.GetRect(cAxis, HighLogic.Skin.box, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
                 GUI.Box(cAxisRect, cAxis);
-                //GUILayout.Box(grapher.cAxisTex, GUIStyle.none, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
-                //GUILayout.Label("Colourmap goes here...", labelCentered);
                 GUILayout.EndHorizontal();
 
                 for (int i = 0; i <= grapher.colorAxis.TickCount; i++)
