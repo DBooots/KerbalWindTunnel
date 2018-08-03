@@ -205,6 +205,7 @@ namespace KerbalWindTunnel
         {
             try
             {
+                if (!WindTunnelSettings.UseBlizzy) return false;
                 if (!ToolbarManager.ToolbarAvailable) return false;
                 if (HighLogic.LoadedScene != GameScenes.EDITOR && HighLogic.LoadedScene != GameScenes.FLIGHT) return true;
                 blizzyToolbarButton = ToolbarManager.Instance.add("ReCoupler", "ReCoupler");
