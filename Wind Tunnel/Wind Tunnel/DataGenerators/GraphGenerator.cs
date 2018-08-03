@@ -32,6 +32,11 @@ namespace KerbalWindTunnel.DataGenerators
             return null;
         }
 
+        public virtual GraphableCollection GetGraphableCollection()
+        {
+            return new GraphableCollection(this.graphs.Values);
+        }
+
         public virtual float PercentComplete
         {
             get { return calculationManager.PercentComplete; }
