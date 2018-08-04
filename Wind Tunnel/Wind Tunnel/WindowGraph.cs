@@ -142,6 +142,9 @@ namespace KerbalWindTunnel
                                     case GraphSelect.PitchInput:
                                         grapher.Add(AoACurveGenerator.GetGraphableByName("Pitch Input"));
                                         break;
+                                    case GraphSelect.Torque:
+                                        grapher.Add(AoACurveGenerator.GetGraphableByName("Torque"));
+                                        break;
                                 }
                                 graphDirty = false;
                                 break;

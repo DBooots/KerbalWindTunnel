@@ -95,14 +95,14 @@ namespace KerbalWindTunnel
 
         public readonly GraphSelect[][] selectFromIndex = new GraphSelect[][]{
             new GraphSelect[]{ GraphSelect.ExcessThrust, GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.LiftSlope, GraphSelect.ExcessAcceleration, GraphSelect.FuelBurn, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce },
-            new GraphSelect[]{ GraphSelect.LiftForce, GraphSelect.DragForce, GraphSelect.LiftDragRatio, GraphSelect.LiftSlope, GraphSelect.PitchInput },
+            new GraphSelect[]{ GraphSelect.LiftForce, GraphSelect.DragForce, GraphSelect.LiftDragRatio, GraphSelect.LiftSlope, GraphSelect.PitchInput, GraphSelect.Torque },
             new GraphSelect[]{ GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.DragForce, GraphSelect.LiftSlope, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce } };
 
         public readonly int[][] indexFromSelect = new int[][]
         {
-            new int[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0 },
-            new int[]{ 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 1, 4 },
-            new int[]{ 0, 0, 1, 2, 4, 0, 0, 5, 6, 0, 3, 0 } };
+            new int[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0 },
+            new int[]{ 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 1, 4, 5 },
+            new int[]{ 0, 0, 1, 2, 4, 0, 0, 5, 6, 0, 3, 0, 0 } };
 
         public enum GraphSelect
         {
@@ -118,7 +118,8 @@ namespace KerbalWindTunnel
 
             LiftForce = 9,
             DragForce = 10,
-            PitchInput = 11
+            PitchInput = 11,
+            Torque = 12
             //LiftDragRatio = 2,
             //LiftSlope = 4
 
@@ -149,7 +150,7 @@ namespace KerbalWindTunnel
         private readonly string[] graphModes = new string[] { "Flight Envelope", "AoA Curves", "Velocity Curves" };
         private readonly string[][] graphSelections = new string[][] {
             new string[] { "Excess Thrust", "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Lift Slope", "Excess Acceleration" },
-            new string[] { "Lift Force", "Drag Force", "Lift/Drag Ratio", "Lift Slope", "Pitch Input" },
+            new string[] { "Lift Force", "Drag Force", "Lift/Drag Ratio", "Lift Slope", "Pitch Input", "Pitching Torque" },
             new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Drag Force" }
         };
         private readonly string[] highliftModeStrings = new string[] { "Off", "Drag", "Lift" };
