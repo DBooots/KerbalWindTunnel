@@ -170,5 +170,10 @@ namespace KerbalWindTunnel.Graphing
                 }
             }
         }
+
+        public override void WriteToFile(string filename, string sheetName = "")
+        {
+            return;
+        }
     }
 }
