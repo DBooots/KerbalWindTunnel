@@ -288,13 +288,13 @@ namespace KerbalWindTunnel
 
         internal override void DrawWindow(int id)
         {
-            if (GUI.Button(new Rect(this.WindowRect.width - 18, 2, 16, 16), "X", exitButton))
+            if (GUI.Button(new Rect(this.WindowRect.width - 27, 2, 25, 25), "X", exitButton))
             {
                 WindTunnel.Instance.CloseWindow();
                 return;
             }
 
-            if (GUI.Button(new Rect(this.WindowRect.width - 36, 2, 16, 16), "▲", Minimized ? downButton : HighLogic.Skin.button))
+            if (GUI.Button(new Rect(this.WindowRect.width - 54, 2, 25, 25), "▲", Minimized ? downButton : HighLogic.Skin.button))
             {
                 Minimized = !Minimized;
                 if (Minimized)
@@ -305,12 +305,11 @@ namespace KerbalWindTunnel
             }
 
             
-            if (GUI.Button(new Rect(this.WindowRect.width - 54, 2, 16, 16), ""))
+            if (GUI.Button(new Rect(this.WindowRect.width - 81, 2, 25, 25), settingsTex))
             {
                 settingsDialog = SpawnDialog();
                 this.Visible = false;
             }
-            GUI.Label(new Rect(this.WindowRect.width - 54, 2, 16, 16), settingsTex, GUIStyle.none);
 
             GUILayout.BeginVertical();
             GUILayout.BeginHorizontal();
