@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace KerbalWindTunnel.Graphing
 {
-    class LineGraph : Graphable
+    public class LineGraph : Graphable
     {
         public UnityEngine.Vector2[] _values;
         public UnityEngine.Vector2[] Values
