@@ -65,6 +65,18 @@ namespace KerbalWindTunnel
         [Persistent]
         public bool showEnvelopeMask = true;
 
+        public static bool ShowEnvelopeMaskAlways
+        {
+            get { return Instance.showEnvelopeMaskAlways; }
+            set
+            {
+                Instance.showEnvelopeMaskAlways = value;
+                settingsChanged = true;
+            }
+        }
+        [Persistent]
+        public bool showEnvelopeMaskAlways = false;
+
         public static bool UseBlizzy
         {
             get { return Instance.useBlizzy; }
@@ -136,7 +148,8 @@ namespace KerbalWindTunnel
                 new DialogGUIToggle(WindTunnelSettings.DefaultToMach, "Default to speed as Mach", delegate (bool b) { WindTunnelSettings.DefaultToMach = !WindTunnelSettings.DefaultToMach; }),
                 new DialogGUIToggle(WindTunnelSettings.StartMinimized, "Start minimized", delegate (bool b) { WindTunnelSettings.StartMinimized = !WindTunnelSettings.StartMinimized; }),
                 new DialogGUIToggle(WindTunnelSettings.UseSingleColorHighlighting, "Use simple part highlighting", delegate (bool b) {WindTunnelSettings.UseSingleColorHighlighting = !WindTunnelSettings.UseSingleColorHighlighting; }),
-                new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline on graphs", delegate (bool b) {WindTunnelSettings.ShowEnvelopeMask = !WindTunnelSettings.ShowEnvelopeMask; })
+                new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline on graphs", delegate (bool b) {WindTunnelSettings.ShowEnvelopeMask = !WindTunnelSettings.ShowEnvelopeMask; }),
+                new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMaskAlways && WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline even on flight envelope", delegate (bool b) {if(WindTunnelSettings.ShowEnvelopeMask) WindTunnelSettings.ShowEnvelopeMaskAlways = !WindTunnelSettings.ShowEnvelopeMaskAlways; })
             };
 
             if (ToolbarManager.ToolbarAvailable)
