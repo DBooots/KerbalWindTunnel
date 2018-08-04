@@ -317,10 +317,13 @@ namespace KerbalWindTunnel
 
             if (!Minimized)
             {
-                if (GUI.Button(new Rect(12, 80 + graphHeight + 9 + 11 - (CurrentGraphMode != GraphMode.FlightEnvelope ? 28 : 0), 25, 25), saveIconTex))
+                if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
                 {
-                    if (EditorLogic.fetch.ship != null)
-                        grapher.WriteToFile(EditorLogic.fetch.ship.shipName);
+                    if (GUI.Button(new Rect(12, 80 + graphHeight + 9 + 11 - (CurrentGraphMode != GraphMode.FlightEnvelope ? 28 : 0), 25, 25), saveIconTex))
+                    {
+                        if (EditorLogic.fetch.ship != null)
+                            grapher.WriteToFile(EditorLogic.fetch.ship.shipName);
+                    }
                 }
 
                 CurrentGraphMode = (GraphMode)GUILayout.SelectionGrid((int)CurrentGraphMode, graphModes, 3);
@@ -375,22 +378,23 @@ namespace KerbalWindTunnel
             {
                 GUILayout.BeginHorizontal(GUILayout.Height(25), GUILayout.ExpandHeight(false));
                 GUILayout.Label("Altitude: ", GUILayout.Width(62));
-                altitudeStr = GUILayout.TextField(altitudeStr, GUILayout.Width(105), GUILayout.Height(22));
+                altitudeStr = GUILayout.TextField(altitudeStr, GUILayout.Width(105));
 
                 if (CurrentGraphMode == GraphMode.AoACurves || Minimized)
                 {
                     Rect toggleRect = GUILayoutUtility.GetRect(new GUIContent(""), HighLogic.Skin.label, GUILayout.Width(20));
-                    Mach = GUI.Toggle(toggleRect, Mach, "    ", new GUIStyle(HighLogic.Skin.toggle) { padding = new RectOffset(-6, -6, -6, -6) });
+                    toggleRect.position -= new Vector2(7, 3);
+                    Mach = GUI.Toggle(toggleRect, Mach, "    ", new GUIStyle(HighLogic.Skin.toggle) { padding = new RectOffset(6, 2, -6, -6), contentOffset = new Vector2(6, 2) });
                     //Mach = GUILayout.Toggle(Mach, "", GUILayout.Width(30), GUILayout.Height(20));
                     if (!Mach)
                     {
                         GUILayout.Label("Speed (m/s): ", GUILayout.Width(101));
-                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132), GUILayout.Height(22));
+                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132));
                     }
                     else
                     {
                         GUILayout.Label("Speed (Mach): ", GUILayout.Width(101));
-                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132), GUILayout.Height(22));
+                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132));
                     }
                 }
                 else
