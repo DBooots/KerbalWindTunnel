@@ -38,11 +38,13 @@ namespace KerbalWindTunnel
         private int guiId;
         private bool appLauncherEventSet = false;
         public const string texPath = "GameData/WindTunnel/Textures/";
+        public const string graphPath = "GameData/WindTunnel/PluginData";
         private const string iconPath = "KWT_Icon_on.png";
         private const string iconPath_off = "KWT_Icon.png";
         private const string iconPath_blizzy = "KWT_Icon_blizzy_on.png";
         private const string iconPath_blizzy_off = "KWT_Icon_blizzy.png";
         internal const string iconPath_settings = "KWT_settings.png";
+        internal const string iconPath_save = "KWT_saveIcon.png";
 
         private Texture2D icon_on = new Texture2D(38, 38, TextureFormat.ARGB32, false);
         private Texture2D icon = new Texture2D(38, 38, TextureFormat.ARGB32, false);

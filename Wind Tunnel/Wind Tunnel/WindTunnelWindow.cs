@@ -233,6 +233,7 @@ namespace KerbalWindTunnel
         Texture2D selectedCrossHair = new Texture2D(1, 1);
         Texture2D clearTex = new Texture2D(1, 1);
         Texture2D settingsTex = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
+        Texture2D saveIconTex = new Texture2D(21, 21, TextureFormat.ARGB32, false);
 
         Vector2 selectedCrossHairVect = new Vector2(-1, -1);
 
@@ -258,6 +259,7 @@ namespace KerbalWindTunnel
             clearBox.normal.background = clearTex;
 
             settingsTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_settings));
+            saveIconTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_save));
 
             onWindowVisibleChanged += (MonoBehaviourWindow sender, bool visible) => { if (inputLocked && !visible && sender == this) { EditorLogic.fetch.Unlock(lockID); inputLocked = false; } };
         }
@@ -316,6 +318,12 @@ namespace KerbalWindTunnel
 
             if (!Minimized)
             {
+                if (GUI.Button(new Rect(12, 80 + graphHeight + 9 + 11 - (CurrentGraphMode != GraphMode.FlightEnvelope ? 28 : 0), 25, 25), saveIconTex))
+                {
+                    if (EditorLogic.fetch.ship != null)
+                        grapher.WriteToFile(EditorLogic.fetch.ship.shipName);
+                }
+
                 CurrentGraphMode = (GraphMode)GUILayout.SelectionGrid((int)CurrentGraphMode, graphModes, 3);
 
                 DrawGraph(CurrentGraphMode, CurrentGraphSelect);

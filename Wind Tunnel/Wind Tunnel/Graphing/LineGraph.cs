@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace KerbalWindTunnel.Graphing
 {
-    class LineGraph : Graphable
+    public class LineGraph : Graphable
     {
         public UnityEngine.Vector2[] _values;
         public UnityEngine.Vector2[] Values
@@ -170,6 +170,47 @@ namespace KerbalWindTunnel.Graphing
         public void SetValues(UnityEngine.Vector2[] values)
         {
             this.Values = values;
+        }
+
+        public override void WriteToFile(string filename, string sheetName = "")
+        {
+            if (!System.IO.Directory.Exists(WindTunnel.graphPath))
+                System.IO.Directory.CreateDirectory(WindTunnel.graphPath);
+
+            if (sheetName == "")
+                sheetName = this.Name.Replace("/", "-").Replace("\\", "-");
+
+            string fullFilePath = string.Format("{0}/{1}{2}.csv", WindTunnel.graphPath, filename, sheetName != "" ? "_" + sheetName : "");
+
+            try
+            {
+                if (System.IO.File.Exists(fullFilePath))
+                    System.IO.File.Delete(fullFilePath);
+            }
+            catch (Exception ex) { UnityEngine.Debug.LogFormat("Unable to delete file:{0}", ex.Message); }
+
+            string strCsv;
+            if (Name != "")
+                strCsv = String.Format(",{0} [{1}]", Name, Unit);
+            else
+                strCsv = String.Format(",{0}", Unit);
+
+            try
+            {
+                System.IO.File.AppendAllText(fullFilePath, strCsv + "\r\n");
+            }
+            catch (Exception ex) { UnityEngine.Debug.Log(ex.Message); }
+
+            for (int i = 0; i < _values.Length; i++)
+            {
+                strCsv = String.Format("{0}, {1:" + StringFormat.Replace("N","F") + "}", _values[i].x, _values[i].y);
+
+                try
+                {
+                    System.IO.File.AppendAllText(fullFilePath, strCsv + "\r\n");
+                }
+                catch (Exception) { }
+            }
         }
     }
 }

@@ -199,5 +199,55 @@ namespace KerbalWindTunnel.Graphing
             this._values = values;
             OnValuesChanged(null);
         }
+
+        public override void WriteToFile(string filename, string sheetName = "")
+        {
+            if (!System.IO.Directory.Exists(WindTunnel.graphPath))
+                System.IO.Directory.CreateDirectory(WindTunnel.graphPath);
+
+            if (sheetName == "")
+                sheetName = this.Name.Replace("/", "-").Replace("\\", "-");
+
+            string fullFilePath = string.Format("{0}/{1}{2}.csv", WindTunnel.graphPath, filename, sheetName != "" ? "_" + sheetName : "");
+
+            try
+            {
+                if (System.IO.File.Exists(fullFilePath))
+                    System.IO.File.Delete(fullFilePath);
+            }
+            catch (Exception ex) { UnityEngine.Debug.LogFormat("Unable to delete file:{0}", ex.Message); }
+
+            int height = _values.GetUpperBound(1);
+            int width = _values.GetUpperBound(0);
+            float xStep = (XMax - XMin) / width;
+            float yStep = (YMax - YMin) / height;
+
+            string strCsv;
+            if (Name != "")
+                strCsv = String.Format("{0} [{1}]", Name, Unit);
+            else
+                strCsv = String.Format("{0}", Unit);
+            for (int x = 0; x <= width; x++)
+                strCsv += String.Format(",{0}", xStep * x);
+
+            try
+            {
+                System.IO.File.AppendAllText(fullFilePath, strCsv + "\r\n");
+            }
+            catch (Exception) { }
+
+            for (int y = height; y >= 0; y--)
+            {
+                strCsv = string.Format("{0}", y * yStep);
+                for (int x = 0; x <= width; x++)
+                    strCsv += string.Format(",{0:" + StringFormat.Replace("N", "F") + "}", _values[x, y]);
+
+                try
+                {
+                    System.IO.File.AppendAllText(fullFilePath, strCsv + "\r\n");
+                }
+                catch (Exception) { }
+            }
+        }
     }
 }

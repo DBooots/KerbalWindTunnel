@@ -170,8 +170,7 @@ namespace KerbalWindTunnel.Graphing
         {
             return graphs.Find(g => g.Name.ToLower() == name.ToLower());
         }
-
-
+        
         public virtual IGraphable Find(Predicate<IGraphable> predicate)
         {
             return graphs.Find(predicate);
@@ -263,6 +262,92 @@ namespace KerbalWindTunnel.Graphing
         IEnumerator IEnumerable.GetEnumerator()
         {
             return Graphables.GetEnumerator();
+        }
+
+        public void WriteToFile(string filename, string sheetName = "")
+        {
+            if (!System.IO.Directory.Exists(WindTunnel.graphPath))
+                System.IO.Directory.CreateDirectory(WindTunnel.graphPath);
+
+            if (graphs.Count > 1 && graphs.All(g => g is LineGraph))
+            {
+                LineGraph[] lineGraphs = graphs.Cast<LineGraph>().ToArray();
+                UnityEngine.Vector2[] basis = lineGraphs[0].Values;
+                int count = basis.Length;
+
+                bool combinable = true;
+                for (int i = lineGraphs.Length - 1; i >= 1; i--)
+                {
+                    UnityEngine.Vector2[] points = lineGraphs[i].Values;
+                    for (int j = count - 1; i >= 0; i--)
+                    {
+                        if (points[j].x != basis[j].x)
+                        {
+                            combinable = false;
+                            break;
+                        }
+                    }
+                    if (!combinable)
+                        break;
+                }
+
+                if (combinable)
+                {
+                    WriteLineGraphsToCombinedFile(filename, lineGraphs, sheetName);
+                    return;
+                }
+            }
+
+            for(int i = 0; i < graphs.Count; i++)
+            {
+                graphs[i].WriteToFile(filename, (sheetName != "" ? sheetName + "_" : "") + graphs[i].Name.Replace("/", "-").Replace("\\", "-"));
+            }
+        }
+
+        protected void WriteLineGraphsToCombinedFile(string filename, LineGraph[] lineGraphs, string sheetName = "")
+        {
+            if (sheetName == "")
+                sheetName = this.Name.Replace("/", "-").Replace("\\", "-");
+
+            string fullFilePath = string.Format("{0}/{1}{2}.csv", WindTunnel.graphPath, filename, sheetName != "" ? "_" + sheetName : "");
+
+            try
+            {
+                if (System.IO.File.Exists(fullFilePath))
+                    System.IO.File.Delete(fullFilePath);
+            }
+            catch (Exception ex) { UnityEngine.Debug.LogFormat("Unable to delete file:{0}", ex.Message); }
+
+            int count = lineGraphs.Length;
+            string strCsv = "";
+            for (int i = 0; i < count; i++)
+            {
+                if (lineGraphs[i].Name != "")
+                    strCsv += string.Format(",{0} [{1}]", lineGraphs[i].Name, lineGraphs[i].Unit);
+                else
+                    strCsv += string.Format(",{0}", lineGraphs[i].Unit);
+            }
+
+            try
+            {
+                System.IO.File.AppendAllText(fullFilePath, strCsv + "\r\n");
+            }
+            catch (Exception ex) { UnityEngine.Debug.Log(ex.Message); }
+
+            IEnumerator<float> xEnumerator = lineGraphs[0].Values.Select(v => v.x).GetEnumerator();
+            int j = -1;
+            while (xEnumerator.MoveNext())
+            {
+                j++;
+                strCsv = string.Format("{0}", xEnumerator.Current);
+                for (int i = 0; i < count; i++)
+                    strCsv += string.Format(",{0:" + lineGraphs[i].StringFormat.Replace("N", "F") + "}", lineGraphs[i].Values[j].y);
+                try
+                {
+                    System.IO.File.AppendAllText(fullFilePath, strCsv + "\r\n");
+                }
+                catch (Exception) { }
+            }
         }
     }
 

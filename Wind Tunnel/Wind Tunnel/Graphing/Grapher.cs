@@ -186,6 +186,7 @@ namespace KerbalWindTunnel.Graphing
         float ValueAt(float x, float y);
         string GetFormattedValueAt(float x, float y, bool withName = false);
         event EventHandler ValuesChanged;
+        void WriteToFile(string filename, string sheetName = "");
     }
     public interface IGraphable3 : IGraphable
     {
@@ -213,7 +214,9 @@ namespace KerbalWindTunnel.Graphing
         public abstract float ValueAt(float x, float y);
         public event EventHandler ValuesChanged;
 
-        protected virtual void OnValuesChanged(EventArgs eventArgs)
+        public abstract void WriteToFile(string filename, string sheetName = "");
+
+        public virtual void OnValuesChanged(EventArgs eventArgs)
         {
             ValuesChanged?.Invoke(this, eventArgs);
         }
