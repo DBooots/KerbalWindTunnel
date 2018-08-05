@@ -89,6 +89,18 @@ namespace KerbalWindTunnel
         [Persistent]
         public bool useBlizzy = false;
 
+        public static bool AutoFitAxes
+        {
+            get { return Instance.autoFitAxes; }
+            set
+            {
+                Instance.autoFitAxes = value;
+                settingsChanged = true;
+            }
+        }
+        [Persistent]
+        public bool autoFitAxes = true;
+
         private static bool settingsChanged = false;
         private static bool settingsLoaded = false;
 
@@ -142,14 +154,15 @@ namespace KerbalWindTunnel
             {
                 new DialogGUIToggle(WindTunnelSettings.UseCoefficients, "Lift, Drag as coefficients",
                     delegate (bool b) {
-                        WindTunnelWindow.Instance.graphDirty = true;
-                        WindTunnelWindow.Instance.graphRequested = false;
+                        Instance.graphDirty = true;
+                        Instance.graphRequested = false;
                         WindTunnelSettings.UseCoefficients = !WindTunnelSettings.UseCoefficients; }),
                 new DialogGUIToggle(WindTunnelSettings.DefaultToMach, "Default to speed as Mach", delegate (bool b) { WindTunnelSettings.DefaultToMach = !WindTunnelSettings.DefaultToMach; }),
                 new DialogGUIToggle(WindTunnelSettings.StartMinimized, "Start minimized", delegate (bool b) { WindTunnelSettings.StartMinimized = !WindTunnelSettings.StartMinimized; }),
                 new DialogGUIToggle(WindTunnelSettings.UseSingleColorHighlighting, "Use simple part highlighting", delegate (bool b) {WindTunnelSettings.UseSingleColorHighlighting = !WindTunnelSettings.UseSingleColorHighlighting; }),
                 new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline on graphs", delegate (bool b) {WindTunnelSettings.ShowEnvelopeMask = !WindTunnelSettings.ShowEnvelopeMask; }),
-                new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMaskAlways && WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline even on flight envelope", delegate (bool b) {if(WindTunnelSettings.ShowEnvelopeMask) WindTunnelSettings.ShowEnvelopeMaskAlways = !WindTunnelSettings.ShowEnvelopeMaskAlways; })
+                new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMaskAlways && WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline even on flight envelope", delegate (bool b) {if(WindTunnelSettings.ShowEnvelopeMask) WindTunnelSettings.ShowEnvelopeMaskAlways = !WindTunnelSettings.ShowEnvelopeMaskAlways; }),
+                new DialogGUIToggle(WindTunnelSettings.AutoFitAxes, string.Format("Auto-fit axes to graph data\n(Uncheck to plot full range)"), delegate (bool b) {WindTunnelSettings.AutoFitAxes = !WindTunnelSettings.AutoFitAxes; grapher.AutoFitAxes = WindTunnelSettings.AutoFitAxes; })
             };
 
             if (ToolbarManager.ToolbarAvailable)
