@@ -188,12 +188,17 @@ namespace KerbalWindTunnel.Graphing
                     System.IO.File.Delete(fullFilePath);
             }
             catch (Exception ex) { UnityEngine.Debug.LogFormat("Unable to delete file:{0}", ex.Message); }
-
-            string strCsv;
-            if (Name != "")
-                strCsv = String.Format(",{0} [{1}]", Name, Unit);
+            
+            string strCsv = "";
+            if (XName != "")
+                strCsv += string.Format("{0} [{1}]", XName, XUnit != "" ? XUnit : "-");
             else
-                strCsv = String.Format(",{0}", Unit);
+                strCsv += string.Format("{0}", XUnit != "" ? XUnit : "-");
+
+            if (Name != "")
+                strCsv += String.Format(",{0} [{1}]", Name, YUnit != "" ? YUnit : "-");
+            else
+                strCsv += String.Format(",{0}", YUnit != "" ? YUnit : "-");
 
             try
             {

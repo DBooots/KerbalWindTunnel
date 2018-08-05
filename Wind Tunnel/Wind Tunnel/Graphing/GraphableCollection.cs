@@ -367,12 +367,17 @@ namespace KerbalWindTunnel.Graphing
 
             int count = lineGraphs.Length;
             string strCsv = "";
+            if (lineGraphs[0].XName != "")
+                strCsv += string.Format("{0} [{1}]", lineGraphs[0].XName, lineGraphs[0].XUnit != "" ? lineGraphs[0].XUnit : "-");
+            else
+                strCsv += string.Format("{0}", lineGraphs[0].XUnit != "" ? lineGraphs[0].XUnit : "-");
+
             for (int i = 0; i < count; i++)
             {
                 if (lineGraphs[i].Name != "")
-                    strCsv += string.Format(",{0} [{1}]", lineGraphs[i].Name, lineGraphs[i].Unit);
+                    strCsv += string.Format(",{0} [{1}]", lineGraphs[i].Name, lineGraphs[i].YUnit != "" ? lineGraphs[i].YUnit : "-");
                 else
-                    strCsv += string.Format(",{0}", lineGraphs[i].Unit);
+                    strCsv += string.Format(",{0}", lineGraphs[i].YUnit != "" ? lineGraphs[i].YUnit : "-");
             }
 
             try

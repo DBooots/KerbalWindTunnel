@@ -224,9 +224,10 @@ namespace KerbalWindTunnel.Graphing
 
             string strCsv;
             if (Name != "")
-                strCsv = String.Format("{0} [{1}]", Name, Unit);
+                strCsv = String.Format("{0} [{1}]", Name, ZUnit != "" ? ZUnit : "-");
             else
-                strCsv = String.Format("{0}", Unit);
+                strCsv = String.Format("{0}", ZUnit != "" ? ZUnit : "-");
+
             for (int x = 0; x <= width; x++)
                 strCsv += String.Format(",{0}", xStep * x);
 

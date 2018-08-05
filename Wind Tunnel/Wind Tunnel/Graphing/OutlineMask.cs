@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class OutlineMask : Graphable
+    public class OutlineMask : Graphable3
     {
         public override ColorMap Color { get; set; } = UnityEngine.Color.gray;
 
