@@ -273,20 +273,27 @@ namespace KerbalWindTunnel
             GUILayout.Box(grapher.hAxisTex, GUIStyle.none, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
             GUILayout.EndHorizontal();
 
-            GUILayout.Label("", GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(10));
+            GUI.Label(new Rect(43, 88 + graphHeight, graphWidth, 20), string.Format("{0} [{1}]", grapher.XName, grapher.XUnit != "" ? grapher.XUnit : "-"), hAxisMarks);
+            Matrix4x4 guiMatrix = GUI.matrix;
+            GUIUtility.RotateAroundPivot(90, new Vector2(20, 58));
+            GUI.Label(new Rect(58 - 33, 58, graphHeight, 20), string.Format("{0} [{1}]", grapher.YName, grapher.YUnit != "" ? grapher.YUnit : "-"), hAxisMarks);
+            GUI.matrix = guiMatrix;
+
+            GUILayout.Label("", GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(18));
 
             if (CurrentGraphMode == GraphMode.FlightEnvelope)
             {
                 GUILayout.BeginHorizontal(GUILayout.Height(28));
                 GUILayout.Box("", GUIStyle.none, GUILayout.Width(axisWidth + 4), GUILayout.Height(axisWidth));
                 GUIContent cAxis = new GUIContent(grapher.cAxisTex);
-                cAxisRect = GUILayoutUtility.GetRect(cAxis, HighLogic.Skin.box, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
+                cAxisRect = GUILayoutUtility.GetRect(cAxis, GUIStyle.none, GUILayout.Width(graphWidth), GUILayout.Height(axisWidth));
                 GUI.Box(cAxisRect, cAxis);
                 GUILayout.EndHorizontal();
+                GUI.Label(new Rect(43, 115 + graphHeight + 8, graphWidth, 20), string.Format("{0} [{1}]", grapher.ZName, grapher.ZUnit != "" ? grapher.ZUnit : "-"), hAxisMarks);
 
                 for (int i = 0; i <= grapher.colorAxis.TickCount; i++)
                 {
-                    GUI.Label(new Rect(43 + Mathf.RoundToInt(graphWidth / (float)grapher.colorAxis.TickCount * i), 80 + graphHeight + 28, 40, 15),
+                    GUI.Label(new Rect(43 + Mathf.RoundToInt(graphWidth / (float)grapher.colorAxis.TickCount * i), 80 + graphHeight + 28 + 8, 40, 15),
                         grapher.colorAxis.labels[i], hAxisMarks);
                 }
             }
