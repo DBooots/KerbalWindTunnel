@@ -16,6 +16,19 @@ namespace KerbalWindTunnel.Graphing
         public Func<float, float> XAxisScale { get; set; } = (v) => v;
         public Func<float, float> YAxisScale { get; set; } = (v) => v;
 
+        protected bool autoFitAxes = true;
+        public virtual bool AutoFitAxes
+        {
+            get => autoFitAxes;
+            set
+            {
+                autoFitAxes = value;
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    if (graphs[i] is GraphableCollection collection)
+                        collection.AutoFitAxes = value;
+            }
+        }
+
         public string XUnit
         {
             get => graphs.Count > 0 ? graphs[0].XUnit : "";
@@ -127,10 +140,36 @@ namespace KerbalWindTunnel.Graphing
 
             for (int i = 0; i < graphs.Count; i++)
             {
-                float xMin = graphs[i].XAxisScale(graphs[i].XMin);
-                float xMax = graphs[i].XAxisScale(graphs[i].XMax);
-                float yMin = graphs[i].YAxisScale(graphs[i].YMin);
-                float yMax = graphs[i].YAxisScale(graphs[i].YMax);
+                float xMin, xMax, yMin, yMax;
+                if (!autoFitAxes)
+                {
+                    xMin = graphs[i].XAxisScale(graphs[i].XMin);
+                    xMax = graphs[i].XAxisScale(graphs[i].XMax);
+                    yMin = graphs[i].YAxisScale(graphs[i].YMin);
+                    yMax = graphs[i].YAxisScale(graphs[i].YMax);
+                }
+                else
+                {
+                    if (graphs[i] is LineGraph lineGraph)
+                    {
+                        GetLimitsAutoLine(lineGraph, out xMin, out xMax, out yMin, out yMax);
+                    }
+                    else if (graphs[i] is SurfGraph surfGraph)
+                    {
+                        GetLimitsAutoSurf(surfGraph, out xMin, out xMax, out yMin, out yMax);
+                    }
+                    else if (graphs[i] is OutlineMask outlineGraph)
+                    {
+                        xMin = XMin; xMax = XMax; yMin = YMin; yMax = YMax;
+                    }
+                    else
+                    {
+                        xMin = graphs[i].XAxisScale(graphs[i].XMin);
+                        xMax = graphs[i].XAxisScale(graphs[i].XMax);
+                        yMin = graphs[i].YAxisScale(graphs[i].YMin);
+                        yMax = graphs[i].YAxisScale(graphs[i].YMax);
+                    }
+                }
                 if (xMin < this.XMin || float.IsNaN(this.XMin)) this.XMin = xMin;
                 if (xMax > this.XMax || float.IsNaN(this.XMax)) this.XMax = xMax;
                 if (yMin < this.YMin || float.IsNaN(this.YMin)) this.YMin = yMin;
@@ -142,6 +181,94 @@ namespace KerbalWindTunnel.Graphing
                 return true;
             }
             return false;
+        }
+
+        protected void GetLimitsAutoSurf(SurfGraph surfGraph, out float xMin, out float xMax, out float yMin, out float yMax)
+        {
+            float[,] values = surfGraph.Values;
+            int width = values.GetUpperBound(0);
+            int height = values.GetUpperBound(1);
+            bool breakFlag = false;
+            int x, y;
+            for (x = 0; x <= width; x++)
+            {
+                for (y = 0; y <= height; y++)
+                    if (surfGraph.Color.Filter(values[x, y]))
+                    {
+                        breakFlag = true;
+                        break;
+                    }
+                if (breakFlag) break;
+            }
+            xMin = (surfGraph.XMax - surfGraph.XMin) / width * x;
+
+            breakFlag = false;
+            for (x = width; x >= 0; x--)
+            {
+                for (y = 0; y <= height; y++)
+                    if (surfGraph.Color.Filter(values[x, y]))
+                    {
+                        breakFlag = true;
+                        break;
+                    }
+                if (breakFlag) break;
+            }
+            xMax = (surfGraph.XMax - surfGraph.XMin) / width * x;
+
+            breakFlag = false;
+            for (y = 0; y <= height; y++)
+            {
+                for (x = 0; x <= width; x++)
+                    if (surfGraph.Color.Filter(values[x, y]))
+                    {
+                        breakFlag = true;
+                        break;
+                    }
+                if (breakFlag) break;
+            }
+            yMin = (surfGraph.YMax - surfGraph.YMin) / height * y;
+
+            breakFlag = false;
+            for (y = height; y >= 0; y--)
+            {
+                for (x = 0; x <= width; x++)
+                    if (surfGraph.Color.Filter(values[x, y]))
+                    {
+                        breakFlag = true;
+                        break;
+                    }
+                if (breakFlag) break;
+            }
+            yMax = (surfGraph.YMax - surfGraph.YMin) / height * y;
+
+            if (yMin > yMax) yMin = yMin = float.NaN;
+            if (xMin > xMax) xMin = xMax = float.NaN;
+            UnityEngine.Debug.LogFormat("X: {0}, {1}\tY: {2}, {3}", xMin, xMax, yMin, yMax);
+        }
+
+        /*protected void GetLimitsAutoOutline(OutlineMask outlineMask, out float xMin, out float xMax, out float yMin, out float yMax)
+        {
+
+        }*/
+
+        protected void GetLimitsAutoLine(LineGraph lineGraph, out float xMin, out float xMax, out float yMin, out float yMax)
+        {
+            UnityEngine.Vector2[] values = lineGraph.Values;
+            xMin = float.NaN;
+            xMax = float.NaN;
+            yMin = float.NaN;
+            yMax = float.NaN;
+
+            for (int i = values.Length - 1; i >= 0; i--)
+            {
+                if (lineGraph.Color.Filter(values[i].y) && !float.IsNaN(values[i].x) && !float.IsInfinity(values[i].x))
+                {
+                    if (float.IsNaN(xMin) || values[i].x < xMin) xMin = values[i].x;
+                    if (float.IsNaN(xMax) || values[i].x > xMax) xMax = values[i].x;
+                    if (float.IsNaN(yMin) || values[i].y < yMin) yMin = values[i].y;
+                    if (float.IsNaN(yMax) || values[i].y > yMax) yMax = values[i].y;
+                }
+            }
         }
 
         public float ValueAt(float x, float y)
@@ -466,10 +593,38 @@ namespace KerbalWindTunnel.Graphing
                         dominantColorMapIndex = i;
                     }
                 }
-                float xMin = graphs[i].XAxisScale(graphs[i].XMin);
-                float xMax = graphs[i].XAxisScale(graphs[i].XMax);
-                float yMin = graphs[i].YAxisScale(graphs[i].YMin);
-                float yMax = graphs[i].YAxisScale(graphs[i].YMax);
+
+                float xMin, xMax, yMin, yMax;
+                if (!autoFitAxes)
+                {
+                    xMin = graphs[i].XAxisScale(graphs[i].XMin);
+                    xMax = graphs[i].XAxisScale(graphs[i].XMax);
+                    yMin = graphs[i].YAxisScale(graphs[i].YMin);
+                    yMax = graphs[i].YAxisScale(graphs[i].YMax);
+                }
+                else
+                {
+                    if (graphs[i] is LineGraph lineGraph)
+                    {
+                        GetLimitsAutoLine(lineGraph, out xMin, out xMax, out yMin, out yMax);
+                    }
+                    else if (graphs[i] is SurfGraph surfGraph)
+                    {
+                        GetLimitsAutoSurf(surfGraph, out xMin, out xMax, out yMin, out yMax);
+                    }
+                    else if (graphs[i] is OutlineMask outlineGraph)
+                    {
+                        xMin = XMin; xMax = XMax; yMin = YMin; yMax = YMax;
+                    }
+                    else
+                    {
+                        xMin = graphs[i].XAxisScale(graphs[i].XMin);
+                        xMax = graphs[i].XAxisScale(graphs[i].XMax);
+                        yMin = graphs[i].YAxisScale(graphs[i].YMin);
+                        yMax = graphs[i].YAxisScale(graphs[i].YMax);
+                    }
+                }
+
                 if (xMin < this.XMin || float.IsNaN(this.XMin)) this.XMin = xMin;
                 if (xMax > this.XMax || float.IsNaN(this.XMax)) this.XMax = xMax;
                 if (yMin < this.YMin || float.IsNaN(this.YMin)) this.YMin = yMin;

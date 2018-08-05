@@ -12,6 +12,20 @@ namespace KerbalWindTunnel.Graphing
         public UnityEngine.Texture2D hAxisTex;
         public UnityEngine.Texture2D vAxisTex;
         public UnityEngine.Texture2D cAxisTex;
+        
+        public override bool AutoFitAxes
+        {
+            get => base.AutoFitAxes;
+            set
+            {
+                if (value != AutoFitAxes)
+                {
+                    base.AutoFitAxes = value;
+                    graphDirty = true;
+                    axesDirty = true;
+                }
+            }
+        }
 
         public virtual float Width { get; set; }
         public virtual float Height { get; set; }
