@@ -73,7 +73,7 @@ namespace KerbalWindTunnel.DataGenerators
             var e = graphs.GetEnumerator();
             while (e.MoveNext())
             {
-                e.Current.Value.XUnit = "deg";
+                e.Current.Value.XUnit = "°";
                 e.Current.Value.XName = "Angle of Attack";
             }
         }
