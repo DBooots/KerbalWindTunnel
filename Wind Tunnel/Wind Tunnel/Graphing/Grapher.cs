@@ -180,6 +180,10 @@ namespace KerbalWindTunnel.Graphing
         float XMax { get; }
         float YMin { get; }
         float YMax { get; }
+        string XUnit { get; set; }
+        string YUnit { get; set; }
+        string XName { get; set; }
+        string YName { get; set; }
         Func<float, float> XAxisScale { get; set; }
         Func<float, float> YAxisScale { get; set; }
         void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop);
@@ -192,6 +196,8 @@ namespace KerbalWindTunnel.Graphing
     {
         float ZMin { get; }
         float ZMax { get; }
+        string ZUnit { get; set; }
+        string ZName { get; set; }
         Func<float, float> ZAxisScale { get; set; }
     }
 
@@ -203,7 +209,11 @@ namespace KerbalWindTunnel.Graphing
         public virtual float YMin { get; protected set; }
         public virtual float YMax { get; protected set; }
         public bool Transpose { get; set; } = false;
-        public string Unit { get; set; } = "";
+        public string XName { get; set; } = "";
+        protected internal string yName = null;
+        public virtual string YName { get => yName ?? Name; set => yName = value; }
+        public string XUnit { get; set; } = "";
+        public string YUnit { get; set; } = "";
         public string StringFormat { get; set; } = "G";
         public virtual ColorMap Color { get; set; } = new ColorMap(UnityEngine.Color.white);
         public virtual Grapher.CoordsToColorFunc ColorFunc { get; set; } = (x, y, z) => 0;
@@ -223,15 +233,24 @@ namespace KerbalWindTunnel.Graphing
 
         public virtual string GetFormattedValueAt(float x, float y, bool withName = false)
         {
-            return String.Format("{2}{0:" + StringFormat + "}{1}", ValueAt(x, y), Unit, withName && Name != "" ? Name + ": " : "");
+            return String.Format("{2}{0:" + StringFormat + "}{1}", ValueAt(x, y), YUnit, withName && Name != "" ? Name + ": " : "");
         }
     }
     public abstract class Graphable3 : Graphable, IGraphable3
     {
         public float ZMin { get; protected set; }
         public float ZMax { get; protected set; }
+        public string ZUnit { get; set; }
+        public override string YName { get => yName ?? ""; set => yName = value; }
+        protected string zName = null;
+        public string ZName { get { return zName ?? Name; } set { zName = value; } }
         public float ZAxisScaler { get; set; } = 1;
         public virtual Func<float, float> ZAxisScale { get; set; } = (v) => v;
+
+        public override string GetFormattedValueAt(float x, float y, bool withName = false)
+        {
+            return String.Format("{2}{0:" + StringFormat + "}{1}", ValueAt(x, y), ZUnit, withName && Name != "" ? Name + ": " : "");
+        }
     }
 
 }

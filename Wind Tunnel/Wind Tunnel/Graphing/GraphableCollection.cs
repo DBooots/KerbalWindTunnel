@@ -16,6 +16,53 @@ namespace KerbalWindTunnel.Graphing
         public Func<float, float> XAxisScale { get; set; } = (v) => v;
         public Func<float, float> YAxisScale { get; set; } = (v) => v;
 
+        public string XUnit
+        {
+            get => graphs.Count > 0 ? graphs[0].XUnit : "";
+            set
+            {
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    graphs[i].XUnit = value;
+            }
+        }
+        public string YUnit
+        {
+            get => graphs.Count > 0 ? graphs[0].YUnit : "";
+            set
+            {
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    graphs[i].YUnit = value;
+            }
+        }
+        public string XName
+        {
+            get => graphs.Count > 0 ? graphs[0].XName : "";
+            set
+            {
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    graphs[i].XName = value;
+            }
+        }
+        public string YName
+        {
+            get
+            {
+                if (graphs.Count <= 0) return "";
+                if (graphs[0] is Graphable graph && graph.yName == null)
+                {
+                    string nameSubstring = GetNameSubstring();
+                    if (nameSubstring != "")
+                        return nameSubstring.Trim();
+                }
+                return graphs[0].YName;
+            }
+            set
+            {
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    graphs[i].YName = value;
+            }
+        }
+
         protected List<IGraphable> graphs = new List<IGraphable>();
 
         public event EventHandler ValuesChanged;
@@ -357,6 +404,35 @@ namespace KerbalWindTunnel.Graphing
         public virtual float ZMax { get; protected set; } = float.NaN;
         public float ZAxisScaler { get; set; } = 1;
         public Func<float, float> ZAxisScale { get; set; } = (v) => v;
+
+        public string ZUnit
+        {
+            get
+            {
+                IGraphable3 graphable3 = (IGraphable3)graphs.FirstOrDefault(g => g is IGraphable3);
+                return graphable3 != null ? graphable3.ZUnit : "";
+            }
+            set
+            {
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    if (graphs[i] is IGraphable3)
+                        ((IGraphable3)graphs[i]).ZUnit = value;
+            }
+        }
+        public string ZName
+        {
+            get
+            {
+                IGraphable3 graphable3 = (IGraphable3)graphs.FirstOrDefault(g => g is IGraphable3);
+                return graphable3 != null ? graphable3.ZName : "";
+            }
+            set
+            {
+                for (int i = graphs.Count - 1; i >= 0; i--)
+                    if (graphs[i] is IGraphable3)
+                        ((IGraphable3)graphs[i]).ZName = value;
+            }
+        }
 
         public ColorMap dominantColorMap = ColorMap.Jet_Dark;
         public int dominantColorMapIndex = -1;

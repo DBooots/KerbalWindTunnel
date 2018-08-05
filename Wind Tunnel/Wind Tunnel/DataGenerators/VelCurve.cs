@@ -54,16 +54,23 @@ namespace KerbalWindTunnel.DataGenerators
             Func<VelPoint, float> scale = (pt) => 1;
             if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
-            graphs.Add("Level AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_level * 180 / Mathf.PI).ToArray(), left, right) { Name = "Level AoA", Unit = "°", StringFormat = "F2", Color = Color.green });
-            graphs.Add("Max Lift AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_max * 180 / Mathf.PI).ToArray(), left, right) { Name = "Max Lift AoA", Unit = "°", StringFormat = "F2", Color = Color.green });
-            graphs.Add("Thrust Available", new LineGraph(VelPoints.Select(pt => pt.Thrust_available).ToArray(), left, right) { Name = "Thrust Available", Unit = "kN", StringFormat = "N0", Color = Color.green });
-            graphs.Add("Lift/Drag Ratio", new LineGraph(VelPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", Unit = "", StringFormat = "F2", Color = Color.green });
-            graphs.Add("Drag", new LineGraph(VelPoints.Select(pt => pt.drag * scale(pt)).ToArray(), left, right) { Name = "Drag", Unit = "kN", StringFormat = "N0", Color = Color.green });
-            graphs.Add("Lift Slope", new LineGraph(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", Unit = "m^2/°", StringFormat = "F3", Color = Color.green });
-            graphs.Add("Excess Thrust", new LineGraph(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right) { Name = "Excess Thrust", Unit = "kN", StringFormat = "N0", Color = Color.green });
-            graphs.Add("Pitch Input", new LineGraph(VelPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input", Unit = "", StringFormat = "F3", Color = Color.green });
+            graphs.Add("Level AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_level * 180 / Mathf.PI).ToArray(), left, right) { Name = "Level AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Max Lift AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_max * 180 / Mathf.PI).ToArray(), left, right) { Name = "Max Lift AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Thrust Available", new LineGraph(VelPoints.Select(pt => pt.Thrust_available).ToArray(), left, right) { Name = "Thrust Available", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Lift/Drag Ratio", new LineGraph(VelPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Drag", new LineGraph(VelPoints.Select(pt => pt.drag * scale(pt)).ToArray(), left, right) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Lift Slope", new LineGraph(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
+            graphs.Add("Excess Thrust", new LineGraph(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right) { Name = "Excess Thrust", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphs.Add("Pitch Input", new LineGraph(VelPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input", YUnit = "", StringFormat = "F3", Color = Color.green });
             //graphs.Add("Excess Acceleration", new LineGraph(VelPoints.Select(pt => pt.Accel_excess).ToArray(), left, right) { Name = "Excess Acceleration", Unit = "g", StringFormat = "N2", Color = Color.green });
             //graphs.Add("Max Lift", new LineGraph(VelPoints.Select(pt => pt.Lift_max * scale(pt)).ToArray(), left, right) { Name = "Max Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
+
+            var e = graphs.GetEnumerator();
+            while (e.MoveNext())
+            {
+                e.Current.Value.XUnit = "m/s";
+                e.Current.Value.XName = "Airspeed";
+            }
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)

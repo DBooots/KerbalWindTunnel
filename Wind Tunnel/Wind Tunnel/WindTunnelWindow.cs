@@ -547,7 +547,7 @@ namespace KerbalWindTunnel
                 float showValue = (vectMouse.x - cAxisRect.x) / (cAxisRect.width - 1) * (grapher.colorAxis.Max - grapher.colorAxis.Min) + grapher.colorAxis.Min;
                 //GUI.Label(new Rect(vectMouse.x + 5, cAxisRect.y - 15, 80, 15), String.Format(graphUnits[(int)CurrentGraphSelect], showValue), SkinsLibrary.CurrentTooltip);
                 GUI.Label(new Rect(vectMouse.x + 5, cAxisRect.y - 15, 80, 15),
-                    String.Format("{0:" + ((Graphing.Graphable)(grapher[grapher.dominantColorMapIndex])).StringFormat + "}{1}", showValue, ((Graphing.Graphable)(grapher[grapher.dominantColorMapIndex])).Unit),
+                    String.Format("{0:" + ((Graphing.Graphable)(grapher[grapher.dominantColorMapIndex])).StringFormat + "}{1}", showValue, ((Graphing.Graphable3)(grapher[grapher.dominantColorMapIndex])).ZUnit),
                     SkinsLibrary.CurrentTooltip);
             }
         }
