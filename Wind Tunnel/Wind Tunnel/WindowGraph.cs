@@ -113,7 +113,7 @@ namespace KerbalWindTunnel
                     case GraphMode.AoACurves:
                         if (!graphRequested)
                         {
-                            AoACurveGenerator.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.PI / 180, 20f * Mathf.PI / 180, 0.5f * Mathf.PI / 180);
+                            AoACurveGenerator.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.Deg2Rad, 20f * Mathf.Deg2Rad, 0.5f * Mathf.Deg2Rad);
                             graphRequested = true;
                         }
                         switch (AoACurveGenerator.Status)

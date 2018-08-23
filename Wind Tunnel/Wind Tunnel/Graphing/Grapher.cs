@@ -169,6 +169,7 @@ namespace KerbalWindTunnel.Graphing
         protected override void ValuesChangedSubscriber(object sender, EventArgs e)
         {
             graphDirty = true;
+            base.ValuesChangedSubscriber(sender, e);
         }
         protected override void OnValuesChanged(EventArgs eventArgs)
         {

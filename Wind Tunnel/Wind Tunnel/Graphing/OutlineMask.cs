@@ -171,6 +171,16 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
+        public void SetValues(float[,] values, float xLeft, float xRight, float yBottom, float yTop)
+        {
+            this._values = values;
+            this.XMin = xLeft;
+            this.XMax = xRight;
+            this.YMin = yBottom;
+            this.YMax = yTop;
+            OnValuesChanged(null);
+        }
+
         public override void WriteToFile(string filename, string sheetName = "")
         {
             return;
