@@ -70,8 +70,8 @@ namespace KerbalWindTunnel.DataGenerators
             newSurfGraph.ZAxisScaler = maxAccelExcess / Axis.GetMax(0, newSurfGraph.ZMax);
             graphs.Add("Excess Acceleration", newSurfGraph);
             graphs.Add("Thrust Available", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top, true) { Name = "Thrust Available", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
-            graphs.Add("Level AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_level * 180 / Mathf.PI), left, right, bottom, top, true) { Name = "Level AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphs.Add("Max Lift AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_max * 180 / Mathf.PI), left, right, bottom, top, true) { Name = "Max Lift AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Level AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top, true) { Name = "Level AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphs.Add("Max Lift AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top, true) { Name = "Max Lift AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphs.Add("Max Lift", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true) { Name = "Max Lift", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
             graphs.Add("Lift/Drag Ratio", new SurfGraph(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true) { Name = "Lift/Drag Ratio", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphs.Add("Drag", new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true) { Name = "Drag", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
@@ -252,9 +252,9 @@ namespace KerbalWindTunnel.DataGenerators
                 return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{9:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
                         "Excess Thrust:\t{3:N0}kN\n" + "Excess Acceleration:\t{4:N2}g\n" + "Max Lift Force:\t{5:N0}kN\n" +
                         "Max Lift AoA:\t{6:N2}°\n" + "Lift/Drag Ratio:\t{8:N2}\n" + "Available Thrust:\t{7:N0}kN",
-                        altitude, speed, AoA_level * 180 / Mathf.PI,
+                        altitude, speed, AoA_level * Mathf.Rad2Deg,
                         Thrust_excess, Accel_excess, Lift_max,
-                        AoA_max * 180 / Mathf.PI, Thrust_available, LDRatio,
+                        AoA_max * Mathf.Rad2Deg, Thrust_available, LDRatio,
                         mach);
             }
         }

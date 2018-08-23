@@ -56,7 +56,7 @@ namespace KerbalWindTunnel
         }
         public static float GetLiftForceMagnitude(Vector3 force, float AoA)
         {
-            return (Quaternion.AngleAxis((AoA * 180 / Mathf.PI), Vector3.left) * force).y;
+            return (Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * force).y;
         }
 
         public virtual float GetDragForceMagnitude(Conditions conditions, float AoA, float pitchInput = 0)
@@ -65,7 +65,7 @@ namespace KerbalWindTunnel
         }
         public static float GetDragForceMagnitude(Vector3 force, float AoA)
         {
-            return -(Quaternion.AngleAxis((AoA * 180 / Mathf.PI), Vector3.left) * force).z;
+            return -(Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * force).z;
         }
 
         public virtual Vector3 GetThrustForce(Conditions conditions)
@@ -74,13 +74,13 @@ namespace KerbalWindTunnel
         }
         public virtual Vector3 GetThrustForce(Conditions conditions, float AoA)
         {
-            return Quaternion.AngleAxis((AoA * 180 / Mathf.PI), Vector3.left) * GetThrustForce(conditions);
+            return Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * GetThrustForce(conditions);
         }
 
         public abstract Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent);
         public virtual Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent, float AoA)
         {
-            return Quaternion.AngleAxis((AoA * 180 / Mathf.PI), Vector3.left) * GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
+            return Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
         }
 
         public virtual Vector2 GetThrustForce2D(Conditions conditions)
@@ -112,11 +112,11 @@ namespace KerbalWindTunnel
 
         public static Vector3 ToFlightFrame(Vector3 force, float AoA)
         {
-            return Quaternion.AngleAxis((AoA * 180 / Mathf.PI), Vector3.left) * force;
+            return Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * force;
         }
         public static Vector3 ToVesselFrame(Vector3 force, float AoA)
         {
-            return Quaternion.AngleAxis((-AoA * 180 / Mathf.PI), Vector3.left) * force;
+            return Quaternion.AngleAxis((-AoA * Mathf.Rad2Deg), Vector3.left) * force;
         }
 
         public static Vector3 InflowVect(float AoA)

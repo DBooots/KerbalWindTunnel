@@ -54,8 +54,8 @@ namespace KerbalWindTunnel.DataGenerators
             Func<VelPoint, float> scale = (pt) => 1;
             if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
-            graphs.Add("Level AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_level * 180 / Mathf.PI).ToArray(), left, right) { Name = "Level AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
-            graphs.Add("Max Lift AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_max * 180 / Mathf.PI).ToArray(), left, right) { Name = "Max Lift AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Level AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_level * Mathf.Rad2Deg).ToArray(), left, right) { Name = "Level AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
+            graphs.Add("Max Lift AoA", new LineGraph(VelPoints.Select(pt => pt.AoA_max * Mathf.Rad2Deg).ToArray(), left, right) { Name = "Max Lift AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
             graphs.Add("Thrust Available", new LineGraph(VelPoints.Select(pt => pt.Thrust_available).ToArray(), left, right) { Name = "Thrust Available", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphs.Add("Lift/Drag Ratio", new LineGraph(VelPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
             graphs.Add("Drag", new LineGraph(VelPoints.Select(pt => pt.drag * scale(pt)).ToArray(), left, right) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
@@ -190,9 +190,9 @@ namespace KerbalWindTunnel.DataGenerators
                 return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{7:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
                         "Excess Thrust:\t{3:N0}kN\n" +
                         "Max Lift AoA:\t{4:N2}°\n" + "Lift/Drag Ratio:\t{6:N0}\n" + "Available Thrust:\t{5:N0}kN",
-                        altitude, speed, AoA_level * 180 / Mathf.PI,
+                        altitude, speed, AoA_level * Mathf.Rad2Deg,
                         Thrust_excess,
-                        AoA_max * 180 / Mathf.PI, Thrust_available, LDRatio,
+                        AoA_max * Mathf.Rad2Deg, Thrust_available, LDRatio,
                         mach);
             }
         }

@@ -192,7 +192,7 @@ namespace KerbalWindTunnel
             set
             {
                 _aoa = value;
-                aoaStr = (value * 180 / Mathf.PI).ToString("F2");
+                aoaStr = (value * Mathf.Rad2Deg).ToString("F2");
             }
         }
         private bool _mach = false;
@@ -220,7 +220,7 @@ namespace KerbalWindTunnel
 
         private Graphing.Grapher grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes };
 
-        internal const float AoAdelta = 0.1f / 180 * Mathf.PI;
+        internal const float AoAdelta = 0.1f * Mathf.Deg2Rad;
 
         private List<cbItem> lstPlanets = new List<cbItem>();
         private CelestialBody cbStar;
@@ -491,7 +491,7 @@ namespace KerbalWindTunnel
                 {
                     if (float.TryParse(aoaStr, out float tempAoA))
                     {
-                        tempAoA *= Mathf.PI / 180;
+                        tempAoA *= Mathf.Deg2Rad;
                         if (tempAoA != AoA)
                         {
                             AoA = tempAoA;
@@ -561,7 +561,7 @@ namespace KerbalWindTunnel
                     this.Speed = (crossHairs.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                     break;
                 case GraphMode.AoACurves:
-                    this.AoA = ((crossHairs.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin) * Mathf.PI / 180;
+                    this.AoA = ((crossHairs.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin) * Mathf.Deg2Rad;
                     break;
                 case GraphMode.VelocityCurves:
                     this.Speed = (crossHairs.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin;
@@ -577,7 +577,7 @@ namespace KerbalWindTunnel
                     return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * (graphWidth - 1),
                         (1 - altitude / (grapher.YMax - grapher.YMin)) * (graphHeight - 1));
                 case GraphMode.AoACurves:
-                    return new Vector2(((aoa * 180 / Mathf.PI) - grapher.XMin) / (grapher.XMax - grapher.XMin) * (graphWidth - 1), 0);
+                    return new Vector2(((aoa * Mathf.Rad2Deg) - grapher.XMin) / (grapher.XMax - grapher.XMin) * (graphWidth - 1), 0);
                 case GraphMode.VelocityCurves:
                     return new Vector2((speed - grapher.XMin) / (grapher.XMax - grapher.XMin) * (graphWidth - 1), 0);
                 default:
