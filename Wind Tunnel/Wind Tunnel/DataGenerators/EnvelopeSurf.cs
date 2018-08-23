@@ -94,7 +94,6 @@ namespace KerbalWindTunnel.DataGenerators
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
             EnvelopePoint[,] newEnvelopePoints = new EnvelopePoint[numPtsX + 1, numPtsY + 1];
-            CalculationManager.State[,] results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
             
             GenData rootData = new GenData(vessel, conditions, 0, 0, manager);
             ThreadPool.QueueUserWorkItem(SetupInBackground, rootData);
@@ -125,28 +124,52 @@ namespace KerbalWindTunnel.DataGenerators
             GenData rootData = (GenData)obj;
             Conditions conditions = rootData.conditions;
             CalculationManager manager = rootData.storeState.manager;
+            CalculationManager seedManager = new CalculationManager();
+            CalculationManager.State[,] results = null;
+            
+            Conditions seedConditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed, 10, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, 10);
+            GenerateLevel(seedConditions, seedManager, ref results, rootData.vessel);
 
+            seedManager.WaitForCompletion();
+
+            GenerateLevel(conditions, manager, ref results, rootData.vessel);
+
+            if (rootData.storeState.manager.Cancelled)
+                return;
+            rootData.storeState.StoreResult(results);
+        }
+
+        private static void GenerateLevel(Conditions conditions, CalculationManager manager, ref CalculationManager.State[,] results, AeroPredictor vessel)
+        {
+            float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
+            if (results != null)
+            {
+                AoAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_level);
+                maxAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_max);
+                pitchIs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).pitchInput);
+            }
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
             float trueStepX = (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / numPtsX;
             float trueStepY = (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / numPtsY;
-            CalculationManager.State[,] results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
+            results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
 
             for (int j = 0; j <= numPtsY; j++)
             {
                 for (int i = 0; i <= numPtsX; i++)
                 {
-                    if (rootData.storeState.manager.Cancelled)
+                    if (manager.Cancelled)
                         return;
-                    GenData genData = new GenData(rootData.vessel, conditions, conditions.lowerBoundSpeed + trueStepX * i, conditions.lowerBoundAltitude + trueStepY * j, rootData.solver, manager);
+                    float x = (float)i / numPtsX;
+                    float y = (float)j / numPtsY;
+                    float aoa_guess = AoAs_guess != null ? AoAs_guess.Lerp2(x, y) : float.NaN;
+                    float maxA_guess = maxAs_guess != null ? maxAs_guess.Lerp2(x, y) : float.NaN;
+                    float pi_guess = pitchIs_guess != null ? pitchIs_guess.Lerp2(x, y) : float.NaN;
+                    GenData genData = new GenData(vessel, conditions, conditions.lowerBoundSpeed + trueStepX * i, conditions.lowerBoundAltitude + trueStepY * j, manager, aoa_guess, maxA_guess, pi_guess);
                     results[i, j] = genData.storeState;
                     ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
                 }
             }
-
-            if (rootData.storeState.manager.Cancelled)
-                return;
-            rootData.storeState.StoreResult(results);
         }
 
         private static void GenerateSurfPoint(object obj)

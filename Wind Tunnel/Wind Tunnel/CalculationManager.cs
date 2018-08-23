@@ -15,7 +15,7 @@ namespace KerbalWindTunnel
 
     }
 
-    public class CalculationManager : ICalculationManager
+    public class CalculationManager : ICalculationManager, IDisposable
     {
         private volatile int linked = 0;
         private volatile int completed = 0;
@@ -23,6 +23,7 @@ namespace KerbalWindTunnel
         private readonly object completeLock = new object();
         private readonly object statusLock = new object();
         private volatile bool _cancelled = false;
+        private ManualResetEvent completionEvent = new ManualResetEvent(false);
         public Callback OnCancelCallback = delegate { };
         public bool Cancelled
         {
@@ -97,6 +98,11 @@ namespace KerbalWindTunnel
             }
         }
 
+        public void WaitForCompletion()
+        {
+            completionEvent.WaitOne();
+        }
+
         private CalculationManager LinkTo()
         {
             if (_status == RunStatus.PreStart || _status == RunStatus.Completed)
@@ -109,12 +115,17 @@ namespace KerbalWindTunnel
             return this;
         }
 
+        /// <summary>
+        /// Public implementation of the <see cref="IDisposable.Dispose"/> method of the <see cref="IDisposable"/> interface.
+        /// </summary>
         public void Cancel()
         {
             this._cancelled = true;
+            completionEvent.Set();
             lock (statusLock)
                 this._status = RunStatus.Cancelled;
             this.OnCancelCallback();
+            completionEvent.Close();
         }
 
         protected internal bool MarkCompleted()
@@ -123,12 +134,19 @@ namespace KerbalWindTunnel
             {
                 this.completed += 1;
             }
+            if (Completed)
+                completionEvent.Set();
             return true;
         }
 
         public State GetStateToken()
         {
             return State.CreateToken(this);
+        }
+
+        public void Dispose()
+        {
+            completionEvent.Close();
         }
 
         public class State
