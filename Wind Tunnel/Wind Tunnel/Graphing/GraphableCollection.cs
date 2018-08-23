@@ -243,7 +243,6 @@ namespace KerbalWindTunnel.Graphing
 
             if (yMin > yMax) yMin = yMin = float.NaN;
             if (xMin > xMax) xMin = xMax = float.NaN;
-            UnityEngine.Debug.LogFormat("X: {0}, {1}\tY: {2}, {3}", xMin, xMax, yMin, yMax);
         }
 
         /*protected void GetLimitsAutoOutline(OutlineMask outlineMask, out float xMin, out float xMax, out float yMin, out float yMax)
@@ -416,7 +415,8 @@ namespace KerbalWindTunnel.Graphing
             OnValuesChanged(null);
         }
 
-        protected virtual void ValuesChangedSubscriber(object sender, EventArgs e) { }
+        protected virtual void ValuesChangedSubscriber(object sender, EventArgs e)
+        { OnValuesChanged(null); }
 
         public bool Contains(IGraphable item)
         {

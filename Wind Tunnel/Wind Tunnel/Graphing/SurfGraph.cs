@@ -188,15 +188,23 @@ namespace KerbalWindTunnel.Graphing
             texture.Apply();
         }
 
-        public void SetValues(float[,] values, float xLeft, float xRight, float yBottom, float yTop)
+        public void SetValues(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false)
         {
+            this._values = values;
             this.XMin = xLeft;
             this.XMax = xRight;
             this.YMin = yBottom;
             this.YMax = yTop;
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
-            this._values = values;
+            this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
+            if (scaleZToAxis)
+            {
+                float axisMax = Axis.GetMax(ZMin, ZMax);
+                float axisMin = Axis.GetMin(ZMin, ZMax);
+                //this.ZAxisScaler = (ZMax - ZMin) / (Axis.GetMax(ZMin, ZMax) - Axis.GetMin(ZMin, ZMax));
+                this.ColorFunc = (x, y, z) => (z - axisMin) / (axisMax - axisMin);
+            }
             OnValuesChanged(null);
         }
 
