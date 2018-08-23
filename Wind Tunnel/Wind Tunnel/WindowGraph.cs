@@ -231,7 +231,7 @@ namespace KerbalWindTunnel
             switch (mode)
             {
                 case GraphMode.FlightEnvelope:
-                    EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, altitude, speed, this.rootSolver, 0);
+                    EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, altitude, speed, 0);
                     if (setAoA)
                         this.AoA = conditionPtFE.AoA_level;
                     return conditionPtFE.ToString();
@@ -241,7 +241,7 @@ namespace KerbalWindTunnel
                     return conditionPtAoA.ToString();
 
                 case GraphMode.VelocityCurves:
-                    VelCurve.VelPoint conditionPtVel = new VelCurve.VelPoint(this.vessel, this.body, altitude, speed, this.rootSolver);
+                    VelCurve.VelPoint conditionPtVel = new VelCurve.VelPoint(this.vessel, this.body, altitude, speed);
                     if (setAoA)
                         this.AoA = conditionPtVel.AoA_level;
                     return conditionPtVel.ToString();

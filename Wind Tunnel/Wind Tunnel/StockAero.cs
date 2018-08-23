@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using KerbalWindTunnel.RootSolvers;
 using UnityEngine;
 
 namespace KerbalWindTunnel
@@ -111,7 +110,7 @@ namespace KerbalWindTunnel
             throw new NotImplementedException();
         }
 
-        public override float GetPitchInput(RootSolver solver, Conditions conditions, float AoA, bool dryTorque = false)
+        public override float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN)
         {
             return 0;
         }

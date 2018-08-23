@@ -162,8 +162,8 @@ namespace KerbalWindTunnel.DataGenerators
                 this.AoA = AoA;
                 this.mach = conditions.mach;
                 this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
-                this.pitchInput = vessel.GetPitchInput(WindTunnelWindow.Instance.rootSolver, conditions, AoA);
-                this.pitchInput_dry = vessel.GetPitchInput(WindTunnelWindow.Instance.rootSolver, conditions, AoA, true);
+                this.pitchInput = vessel.GetPitchInput(conditions, AoA);
+                this.pitchInput_dry = vessel.GetPitchInput(conditions, AoA, true);
                 Vector3 force = AeroPredictor.ToFlightFrame(vessel.GetAeroForce(conditions, AoA, pitchInput), AoA);
                 torque = vessel.GetAeroTorque(conditions, AoA).x;
                 torque_dry = vessel.GetAeroTorque(conditions, AoA, 0, true).x;

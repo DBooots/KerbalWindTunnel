@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using KSPPluginFramework;
-using KerbalWindTunnel.RootSolvers;
 
 namespace KerbalWindTunnel
 {
@@ -42,15 +41,14 @@ namespace KerbalWindTunnel
 
         public static readonly float gAccel = (float)(Planetarium.fetch.Home.gravParameter / (Planetarium.fetch.Home.Radius * Planetarium.fetch.Home.Radius));
 
-        public RootSolverSettings solverSettings = new RootSolverSettings(
+        /*public RootSolverSettings solverSettings = new RootSolverSettings(
             RootSolver.LeftBound(-15 * Mathf.PI / 180),
             RootSolver.RightBound(35 * Mathf.PI / 180),
             RootSolver.LeftGuessBound(-5 * Mathf.PI / 180),
             RootSolver.RightGuessBound(5 * Mathf.PI / 180),
             RootSolver.ShiftWithGuess(true),
-            RootSolver.Tolerance(0.0001f));
-
-        public RootSolver rootSolver = new RootSolvers.Brent();
+            RootSolver.Tolerance(0.0001f));*/
+        
         private AeroPredictor vessel = null;
         private CelestialBody body = Planetarium.fetch.CurrentMainBody;
 

@@ -35,7 +35,7 @@ namespace KerbalWindTunnel.DataGenerators
 
             if (!cache.TryGetValue(newConditions, out VelPoints))
             {
-                WindTunnel.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel, WindTunnelWindow.Instance.rootSolver));
+                WindTunnel.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
             }
             else
             {
@@ -73,7 +73,7 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
-        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, RootSolvers.RootSolver solver)
+        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
         {
             int numPts = (int)Math.Ceiling((conditions.upperBound - conditions.lowerBound) / conditions.step);
             VelPoint[] newVelPoints = new VelPoint[numPts + 1];
@@ -83,7 +83,7 @@ namespace KerbalWindTunnel.DataGenerators
             for (int i = 0; i <= numPts; i++)
             {
                 //newAoAPoints[i] = new AoAPoint(vessel, conditions.body, conditions.altitude, conditions.speed, conditions.lowerBound + trueStep * i);
-                GenData genData = new GenData(vessel, conditions, conditions.lowerBound + trueStep * i, solver, manager);
+                GenData genData = new GenData(vessel, conditions, conditions.lowerBound + trueStep * i, manager);
                 results[i] = genData.storeState;
                 ThreadPool.QueueUserWorkItem(GenerateVelPoint, genData);
             }
@@ -114,7 +114,7 @@ namespace KerbalWindTunnel.DataGenerators
             GenData data = (GenData)obj;
             if (data.storeState.manager.Cancelled)
                 return;
-            data.storeState.StoreResult(new VelPoint(data.vessel, data.conditions.body, data.conditions.altitude, data.speed, data.solver));
+            data.storeState.StoreResult(new VelPoint(data.vessel, data.conditions.body, data.conditions.altitude, data.speed));
         }
 
         private struct GenData
@@ -123,14 +123,12 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly AeroPredictor vessel;
             public readonly CalculationManager.State storeState;
             public readonly float speed;
-            public readonly RootSolvers.RootSolver solver;
 
-            public GenData(AeroPredictor vessel, Conditions conditions, float speed, RootSolvers.RootSolver solver, CalculationManager manager)
+            public GenData(AeroPredictor vessel, Conditions conditions, float speed, CalculationManager manager)
             {
                 this.vessel = vessel;
                 this.conditions = conditions;
                 this.speed = speed;
-                this.solver = solver;
                 this.storeState = manager.GetStateToken();
             }
         }
@@ -149,8 +147,9 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float dynamicPressure;
             public readonly float dLift;
             public readonly float pitchInput;
+            public readonly float Lift_max;
 
-            public VelPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, RootSolvers.RootSolver solver)
+            public VelPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed)
             {
                 this.altitude = altitude;
                 this.speed = speed;
@@ -165,24 +164,16 @@ namespace KerbalWindTunnel.DataGenerators
                 this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
                 float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))); // TODO: Minus centrifugal force...
                 Vector3 thrustForce = vessel.GetThrustForce(conditions);
-                AoA_level = vessel.GetAoA(solver, conditions, weight, out pitchInput, true);
-                AoA_max = float.NaN;
+                AoA_max = vessel.GetMaxAoA(conditions, out Lift_max);
+                AoA_level = Mathf.Min(vessel.GetAoA(conditions, weight), AoA_max);
+                pitchInput = vessel.GetPitchInput(conditions, AoA_level);
                 Thrust_available = thrustForce.magnitude;
-                if (!float.IsNaN(AoA_level))
-                {
-                    drag = AeroPredictor.GetDragForceMagnitude(vessel.GetAeroForce(conditions, AoA_level, pitchInput), AoA_level);
-                    Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
-                    LDRatio = Mathf.Abs(weight / drag);
-                    dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) -
-                        vessel.GetLiftForceMagnitude(conditions, AoA_level, pitchInput)) / (WindTunnelWindow.AoAdelta * 180 / Mathf.PI);
-                }
-                else
-                {
-                    drag = float.PositiveInfinity;
-                    Thrust_excess = float.NegativeInfinity;
-                    LDRatio = 0;
-                    dLift = 0;
-                }
+                Vector3 force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
+                drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
+                Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
+                LDRatio = Mathf.Abs(AeroPredictor.GetLiftForceMagnitude(force, AoA_level) / drag);
+                dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) -
+                    vessel.GetLiftForceMagnitude(conditions, AoA_level, pitchInput)) / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
             }
 
             public override string ToString()

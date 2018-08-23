@@ -86,9 +86,6 @@
     <Compile Include="Graphing\OutlineMask.cs" />
     <Compile Include="Graphing\SurfGraph.cs" />
     <Compile Include="DataGenerators\VelCurve.cs" />
-    <Compile Include="RootSolvers\Bisect.cs" />
-    <Compile Include="RootSolvers\Brent.cs" />
-    <Compile Include="RootSolvers\RootSolver.cs" />
     <Compile Include="StockAero.cs" />
     <Compile Include="StockAeroUtil.cs" />
     <Compile Include="VesselCache\SimulatedControlSurface.cs" />
