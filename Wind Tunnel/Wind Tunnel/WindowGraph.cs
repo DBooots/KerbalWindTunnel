@@ -11,9 +11,9 @@ namespace KerbalWindTunnel
 {
     public partial class WindTunnelWindow
     {
-        private float altitudeStep = 100;
+        private float altitudeStep = 200;
         private float maxAltitude = 25000;
-        private float speedStep = 10;
+        private float speedStep = 20;
         private float maxSpeed = 2000;
         public const int graphWidth = 500;
         public const int graphHeight = 400;
@@ -199,7 +199,7 @@ namespace KerbalWindTunnel
 
                 if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
                 {
-                    grapher.DrawGraphs();
+                    //grapher.DrawGraphs();
                     DrawGraph();
                 }
 
@@ -253,6 +253,7 @@ namespace KerbalWindTunnel
         
         private void DrawGraph()
         {
+            grapher.DrawGraphs();
             GUILayout.Box("", GUIStyle.none, GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(5));
             GUILayout.BeginHorizontal();
             GUILayout.Box("", GUIStyle.none, GUILayout.Width(40), GUILayout.Height(graphHeight));

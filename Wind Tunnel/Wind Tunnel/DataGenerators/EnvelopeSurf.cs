@@ -89,6 +89,35 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
+        private void UpdateGraphs()
+        {
+            float bottom = currentConditions.lowerBoundAltitude;
+            float top = currentConditions.upperBoundAltitude;
+            float left = currentConditions.lowerBoundSpeed;
+            float right = currentConditions.upperBoundSpeed;
+            Func<EnvelopePoint, float> scale = (pt) => 1;
+            if (WindTunnelSettings.UseCoefficients)
+                scale = (pt) => 1 / pt.dynamicPressure;
+
+            ((SurfGraph)graphs["Excess Thrust"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
+            float maxThrustExcess = ((SurfGraph)graphs["Excess Thrust"]).ZMax;
+            ((SurfGraph)graphs["Excess Thrust"]).ColorFunc = (x, y, z) => z / maxThrustExcess;
+            ((SurfGraph)graphs["Excess Thrust"]).ZAxisScaler = maxThrustExcess / Axis.GetMax(0, maxThrustExcess);
+            ((SurfGraph)graphs["Excess Acceleration"]).SetValues(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top);
+            float maxAccelExcess = ((SurfGraph)graphs["Excess Acceleration"]).ZMax;
+            ((SurfGraph)graphs["Excess Acceleration"]).ColorFunc = (x, y, z) => z / maxAccelExcess;
+            ((SurfGraph)graphs["Excess Acceleration"]).ZAxisScaler = maxAccelExcess / Axis.GetMax(0, maxAccelExcess);
+            ((SurfGraph)graphs["Thrust Available"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top, true);
+            ((SurfGraph)graphs["Level AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top, true);
+            ((SurfGraph)graphs["Max Lift AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top, true);
+            ((SurfGraph)graphs["Max Lift"]).SetValues(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true);
+            ((SurfGraph)graphs["Lift/Drag Ratio"]).SetValues(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true);
+            ((SurfGraph)graphs["Drag"]).SetValues(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true);
+            ((SurfGraph)graphs["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true);
+            ((SurfGraph)graphs["Pitch Input"]).SetValues(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true);
+            ((OutlineMask)graphs["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
+        }
+
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
         {
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
@@ -111,12 +140,55 @@ namespace KerbalWindTunnel.DataGenerators
 
             if (!manager.Cancelled)
             {
-                cache.Add(conditions, newEnvelopePoints);
+                //cache.Add(conditions, newEnvelopePoints);
+                AddToCache(conditions, newEnvelopePoints);
                 envelopePoints = newEnvelopePoints;
                 currentConditions = conditions;
                 GenerateGraphs();
                 valuesSet = true;
             }
+
+            float stepSpeed = conditions.stepSpeed, stepAltitude = conditions.stepAltitude;
+            for(int i = 2; i <=3; i++)
+            {
+                CalculationManager backgroundManager = new CalculationManager();
+                manager.OnCancelCallback += backgroundManager.Cancel;
+                conditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed,
+                    stepSpeed / i, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, stepAltitude / i);
+                CalculationManager.State[,] prevResults = ((CalculationManager.State[,])rootData.storeState.Result).SelectToArray(p => p);
+                rootData = new GenData(vessel, conditions, 0, 0, backgroundManager);
+                ThreadPool.QueueUserWorkItem(ContinueInBackground, new object[] { rootData, prevResults });
+                while (!backgroundManager.Completed)
+                {
+                    if (manager.Status == CalculationManager.RunStatus.Cancelled)
+                    {
+                        backgroundManager.Cancel();
+                        yield break;
+                    }
+                    yield return 0;
+                }
+
+                newEnvelopePoints = ((CalculationManager.State[,])rootData.storeState.Result)
+                    .SelectToArray(pt => (EnvelopePoint)pt.Result);
+
+                if (!manager.Cancelled)
+                {
+                    //cache.Add(conditions, newEnvelopePoints);
+                    AddToCache(conditions, newEnvelopePoints);
+                    envelopePoints = newEnvelopePoints;
+                    currentConditions = conditions;
+                    UpdateGraphs();
+                    valuesSet = true;
+                }
+            }
+        }
+
+        private bool AddToCache(Conditions conditions, EnvelopePoint[,] data)
+        {
+            if (cache.ContainsKey(conditions) && cache[conditions].Length > data.Length)
+                return false;
+            cache[conditions] = data;
+            return true;
         }
 
         private static void SetupInBackground(object obj)
@@ -134,6 +206,18 @@ namespace KerbalWindTunnel.DataGenerators
 
             GenerateLevel(conditions, manager, ref results, rootData.vessel);
 
+            if (rootData.storeState.manager.Cancelled)
+                return;
+            rootData.storeState.StoreResult(results);
+        }
+
+        private static void ContinueInBackground(object obj)
+        {
+            object[] inObj = (object[])obj;
+            GenData rootData = (GenData)inObj[0];
+            CalculationManager.State[,] results = (CalculationManager.State[,])inObj[1];
+            CalculationManager manager = rootData.storeState.manager;
+            GenerateLevel(rootData.conditions, manager, ref results, rootData.vessel);
             if (rootData.storeState.manager.Cancelled)
                 return;
             rootData.storeState.StoreResult(results);
@@ -295,7 +379,7 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float upperBoundAltitude;
             public readonly float stepAltitude;
 
-            public static readonly Conditions Blank = new Conditions(null, 0, 0, 0, 0, 0, 0);
+            public static readonly Conditions Blank = new Conditions(null, 0, 0, 0f, 0, 0, 0f);
 
             public Conditions(CelestialBody body, float lowerBoundSpeed, float upperBoundSpeed, float stepSpeed, float lowerBoundAltitude, float upperBoundAltitude, float stepAltitude)
             {
@@ -311,21 +395,22 @@ namespace KerbalWindTunnel.DataGenerators
                 this.upperBoundAltitude = upperBoundAltitude;
                 this.stepAltitude = stepAltitude;
             }
+            public Conditions(CelestialBody body, float lowerBoundSpeed, float upperBoundSpeed, int speedPts, float lowerBoundAltitude, float upperBoundAltitude, int altitudePts) :
+                this(body, lowerBoundSpeed, upperBoundSpeed, (upperBoundSpeed - lowerBoundSpeed) / (speedPts - 1), lowerBoundAltitude, upperBoundAltitude, (upperBoundAltitude - lowerBoundAltitude) / (altitudePts - 1))
+            { }
 
             public bool Equals(Conditions conditions)
             {
                 return this.body == conditions.body &&
                     this.lowerBoundSpeed == conditions.lowerBoundSpeed &&
                     this.upperBoundSpeed == conditions.upperBoundSpeed &&
-                    this.stepSpeed == conditions.stepSpeed &&
                     this.lowerBoundAltitude == conditions.lowerBoundAltitude &&
-                    this.upperBoundAltitude == conditions.upperBoundAltitude &&
-                    this.stepAltitude == conditions.stepAltitude;
+                    this.upperBoundAltitude == conditions.upperBoundAltitude;
             }
 
             public override int GetHashCode()
             {
-                return Extensions.HashCode.Of(this.body).And(this.lowerBoundSpeed).And(this.upperBoundSpeed).And(this.stepSpeed).And(this.lowerBoundAltitude).And(this.upperBoundAltitude).And(this.stepAltitude);
+                return Extensions.HashCode.Of(this.body).And(this.lowerBoundSpeed).And(this.upperBoundSpeed).And(this.lowerBoundAltitude).And(this.upperBoundAltitude);
             }
         }
     }

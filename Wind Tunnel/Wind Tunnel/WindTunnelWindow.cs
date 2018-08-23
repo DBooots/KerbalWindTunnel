@@ -660,20 +660,20 @@ namespace KerbalWindTunnel
                 case "kerbin":
                     maxAltitude = 25000;
                     maxSpeed = 2500;
-                    altitudeStep = 100;
-                    speedStep = 10;
+                    altitudeStep = 200;
+                    speedStep = 20;
                     break;
                 case "eve":
                     maxAltitude = 35000;
                     maxSpeed = 3500;
-                    altitudeStep = 100;
-                    speedStep = 14;
+                    altitudeStep = 200;
+                    speedStep = 28;
                     break;
                 case "duna":
                     maxAltitude = 10000;
                     maxSpeed = 1000;
-                    altitudeStep = 100;
-                    speedStep = 10;
+                    altitudeStep = 200;
+                    speedStep = 20;
                     break;
                 /*case "laythe":
                     maxAltitude = 20000;
@@ -682,8 +682,8 @@ namespace KerbalWindTunnel
                 case "jool":
                     maxAltitude = 200000;
                     maxSpeed = 7000;
-                    altitudeStep = 1000;
-                    speedStep = 35;
+                    altitudeStep = 2000;
+                    speedStep = 70;
                     break;
             }
         }
