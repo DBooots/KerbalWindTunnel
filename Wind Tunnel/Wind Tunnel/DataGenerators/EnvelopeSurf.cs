@@ -203,7 +203,7 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float drag;
             public readonly float pitchInput;
 
-            public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, RootSolvers.RootSolver solver, float AoA_guess = 0)
+            public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
             {
                 this.altitude = altitude;
                 this.speed = speed;
