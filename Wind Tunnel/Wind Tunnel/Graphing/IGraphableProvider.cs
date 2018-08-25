@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using KerbalWindTunnel.Graphing;
 
-namespace KerbalWindTunnel.DataGenerators
+namespace KerbalWindTunnel.Graphing
 {
     public interface IGraphableProvider
     {
