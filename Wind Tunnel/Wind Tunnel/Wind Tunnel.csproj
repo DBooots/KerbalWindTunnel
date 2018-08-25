@@ -47,7 +47,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CalculationManager.cs" />
+    <Compile Include="Threading\CalculationManager.cs" />
     <Compile Include="DataGenerators\IGraphableProvider.cs" />
     <Compile Include="Extensions\KSPClassExtensions.cs" />
     <Compile Include="Extensions\DrawingHelper.cs" />
@@ -80,6 +80,7 @@
     <Compile Include="RootSolvers\RootSolver.cs" />
     <Compile Include="StockAero.cs" />
     <Compile Include="StockAeroUtil.cs" />
+    <Compile Include="Threading\ThreadPool.cs" />
     <Compile Include="VesselCache\SimulatedControlSurface.cs" />
     <Compile Include="WindowGraph.cs" />
     <Compile Include="AeroPredictor.cs" />
