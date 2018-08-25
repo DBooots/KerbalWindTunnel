@@ -57,5 +57,73 @@ namespace KerbalWindTunnel.Extensions
             }
             return result;
         }
+        public static float Lerp2(this float[,] vals, float x, float y)
+        {
+            int xI1, xI2;
+            float fX;
+            if (x <= 0)
+            {
+                xI1 = xI2 = 0;
+                fX = 0;
+            }
+            else
+            {
+                int lengthX = vals.GetUpperBound(0);
+                if (x >= 1)
+                {
+                    xI1 = xI2 = lengthX;
+                    fX = 1;
+                }
+                else
+                {
+                    float stepX = 1f / lengthX;
+                    xI1 = (int)Math.Floor(x / stepX);
+                    fX = x / stepX % 1;
+                    xI2 = xI1 + 1;
+                    if (fX == 0)
+                        xI2 = xI1;
+                    else
+                        xI2 = xI1 + 1;
+                }
+            }
+
+            if (y <= 0)
+            {
+                if (xI1 == xI2) return vals[xI1, 0];
+                return vals[xI1, 0] * (1 - fX) + vals[xI2, 0] * fX;
+            }
+            else
+            {
+                int lengthY = vals.GetUpperBound(1);
+                if (y >= 1)
+                {
+                    if (xI1 == xI2) return vals[xI1, 0];
+                    return vals[xI1, lengthY] * (1 - fX) + vals[xI2, lengthY] * fX;
+                }
+                else
+                {
+                    float stepY = 1f / lengthY;
+                    int yI1 = (int)Math.Floor(y / stepY);
+                    float fY = y / stepY % 1;
+                    int yI2;
+                    if (fY == 0)
+                        yI2 = yI1;
+                    else
+                        yI2 = yI1 + 1;
+
+                    if (xI1 == xI2 && yI1 == yI2)
+                        return vals[xI1, yI1];
+                    else if (xI1 == xI2)
+                        return vals[xI1, yI1] * (1 - fY) + vals[xI1, yI2] * fY;
+                    else if (yI1 == yI2)
+                        return vals[xI1, yI1] * (1 - fX) + vals[xI2, yI1] * fX;
+
+                    return vals[xI1, yI1] * (1 - fX) * (1 - fY) +
+                        vals[xI2, yI1] * fX * (1 - fY) +
+                        vals[xI1, yI2] * (1 - fX) * fY +
+                        vals[xI2, yI2] * fX * fY;
+                }
+            }
+        }
     }
 }

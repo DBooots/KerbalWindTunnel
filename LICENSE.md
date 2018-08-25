@@ -1,4 +1,4 @@
-The majority of Kerbal Wind Tunnel is licensed under the MIT License found below.
+﻿The majority of Kerbal Wind Tunnel is licensed under the MIT License found below.
 However, like most coding projects, it has benefitted from the works of many
 others. Derived and copied code within this project will have the license from
 its progenitor included either in the root of its folder or as a header for the

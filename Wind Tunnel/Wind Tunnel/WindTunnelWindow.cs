@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPPluginFramework;
-using KerbalWindTunnel.RootSolvers;
 using KerbalWindTunnel.Threading;
 
 namespace KerbalWindTunnel
@@ -42,15 +41,14 @@ namespace KerbalWindTunnel
 
         public static readonly float gAccel = (float)(Planetarium.fetch.Home.gravParameter / (Planetarium.fetch.Home.Radius * Planetarium.fetch.Home.Radius));
 
-        public RootSolverSettings solverSettings = new RootSolverSettings(
+        /*public RootSolverSettings solverSettings = new RootSolverSettings(
             RootSolver.LeftBound(-15 * Mathf.PI / 180),
             RootSolver.RightBound(35 * Mathf.PI / 180),
             RootSolver.LeftGuessBound(-5 * Mathf.PI / 180),
             RootSolver.RightGuessBound(5 * Mathf.PI / 180),
             RootSolver.ShiftWithGuess(true),
-            RootSolver.Tolerance(0.0001f));
-
-        public RootSolver rootSolver = new RootSolvers.Brent();
+            RootSolver.Tolerance(0.0001f));*/
+        
         private AeroPredictor vessel = null;
         private CelestialBody body = Planetarium.fetch.CurrentMainBody;
 
@@ -662,20 +660,20 @@ namespace KerbalWindTunnel
                 case "kerbin":
                     maxAltitude = 25000;
                     maxSpeed = 2500;
-                    altitudeStep = 100;
-                    speedStep = 10;
+                    altitudeStep = 200;
+                    speedStep = 20;
                     break;
                 case "eve":
                     maxAltitude = 35000;
                     maxSpeed = 3500;
-                    altitudeStep = 100;
-                    speedStep = 14;
+                    altitudeStep = 200;
+                    speedStep = 28;
                     break;
                 case "duna":
                     maxAltitude = 10000;
                     maxSpeed = 1000;
-                    altitudeStep = 100;
-                    speedStep = 10;
+                    altitudeStep = 200;
+                    speedStep = 20;
                     break;
                 /*case "laythe":
                     maxAltitude = 20000;
@@ -684,8 +682,8 @@ namespace KerbalWindTunnel
                 case "jool":
                     maxAltitude = 200000;
                     maxSpeed = 7000;
-                    altitudeStep = 1000;
-                    speedStep = 35;
+                    altitudeStep = 2000;
+                    speedStep = 70;
                     break;
             }
         }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using KerbalWindTunnel.RootSolvers;
 using Smooth.Pools;
 using UnityEngine;
 
@@ -11,7 +10,7 @@ namespace KerbalWindTunnel.VesselCache
     {
         public static bool accountForControls = false;
 
-        RootSolverSettings pitchInputSolverSettings = new RootSolverSettings(
+        /*RootSolverSettings pitchInputSolverSettings = new RootSolverSettings(
             RootSolver.LeftBound(-1),
             RootSolver.RightBound(1),
             RootSolver.LeftGuessBound(-0.25f),
@@ -27,7 +26,7 @@ namespace KerbalWindTunnel.VesselCache
             WindTunnelWindow.Instance.solverSettings,
             RootSolver.LeftGuessBound(-2 * Mathf.PI / 180),
             RootSolver.RightGuessBound(2 * Mathf.PI / 180),
-            RootSolver.ShiftWithGuess(true));
+            RootSolver.ShiftWithGuess(true));*/
         
         public List<SimulatedPart> parts = new List<SimulatedPart>();
         public List<SimulatedLiftingSurface> surfaces = new List<SimulatedLiftingSurface>();
@@ -117,47 +116,34 @@ namespace KerbalWindTunnel.VesselCache
             return GetLiftForce(conditions, AoA, pitchInput, out _);
         }
 
-        public override float GetAoA(RootSolver solver, Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false)
-        {
-            return this.GetAoA(solver, conditions, offsettingForce, out _, useThrust);
-        }
-
         // TODO: Add ITorqueProvider and thrust effect on torque
-        public override float GetAoA(RootSolver solver, Conditions conditions, float offsettingForce, out float pitchInput, bool useThrust = true, bool dryTorque = false)
+        public override float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false)
         {
             Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
-
-            pitchInput = 0;
+            
             if (!accountForControls)
-                return solver.Solve(
-                    (aoa) => AeroPredictor.GetLiftForceMagnitude(this.GetLiftForce(conditions, aoa, 0, out _, dryTorque) + thrustForce, aoa) - offsettingForce,
-                    0, WindTunnelWindow.Instance.solverSettings);
-
-            float pi = 0;
-            float approxAoA = solver.Solve(
-                (aoa) => AeroPredictor.GetLiftForceMagnitude(this.GetLiftForce(conditions, aoa, pi, out _, dryTorque) + thrustForce, aoa) - offsettingForce,
-                0, coarseAoASolverSettings);
-            float result = solver.Solve((aoa) =>
-            {
-                float netF = -offsettingForce;
-                pi = solver.Solve((input) =>
-                {
-                    netF = AeroPredictor.GetLiftForceMagnitude(this.GetAeroForce(conditions, aoa, input, out Vector3 torque, dryTorque) + thrustForce, aoa) - offsettingForce;
-                    return torque.x;
-                }, pi, pitchInputSolverSettings);
-                return netF;
-            }, 0, fineAoASolverSettings);
-
-            pitchInput = pi;
-            return result;
+                return base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, 0, true);
+            if (lockPitchInput)
+                return base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, pitchInputGuess, lockPitchInput);
+            
+            float approxAoA = GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, pitchInputGuess, true, 1 * Mathf.Deg2Rad);
+            return base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, approxAoA, pitchInputGuess, lockPitchInput);
         }
 
         // TODO: Add ITorqueProvider and thrust effect on torque
-        public override float GetPitchInput(RootSolver solver, Conditions conditions, float AoA, bool dryTorque = false)
+        public override float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN)
         {
-            float pi = solver.Solve((input) => this.GetAeroTorque(conditions, AoA, input, dryTorque).x,
-                0, pitchInputSolverSettings);
-            return pi;
+            Accord.Math.Optimization.BrentSearch solver = new Accord.Math.Optimization.BrentSearch((input) => this.GetAeroTorque(conditions, AoA, (float)input, dryTorque).x, -0.3, 0.3, 0.0001);
+            if (solver.FindRoot())
+                return (float)solver.Solution;
+            solver.LowerBound = -1;
+            solver.UpperBound = 1;
+            if (solver.FindRoot())
+                return (float)solver.Solution;
+            if (this.GetAeroTorque(conditions, AoA, 0, dryTorque).x > 0)
+                return -1;
+            else
+                return 1;
         }
         
         public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0, bool dryTorque = false)
