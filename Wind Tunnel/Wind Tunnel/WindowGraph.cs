@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using KerbalWindTunnel.Graphing;
 using KerbalWindTunnel.DataGenerators;
-using KerbalWindTunnel.Extensions;
+using KerbalWindTunnel.Threading;
 using UnityEngine;
 
 namespace KerbalWindTunnel
