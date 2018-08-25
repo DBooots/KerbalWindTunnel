@@ -154,7 +154,7 @@ namespace KerbalWindTunnel.Graphing
                     {
                         GetLimitsAutoLine(lineGraph, out xMin, out xMax, out yMin, out yMax);
                     }
-                    else if (graphs[i] is SurfGraph surfGraph)
+                    else if (graphs[i] is SurfGraphBase surfGraph)
                     {
                         GetLimitsAutoSurf(surfGraph, out xMin, out xMax, out yMin, out yMax);
                     }
@@ -183,17 +183,16 @@ namespace KerbalWindTunnel.Graphing
             return false;
         }
 
-        protected void GetLimitsAutoSurf(SurfGraph surfGraph, out float xMin, out float xMax, out float yMin, out float yMax)
+        protected void GetLimitsAutoSurf(SurfGraphBase surfGraph, out float xMin, out float xMax, out float yMin, out float yMax)
         {
-            float[,] values = surfGraph.Values;
-            int width = values.GetUpperBound(0);
-            int height = values.GetUpperBound(1);
+            int width = surfGraph.GetUpperBound(0);
+            int height = surfGraph.GetUpperBound(1);
             bool breakFlag = false;
             int x, y;
             for (x = 0; x <= width; x++)
             {
                 for (y = 0; y <= height; y++)
-                    if (surfGraph.Color.Filter(values[x, y]))
+                    if (surfGraph.Color.Filter(surfGraph[x, y]))
                     {
                         breakFlag = true;
                         break;
@@ -206,7 +205,7 @@ namespace KerbalWindTunnel.Graphing
             for (x = width; x >= 0; x--)
             {
                 for (y = 0; y <= height; y++)
-                    if (surfGraph.Color.Filter(values[x, y]))
+                    if (surfGraph.Color.Filter(surfGraph[x, y]))
                     {
                         breakFlag = true;
                         break;
@@ -219,7 +218,7 @@ namespace KerbalWindTunnel.Graphing
             for (y = 0; y <= height; y++)
             {
                 for (x = 0; x <= width; x++)
-                    if (surfGraph.Color.Filter(values[x, y]))
+                    if (surfGraph.Color.Filter(surfGraph[x, y]))
                     {
                         breakFlag = true;
                         break;
@@ -232,7 +231,7 @@ namespace KerbalWindTunnel.Graphing
             for (y = height; y >= 0; y--)
             {
                 for (x = 0; x <= width; x++)
-                    if (surfGraph.Color.Filter(values[x, y]))
+                    if (surfGraph.Color.Filter(surfGraph[x, y]))
                     {
                         breakFlag = true;
                         break;
@@ -608,7 +607,7 @@ namespace KerbalWindTunnel.Graphing
                     {
                         GetLimitsAutoLine(lineGraph, out xMin, out xMax, out yMin, out yMax);
                     }
-                    else if (graphs[i] is SurfGraph surfGraph)
+                    else if (graphs[i] is SurfGraphBase surfGraph)
                     {
                         GetLimitsAutoSurf(surfGraph, out xMin, out xMax, out yMin, out yMax);
                     }

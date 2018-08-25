@@ -60,6 +60,7 @@
   <ItemGroup>
     <Compile Include="CalculationManager.cs" />
     <Compile Include="DataGenerators\IGraphableProvider.cs" />
+    <Compile Include="Extensions\DeferredArray.cs" />
     <Compile Include="Extensions\KSPClassExtensions.cs" />
     <Compile Include="Extensions\DrawingHelper.cs" />
     <Compile Include="Extensions\HashCodeHelper.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="Graphing\Axis.cs" />
     <Compile Include="Graphing\ColorMap.cs" />
     <Compile Include="DataGenerators\EnvelopeSurf.cs" />
+    <Compile Include="Graphing\DeferredSurfGraph.cs" />
     <Compile Include="Graphing\GraphableCollection.cs" />
     <Compile Include="Graphing\Grapher.cs" />
     <Compile Include="DataGenerators\GraphGenerator.cs" />

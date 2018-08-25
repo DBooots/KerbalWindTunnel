@@ -1,29 +1,27 @@
-﻿using System;
-using KerbalWindTunnel.Extensions;
+﻿using KerbalWindTunnel.Extensions;
+using System;
+using System.Linq;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class SurfGraph : SurfGraphBase
+    public class DeferredSurfGraph<T> : SurfGraphBase
     {
-        private float[,] _values;
+        protected DeferredArray<T, float> _values;
+
         public override float[,] Values
         {
-            get { return _values; }
-            set
-            {
-                _values = value;
-                OnValuesChanged(null);
-            }
+            get => _values.ToArray();
+            set => throw new NotImplementedException();
         }
 
         internal override float this[int i, int j] => _values[i,j];
         internal override int GetUpperBound(int dimension) => _values.GetUpperBound(dimension);
 
-        public SurfGraph(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false) : base(xLeft, xRight, yBottom, yTop)
+        public DeferredSurfGraph(T[,] origin, Func<T, float> selector, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false) : base(xLeft, xRight, yBottom, yTop)
         {
-            this._values = values;
-            this.ZMin = values.Min(true);
-            this.ZMax = values.Max(true);
+            this._values = new DeferredArray<T, float>(origin, selector);
+            this.ZMin = _values.Min(true);
+            this.ZMax = _values.Max(true);
             this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
             if (scaleZToAxis)
             {
@@ -110,15 +108,15 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
-        public void SetValues(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false)
+        public void SetValues(T[,] origin, Func<T, float> selector, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false)
         {
-            this._values = values;
+            _values = new DeferredArray<T, float>(origin, selector);
             this.XMin = xLeft;
             this.XMax = xRight;
             this.YMin = yBottom;
             this.YMax = yTop;
-            this.ZMin = values.Min(true);
-            this.ZMax = values.Max(true);
+            this.ZMin = _values.Min(true);
+            this.ZMax = _values.Max(true);
             this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
             if (scaleZToAxis)
             {
@@ -129,7 +127,6 @@ namespace KerbalWindTunnel.Graphing
             }
             OnValuesChanged(null);
         }
-
 
         public override void WriteToFile(string filename, string sheetName = "")
         {
@@ -180,103 +177,6 @@ namespace KerbalWindTunnel.Graphing
                 }
                 catch (Exception) { }
             }
-        }
-    }
-
-    public abstract class SurfGraphBase : Graphable3
-    {
-        public override ColorMap Color { get; set; } = ColorMap.Jet_Dark;
-        
-        public abstract float[,] Values
-        {
-            get;
-            set;
-        }
-
-        internal abstract float this[int i, int j] { get; }
-        internal abstract int GetUpperBound(int dimension);
-
-        public SurfGraphBase(float xLeft, float xRight, float yBottom, float yTop)
-        {
-            this.XMin = xLeft;
-            this.XMax = xRight;
-            this.YMin = yBottom;
-            this.YMax = yTop;
-        }
-        
-        public override void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
-        {
-            int width = texture.width - 1;
-            int height = texture.height - 1;
-            
-            float graphStepX = (xRight - xLeft) / width;
-            float graphStepY = (yTop - yBottom) / height;
-
-            for (int x = 0; x <= width; x++)
-            {
-                for (int y = 0; y <= height; y++)
-                {
-                    float xF = x * graphStepX + xLeft;
-                    float yF = y * graphStepY + yBottom;
-                    if (xF < XMin || xF > XMax || yF < YMin || yF > YMax)
-                        continue;
-                    texture.SetPixel(x, y, this.Color[ColorFunc(xF, yF, ValueAt(xF, yF) * ZAxisScaler)]);
-                }
-            }
-
-            texture.Apply();
-        }
-
-        public void DrawMask(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop, Func<float, bool> maskCriteria, UnityEngine.Color maskColor, bool lineOnly = true, int lineWidth = 1)
-        {
-            int width = texture.width - 1;
-            int height = texture.height - 1;
-
-            float graphStepX = (xRight - xLeft) / width;
-            float graphStepY = (yTop - yBottom) / height;
-
-            for (int x = 0; x <= width; x++)
-            {
-                for (int y = 0; y <= height; y++)
-                {
-                    float xF = x * graphStepX + xLeft;
-                    float yF = y * graphStepY + yBottom;
-
-                    if (lineOnly)
-                    {
-                        float pixelValue = ValueAt(xF, yF);
-                        bool mask = false;
-
-                        if (!maskCriteria(pixelValue))
-                        {
-                            for (int w = 1; w <= lineWidth; w++)
-                            {
-                                if ((x >= w && maskCriteria(ValueAt((x - w) * graphStepX + xLeft, yF))) ||
-                                    (x < width - w && maskCriteria(ValueAt((x + w) * graphStepX + xLeft, yF))) ||
-                                    (y >= w && maskCriteria(ValueAt(xF, (y - w) * graphStepY + yBottom))) ||
-                                    (y < height - w && maskCriteria(ValueAt(xF, (y + w) * graphStepY + yBottom))))
-                                {
-                                    mask = true;
-                                    break;
-                                }
-                            }
-                        }
-                        if (mask)
-                            texture.SetPixel(x, y, maskColor);
-                        else
-                            texture.SetPixel(x, y, UnityEngine.Color.clear);
-                    }
-                    else
-                    {
-                        if (!maskCriteria(ValueAt(xF, yF)) || xF < XMin || xF > XMax || yF < YMin || yF > YMax)
-                            texture.SetPixel(x, y, maskColor);
-                        else
-                            texture.SetPixel(x, y, UnityEngine.Color.clear);
-                    }
-                }
-            }
-
-            texture.Apply();
         }
     }
 }
