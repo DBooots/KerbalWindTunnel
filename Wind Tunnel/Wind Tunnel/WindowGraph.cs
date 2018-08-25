@@ -273,8 +273,8 @@ namespace KerbalWindTunnel
 
             GUI.Label(new Rect(43, 88 + graphHeight, graphWidth, 20), string.Format("{0} [{1}]", grapher.XName, grapher.XUnit != "" ? grapher.XUnit : "-"), hAxisMarks);
             Matrix4x4 guiMatrix = GUI.matrix;
-            GUIUtility.RotateAroundPivot(90, new Vector2(20, 58));
-            GUI.Label(new Rect(58 - 33, 58, graphHeight, 20), string.Format("{0} [{1}]", grapher.YName, grapher.YUnit != "" ? grapher.YUnit : "-"), hAxisMarks);
+            GUIUtility.RotateAroundPivot(270, new Vector2(graphHeight, graphHeight));
+            GUI.Label(new Rect(graphHeight - 64, 0, graphHeight, 20), string.Format("{0} [{1}]", grapher.YName, grapher.YUnit != "" ? grapher.YUnit : "-"), hAxisMarks);
             GUI.matrix = guiMatrix;
 
             GUILayout.Label("", GUILayout.Width(graphWidth + axisWidth), GUILayout.Height(18));
