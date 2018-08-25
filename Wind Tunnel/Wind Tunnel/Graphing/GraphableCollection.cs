@@ -6,7 +6,7 @@ using System.Text;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class GraphableCollection : DataGenerators.IGraphableProvider, IGraphable, IList<IGraphable>
+    public class GraphableCollection : IGraphableProvider, IGraphable, IList<IGraphable>
     {
         public string Name { get; set; } = "";
         public virtual float XMin { get; protected set; } = float.NaN;

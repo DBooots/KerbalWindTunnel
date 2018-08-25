@@ -6,7 +6,7 @@ using System.Text;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class Grapher : GraphableCollection3, IDisposable, DataGenerators.IGraphableProvider
+    public class Grapher : GraphableCollection3, IDisposable, IGraphableProvider
     {
         public UnityEngine.Texture2D graphTex;
         public UnityEngine.Texture2D hAxisTex;
