@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace KerbalWindTunnel.Graphing
 {
@@ -133,6 +132,7 @@ namespace KerbalWindTunnel.Graphing
                 graphs[i].Draw(ref texture, XMin, XMax, YMin, YMax);
             }
         }
+
         public virtual bool RecalculateLimits()
         {
             float[] oldLimits = new float[] { XMin, XMax, YMin, YMax};
@@ -241,8 +241,16 @@ namespace KerbalWindTunnel.Graphing
             }
             yMax = (surfGraph.YMax - surfGraph.YMin) / height * y;
 
-            if (yMin > yMax) yMin = yMin = float.NaN;
-            if (xMin > xMax) xMin = xMax = float.NaN;
+            if (yMin > yMax)
+            {
+                yMin = surfGraph.YMin;
+                yMax = surfGraph.YMax;
+            }
+            if (xMin > xMax)
+            {
+                xMin = surfGraph.XMin;
+                xMax = surfGraph.XMax;
+            }
         }
 
         /*protected void GetLimitsAutoOutline(OutlineMask outlineMask, out float xMin, out float xMax, out float yMin, out float yMax)
