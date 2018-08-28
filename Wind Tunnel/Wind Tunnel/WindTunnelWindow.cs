@@ -441,19 +441,8 @@ namespace KerbalWindTunnel
 
                 if (GUILayout.Button("Update Vessel", GUILayout.Height(25)))
                 {
-                    graphDirty = true;
-                    graphRequested = false;
-                    EnvelopeSurfGenerator.Clear();
-                    AoACurveGenerator.Clear();
-                    VelCurveGenerator.Clear();
-                    this.conditionDetails = "";
-
-                    if (vessel is VesselCache.SimulatedVessel releasable)
-                        releasable.Release();
+                    OnVesselChanged();
                     this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
-                    //this.vessel = new StockAero();
-
-                    selectedCrossHairVect = new Vector2(-1, -1);
                 }
 
                 // Display selected point details.
@@ -550,6 +539,21 @@ namespace KerbalWindTunnel
             }
         }
 
+        private void OnVesselChanged()
+        {
+            graphDirty = true;
+            graphRequested = false;
+            EnvelopeSurfGenerator.Clear();
+            AoACurveGenerator.Clear();
+            VelCurveGenerator.Clear();
+            this.conditionDetails = "";
+
+            if (vessel is VesselCache.SimulatedVessel releasable)
+                releasable.Release();
+
+            selectedCrossHairVect = new Vector2(-1, -1);
+        }
+
         private void SetConditionsFromGraph(Vector2 crossHairs)
         {
             switch (CurrentGraphMode)
@@ -617,6 +621,10 @@ namespace KerbalWindTunnel
             ddlPlanet = new DropDownList(lstPlanets.Select(p => p.NameFormatted), planetIndex, this);
             ddlPlanet.OnSelectionChanged += OnPlanetSelected;
             ddlManager.AddDDL(ddlPlanet);
+
+            GameEvents.onEditorLoad.Add(OnVesselLoaded);
+            GameEvents.onEditorNewShipDialogDismiss.Add(OnNewVessel);
+            GameEvents.onEditorPodPicked.Add(OnRootChanged);
         }
 
         internal override void OnGUIOnceOnly()
@@ -630,7 +638,28 @@ namespace KerbalWindTunnel
             ddlManager.DropDownGlyphs = new GUIContentWithStyle("▼", glyphStyle);
             ddlManager.DropDownSeparators = new GUIContentWithStyle("|", glyphStyle);
         }
-        
+
+        private void OnNewVessel()
+        {
+            this.Parent.CloseWindow();
+            OnVesselChanged();
+            vessel = null;
+        }
+
+        private void OnVesselLoaded(ShipConstruct vessel, KSP.UI.Screens.CraftBrowserDialog.LoadType loadType)
+        {
+            OnVesselChanged();
+            this.vessel = null;
+            //this.vessel = VesselCache.SimulatedVessel.Borrow(vessel, VesselCache.SimCurves.Borrow(body));
+        }
+
+        private void OnRootChanged(Part rootPart)
+        {
+            OnVesselChanged();
+            // TODO: Could do fancier stuff like compare angles and then adjust all AoAs appropriately.
+            this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+        }
+
         private void OnPlanetSelected(DropDownList sender, int OldIndex, int NewIndex)
         {
             CelestialBody newBody = lstPlanets[NewIndex].CB;
@@ -641,9 +670,6 @@ namespace KerbalWindTunnel
             body = newBody;
             graphDirty = true;
             graphRequested = false;
-            EnvelopeSurfGenerator.Clear();
-            AoACurveGenerator.Clear();
-            VelCurveGenerator.Clear();
             this.conditionDetails = "";
 
             if (vessel is VesselCache.SimulatedVessel releasable)
@@ -690,6 +716,11 @@ namespace KerbalWindTunnel
 
         internal override void OnDestroy()
         {
+            Cancel();
+            ThreadPool.Dispose();
+            GameEvents.onEditorLoad.Remove(OnVesselLoaded);
+            GameEvents.onEditorNewShipDialogDismiss.Remove(OnNewVessel);
+            GameEvents.onEditorPodPicked.Remove(OnRootChanged);
             base.OnDestroy();
             grapher.Dispose();
             Destroy(crossHair);
