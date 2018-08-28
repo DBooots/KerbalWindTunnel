@@ -149,8 +149,10 @@ namespace KerbalWindTunnel.DataGenerators
             }
 
             float stepSpeed = conditions.stepSpeed, stepAltitude = conditions.stepAltitude;
-            for(int i = 2; i <=3; i++)
+            for(int i = 2; i <=2; i++)
             {
+                yield return 0;
+
                 CalculationManager backgroundManager = new CalculationManager();
                 manager.OnCancelCallback += backgroundManager.Cancel;
                 conditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed,
