@@ -25,11 +25,12 @@ namespace KerbalWindTunnel.Threading
                         if (threadCount > pool.Count)
                         {
                             int n = threadCount - pool.Count;
+                            int baseCount = pool.Count;
                             for (int i = 0; i < n; i++)
                             {
-                                Thread newThread = new Thread(ThreadTask) { IsBackground = true };
+                                Thread newThread = new Thread(new ParameterizedThreadStart(ThreadTask)) { IsBackground = true };
                                 pool.Add(newThread);
-                                newThread.Start();
+                                newThread.Start(baseCount + i);
                             }
                         }
                     }
@@ -60,26 +61,27 @@ namespace KerbalWindTunnel.Threading
                 pool.Capacity = threadCount;
                 for (int i = 0; i < threadCount; i++)
                 {
-                    pool.Add(new Thread(ThreadTask) { IsBackground = true });
+                    pool.Add(new Thread(new ParameterizedThreadStart(ThreadTask)) { IsBackground = true });
                 }
                 for (int i = 0; i < threadCount; i++)
                 {
-                    pool[i].Start();
+                    pool[i].Start(i);
                 }
             }
         }
 
         public static void QueueUserWorkItem(WaitCallback callback)
         {
-            QueueUserWorkItem(callback, new object[0]);
+            QueueUserWorkItem(callback, null);
         }
-        public static void QueueUserWorkItem(WaitCallback callback, object state)
+        public static void QueueUserWorkItem(WaitCallback callback, object state, bool verbose = false)
         {
-            queue.Enqueue(new CallbackStatePair(callback, state));
+            System.Threading.ThreadPool.QueueUserWorkItem(callback, state);
         }
 
-        private static void ThreadTask()
+        private static void ThreadTask(object idObj)
         {
+            int id = (int)idObj;
             while (!dispose)
             {
                 //if (ThreadCount > threadCount)
@@ -87,10 +89,17 @@ namespace KerbalWindTunnel.Threading
                 queue.WaitForItem();
                 while (queue.TryDequeue(out object task))
                 {
-                    CallbackStatePair callbackStatePair = (CallbackStatePair)task;
-                    callbackStatePair.callback(callbackStatePair.state);
+                    try
+                    {
+                        CallbackStatePair callbackStatePair = (CallbackStatePair)task;
+                        callbackStatePair.callback(callbackStatePair.state);
+                    }
+                    catch (Exception ex)
+                    { UnityEngine.Debug.Log(ex); }
                 }
             }
+            lock (pool)
+                pool.RemoveAt(id);
         }
 
         public static void Dispose(bool abort = false)
@@ -178,7 +187,8 @@ namespace KerbalWindTunnel.Threading
 
         public bool TryDequeue(out T item)
         {
-            lock(queue)
+            lock (queue)
+            {
                 lock (countKey)
                 {
                     if (count > 0)
@@ -189,20 +199,22 @@ namespace KerbalWindTunnel.Threading
                             waitForItem.Reset();
                         return true;
                     }
-                    item = default(T);
-                    return false;
                 }
+                item = default(T);
+                return false;
+            }
         }
 
         public bool TryPeek(out T item)
         {
             lock (queue)
             {
-                if (count > 0)
-                {
-                    item = queue.Peek();
-                    return true;
-                }
+                lock (countKey)
+                    if (count > 0)
+                    {
+                        item = queue.Peek();
+                        return true;
+                    }
                 item = default(T);
                 return false;
             }
