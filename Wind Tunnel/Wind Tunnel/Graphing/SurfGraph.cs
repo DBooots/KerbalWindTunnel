@@ -238,7 +238,7 @@ namespace KerbalWindTunnel.Graphing
                 strCsv = String.Format("{0}", ZUnit != "" ? ZUnit : "-");
 
             for (int x = 0; x <= width; x++)
-                strCsv += String.Format(",{0}", xStep * x);
+                strCsv += String.Format(",{0}", xStep * x + XMin);
 
             try
             {
@@ -248,7 +248,7 @@ namespace KerbalWindTunnel.Graphing
 
             for (int y = height; y >= 0; y--)
             {
-                strCsv = string.Format("{0}", y * yStep);
+                strCsv = string.Format("{0}", y * yStep + YMin);
                 for (int x = 0; x <= width; x++)
                     strCsv += string.Format(",{0:" + StringFormat.Replace("N", "F") + "}", _values[x, y]);
 
