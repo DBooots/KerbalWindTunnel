@@ -6,12 +6,14 @@ using KerbalWindTunnel.Threading;
 
 namespace KerbalWindTunnel.DataGenerators
 {
-    public abstract class DataSetGenerator : IGraphableProvider, ICalculationManager, IDisposable
+    public abstract class DataSetGenerator : ICalculationManager, IDisposable
     {
-        protected Dictionary<string, IGraphable> graphs = new Dictionary<string, IGraphable>(StringComparer.InvariantCultureIgnoreCase);
-        public virtual List<IGraphable> Graphables { get { return graphs.Values.ToList(); } }
+        public GraphableCollection Graphables { get => graphables; }
+        protected GraphableCollection graphables = new GraphableCollection();
         protected CalculationManager calculationManager = new CalculationManager();
         protected bool valuesSet = false;
+
+        public IGraphable this[string name] { get => graphables[name]; set => graphables[name] = value; }
 
         public virtual CalculationManager.RunStatus Status
         {
@@ -24,18 +26,6 @@ namespace KerbalWindTunnel.DataGenerators
                     return CalculationManager.RunStatus.Completed;
                 return status;
             }
-        }
-
-        public virtual IGraphable GetGraphableByName(string graphName)
-        {
-            if (graphs.TryGetValue(graphName, out IGraphable graph))
-                return graph;
-            return null;
-        }
-
-        public virtual GraphableCollection GetGraphableCollection()
-        {
-            return new GraphableCollection(this.graphs.Values);
         }
 
         public virtual float PercentComplete

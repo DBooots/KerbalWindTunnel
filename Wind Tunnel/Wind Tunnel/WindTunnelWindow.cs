@@ -772,4 +772,42 @@ namespace KerbalWindTunnel
             }
         }
     }
+
+    public static class EnumParser
+    {
+        public static string ToFormattedString(this WindTunnelWindow.GraphSelect graphSelect)
+        {
+            switch (graphSelect)
+            {
+                case WindTunnelWindow.GraphSelect.ExcessThrust:
+                    return "Excess Thrust";
+                case WindTunnelWindow.GraphSelect.LevelFlightAoA:
+                    return "Level AoA";
+                case WindTunnelWindow.GraphSelect.LiftDragRatio:
+                    return "Lift/Drag Ratio";
+                case WindTunnelWindow.GraphSelect.ThrustAvailable:
+                    return "Thrust Available";
+                case WindTunnelWindow.GraphSelect.LiftSlope:
+                    return "Lift Slope";
+                case WindTunnelWindow.GraphSelect.ExcessAcceleration:
+                    return "Excess Acceleration";
+                case WindTunnelWindow.GraphSelect.FuelBurn:
+                    return "Fuel Burn Rate";
+                case WindTunnelWindow.GraphSelect.MaxLiftAoA:
+                    return "Max Lift AoA";
+                case WindTunnelWindow.GraphSelect.MaxLiftForce:
+                    return "Max Lift";
+                case WindTunnelWindow.GraphSelect.LiftForce:
+                    return "Lift";
+                case WindTunnelWindow.GraphSelect.DragForce:
+                    return "Drag";
+                case WindTunnelWindow.GraphSelect.PitchInput:
+                    return "Pitch Input";
+                case WindTunnelWindow.GraphSelect.Torque:
+                    return "Torque";
+                default:
+                    throw new ArgumentException();
+            }
+        }
+    }
 }

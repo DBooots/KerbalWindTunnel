@@ -50,7 +50,7 @@ namespace KerbalWindTunnel.DataGenerators
 
         private void GenerateGraphs()
         {
-            graphs.Clear();
+            graphables.Clear();
             float bottom = currentConditions.lowerBoundAltitude;
             float top = currentConditions.upperBoundAltitude;
             float left = currentConditions.lowerBoundSpeed;
@@ -63,29 +63,30 @@ namespace KerbalWindTunnel.DataGenerators
             float maxThrustExcess = newSurfGraph.ZMax;
             newSurfGraph.ColorFunc = (x, y, z) => z / maxThrustExcess;
             newSurfGraph.ZAxisScaler = maxThrustExcess / Axis.GetMax(0, newSurfGraph.ZMax);
-            graphs.Add("Excess Thrust", newSurfGraph);
+            graphables.Add(newSurfGraph);
             newSurfGraph = new SurfGraph(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top) { Name = "Excess Acceleration", ZUnit = "g", StringFormat = "N2", Color = Jet_Dark_Positive, ZAxisScale = (v) => v >= 0 ? v : 0 };
             float maxAccelExcess = newSurfGraph.ZMax;
             newSurfGraph.ColorFunc = (x, y, z) => z / maxAccelExcess;
             newSurfGraph.ZAxisScaler = maxAccelExcess / Axis.GetMax(0, newSurfGraph.ZMax);
-            graphs.Add("Excess Acceleration", newSurfGraph);
-            graphs.Add("Thrust Available", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top, true) { Name = "Thrust Available", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
-            graphs.Add("Level AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top, true) { Name = "Level AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphs.Add("Max Lift AoA", new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top, true) { Name = "Max Lift AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphs.Add("Max Lift", new SurfGraph(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true) { Name = "Max Lift", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
-            graphs.Add("Lift/Drag Ratio", new SurfGraph(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true) { Name = "Lift/Drag Ratio", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphs.Add("Drag", new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true) { Name = "Drag", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
-            graphs.Add("Lift Slope", new SurfGraph(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true) { Name = "Lift Slope", ZUnit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
-            graphs.Add("Pitch Input", new SurfGraph(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true) { Name = "Pitch Input", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphs.Add("Envelope Mask", new OutlineMask(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
+            graphables.Add(newSurfGraph);
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top, true) { Name = "Thrust Available", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top, true) { Name = "Level AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top, true) { Name = "Max Lift AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true) { Name = "Max Lift", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true) { Name = "Lift/Drag Ratio", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true) { Name = "Drag", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true) { Name = "Lift Slope", ZUnit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true) { Name = "Pitch Input", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new OutlineMask(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top) { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
 
-            var e = graphs.GetEnumerator();
+            var e = graphables.GetEnumerator();
             while (e.MoveNext())
             {
-                e.Current.Value.XUnit = "m/s";
-                e.Current.Value.XName = "Speed";
-                e.Current.Value.YUnit = "m";
-                e.Current.Value.YName = "Altitude";
+                e.Current.XUnit = "m/s";
+                e.Current.XName = "Speed";
+                e.Current.YUnit = "m";
+                e.Current.YName = "Altitude";
+                e.Current.Visible = false;
             }
         }
 
@@ -99,23 +100,23 @@ namespace KerbalWindTunnel.DataGenerators
             if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
 
-            ((SurfGraph)graphs["Excess Thrust"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
-            float maxThrustExcess = ((SurfGraph)graphs["Excess Thrust"]).ZMax;
-            ((SurfGraph)graphs["Excess Thrust"]).ColorFunc = (x, y, z) => z / maxThrustExcess;
-            ((SurfGraph)graphs["Excess Thrust"]).ZAxisScaler = maxThrustExcess / Axis.GetMax(0, maxThrustExcess);
-            ((SurfGraph)graphs["Excess Acceleration"]).SetValues(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top);
-            float maxAccelExcess = ((SurfGraph)graphs["Excess Acceleration"]).ZMax;
-            ((SurfGraph)graphs["Excess Acceleration"]).ColorFunc = (x, y, z) => z / maxAccelExcess;
-            ((SurfGraph)graphs["Excess Acceleration"]).ZAxisScaler = maxAccelExcess / Axis.GetMax(0, maxAccelExcess);
-            ((SurfGraph)graphs["Thrust Available"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top, true);
-            ((SurfGraph)graphs["Level AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top, true);
-            ((SurfGraph)graphs["Max Lift AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top, true);
-            ((SurfGraph)graphs["Max Lift"]).SetValues(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true);
-            ((SurfGraph)graphs["Lift/Drag Ratio"]).SetValues(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true);
-            ((SurfGraph)graphs["Drag"]).SetValues(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true);
-            ((SurfGraph)graphs["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true);
-            ((SurfGraph)graphs["Pitch Input"]).SetValues(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true);
-            ((OutlineMask)graphs["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
+            ((SurfGraph)graphables["Excess Thrust"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
+            float maxThrustExcess = ((SurfGraph)graphables["Excess Thrust"]).ZMax;
+            ((SurfGraph)graphables["Excess Thrust"]).ColorFunc = (x, y, z) => z / maxThrustExcess;
+            ((SurfGraph)graphables["Excess Thrust"]).ZAxisScaler = maxThrustExcess / Axis.GetMax(0, maxThrustExcess);
+            ((SurfGraph)graphables["Excess Acceleration"]).SetValues(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top);
+            float maxAccelExcess = ((SurfGraph)graphables["Excess Acceleration"]).ZMax;
+            ((SurfGraph)graphables["Excess Acceleration"]).ColorFunc = (x, y, z) => z / maxAccelExcess;
+            ((SurfGraph)graphables["Excess Acceleration"]).ZAxisScaler = maxAccelExcess / Axis.GetMax(0, maxAccelExcess);
+            ((SurfGraph)graphables["Thrust Available"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Level AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Max Lift AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Max Lift"]).SetValues(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Lift/Drag Ratio"]).SetValues(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Drag"]).SetValues(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Pitch Input"]).SetValues(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true);
+            ((OutlineMask)graphables["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
@@ -203,9 +204,9 @@ namespace KerbalWindTunnel.DataGenerators
             
             Conditions seedConditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed, 10, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, 10);
             GenerateLevel(seedConditions, seedManager, ref results, rootData.vessel);
-
+            
             seedManager.WaitForCompletion();
-
+            
             GenerateLevel(conditions, manager, ref results, rootData.vessel);
 
             if (rootData.storeState.manager.Cancelled)
