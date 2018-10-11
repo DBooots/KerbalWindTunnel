@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace KerbalWindTunnel.Extensions
+namespace KerbalWindTunnel.Graphing
 {
     public static class DrawingHelper
     {

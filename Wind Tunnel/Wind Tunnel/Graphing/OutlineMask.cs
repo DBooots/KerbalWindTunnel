@@ -36,6 +36,7 @@ namespace KerbalWindTunnel.Graphing
 
         public override void Draw(ref Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
         {
+            if (!Visible) return;
             int width = texture.width - 1;
             int height = texture.height - 1;
 

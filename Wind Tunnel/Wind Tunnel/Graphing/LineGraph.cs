@@ -64,6 +64,7 @@ namespace KerbalWindTunnel.Graphing
         
         public override void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
         {
+            if (!Visible) return;
             float xRange = xRight - xLeft;
             float yRange = yTop - yBottom;
             int width = texture.width;
@@ -82,7 +83,7 @@ namespace KerbalWindTunnel.Graphing
             }
 
             for (int i = _values.Length - 2; i >= 0; i--)
-                Extensions.DrawingHelper.DrawLine(ref texture, xPix[i], yPix[i], xPix[i + 1], yPix[i + 1], this.Color[ColorFunc((xPix[i] + xPix[i + 1]) / 2, (yPix[i] + yPix[i + 1]) / 2, 0)]);
+                DrawingHelper.DrawLine(ref texture, xPix[i], yPix[i], xPix[i + 1], yPix[i + 1], this.Color[ColorFunc((xPix[i] + xPix[i + 1]) / 2, (yPix[i] + yPix[i + 1]) / 2, 0)]);
 
             texture.Apply();
         }

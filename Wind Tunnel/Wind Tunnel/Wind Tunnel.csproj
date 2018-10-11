@@ -58,10 +58,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Graphing\Graphable.cs" />
     <Compile Include="Threading\CalculationManager.cs" />
-    <Compile Include="Graphing\IGraphableProvider.cs" />
     <Compile Include="Extensions\KSPClassExtensions.cs" />
-    <Compile Include="Extensions\DrawingHelper.cs" />
+    <Compile Include="Graphing\DrawingHelper.cs" />
     <Compile Include="Extensions\HashCodeHelper.cs" />
     <Compile Include="Extensions\Linq2.cs" />
     <Compile Include="Framework\ConfigNodeStorage.cs" />

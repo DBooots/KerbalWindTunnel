@@ -5,15 +5,32 @@ using System.Linq;
 
 namespace KerbalWindTunnel.Graphing
 {
-    public class GraphableCollection : IGraphableProvider, IGraphable, IList<IGraphable>
+    public class GraphableCollection : IGraphable, IList<IGraphable>
     {
         public string Name { get; set; } = "";
+        public bool Visible
+        {
+            get => _visible;
+            set
+            {
+                bool changed = _visible != value;
+                _visible = value;
+                if (changed) OnValuesChanged(null);
+            }
+        }
+        private bool _visible = true;
+        public bool DisplayValue { get; set; } = true;
         public virtual float XMin { get; protected set; } = float.NaN;
         public virtual float XMax { get; protected set; } = float.NaN;
         public virtual float YMin { get; protected set; } = float.NaN;
         public virtual float YMax { get; protected set; } = float.NaN;
         public Func<float, float> XAxisScale { get; set; } = (v) => v;
         public Func<float, float> YAxisScale { get; set; } = (v) => v;
+
+        protected Dictionary<string, IGraphable> graphDict = new Dictionary<string, IGraphable>(StringComparer.InvariantCultureIgnoreCase);
+        protected List<IGraphable> graphs = new List<IGraphable>();
+
+        public event EventHandler ValuesChanged;
 
         protected bool autoFitAxes = true;
         public virtual bool AutoFitAxes
@@ -75,18 +92,33 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
-        protected List<IGraphable> graphs = new List<IGraphable>();
-
-        public event EventHandler ValuesChanged;
-
-        public virtual List<IGraphable> Graphables
+        public IGraphable this[string name]
         {
-            get { return graphs.ToList(); }
+            get => graphDict[name];
+            set
+            {
+                if (value == null)
+                    return;
+                int index = graphs.FindIndex(g => g.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+                if (index < 0)
+                    return;
+                graphs[index].ValuesChanged -= ValuesChangedSubscriber;
+                graphs[index] = value;
+                graphDict[name] = value;
+                graphs[index].ValuesChanged += ValuesChangedSubscriber;
+                OnValuesChanged(null);
+            }
+        }
+
+        public virtual IEnumerable<IGraphable> Graphables
+        {
+            get => graphs.ToList();
             set
             {
                 for (int i = graphs.Count - 1; i >= 0; i--)
                     graphs[i].ValuesChanged -= ValuesChangedSubscriber;
                 graphs.Clear();
+                graphDict.Clear();
                 //for (int i = value.Count - 1; i >= 0; i--)
                 //    value[i].ValuesChanged += ValuesChangedSubscriber;
                 //graphs = value;
@@ -100,16 +132,14 @@ namespace KerbalWindTunnel.Graphing
 
         public IGraphable this[int index]
         {
-            get
-            {
-                return graphs[index];
-            }
+            get => graphs[index];
             set
             {
                 if (value == null)
                     return;
                 graphs[index].ValuesChanged -= ValuesChangedSubscriber;
                 graphs[index] = value;
+                graphDict[graphDict.ElementAt(index).Key] = value;
                 graphs[index].ValuesChanged += ValuesChangedSubscriber;
                 OnValuesChanged(null);
             }
@@ -127,6 +157,7 @@ namespace KerbalWindTunnel.Graphing
 
         public virtual void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
         {
+            if (!Visible) return;
             for (int i = 0; i < graphs.Count; i++)
             {
                 graphs[i].Draw(ref texture, XMin, XMax, YMin, YMax);
@@ -140,6 +171,7 @@ namespace KerbalWindTunnel.Graphing
 
             for (int i = 0; i < graphs.Count; i++)
             {
+                if (!graphs[i].Visible) continue;
                 float xMin, xMax, yMin, yMax;
                 if (!autoFitAxes)
                 {
@@ -280,7 +312,7 @@ namespace KerbalWindTunnel.Graphing
 
         public float ValueAt(float x, float y)
         {
-            return ValueAt(x, y, 0);
+            return ValueAt(x, y, Math.Max(graphs.FindIndex(g => g.Visible), 0));
         }
 
         public float ValueAt(float x, float y, int index = 0)
@@ -306,6 +338,8 @@ namespace KerbalWindTunnel.Graphing
             string returnValue = "";
             for (int i = 0; i < graphs.Count; i++)
             {
+                if (!graphs[i].Visible || !graphs[i].DisplayValue)
+                    continue;
                 string graphValue = graphs[i].GetFormattedValueAt(x, y, withName);
                 if (graphValue != "" && i > 0)
                     returnValue += String.Format("\n{0}", graphValue);
@@ -323,19 +357,20 @@ namespace KerbalWindTunnel.Graphing
 
         private string GetNameSubstring()
         {
-            if (graphs.Count < 2)
+            List<IGraphable> visibleGraphs = graphs.Where(g => g.Visible).ToList();
+            if (visibleGraphs.Count < 2)
                 return "";
-            int maxL = graphs[0].Name.Length;
+            int maxL = visibleGraphs[0].Name.Length;
             int commonL = 0;
-            while (commonL < maxL && graphs[1].Name.StartsWith(graphs[0].Name.Substring(0, commonL + 1)))
+            while (commonL < maxL && visibleGraphs[1].Name.StartsWith(visibleGraphs[0].Name.Substring(0, commonL + 1)))
                 commonL++;
-            string nameSubstring =  graphs[0].Name.Substring(0, commonL);
+            string nameSubstring = visibleGraphs[0].Name.Substring(0, commonL);
             if (nameSubstring.EndsWith("("))
                 nameSubstring = nameSubstring.Substring(0, nameSubstring.Length - 1);
             
-            for(int i = 2; i < graphs.Count; i++)
+            for(int i = 2; i < visibleGraphs.Count; i++)
             {
-                if (!graphs[i].Name.StartsWith(nameSubstring))
+                if (!visibleGraphs[i].Name.StartsWith(nameSubstring))
                     return "";
             }
             return nameSubstring;
@@ -347,9 +382,16 @@ namespace KerbalWindTunnel.Graphing
             ValuesChanged?.Invoke(this, eventArgs);
         }
 
-        public virtual IGraphable GetGraphableByName(string name)
+        public void SetVisibility(bool visible)
         {
-            return graphs.Find(g => g.Name.ToLower() == name.ToLower());
+            for (int i = graphs.Count - 1; i >= 0; i--)
+                graphs[i].Visible = visible;
+        }
+
+        public void SetVisibilityExcept(bool visible, string exception)
+        {
+            this.SetVisibility(visible);
+            this[exception].Visible = !visible;
         }
         
         public virtual IGraphable Find(Predicate<IGraphable> predicate)
@@ -366,6 +408,7 @@ namespace KerbalWindTunnel.Graphing
             for (int i = graphs.Count - 1; i >= 0; i--)
                 graphs[i].ValuesChanged -= ValuesChangedSubscriber;
             graphs.Clear();
+            graphDict.Clear();
             OnValuesChanged(null);
         }
 
@@ -379,6 +422,7 @@ namespace KerbalWindTunnel.Graphing
             if (newGraph == null)
                 return;
             graphs.Add(newGraph);
+            graphDict.Add(newGraph.Name, newGraph);
             newGraph.ValuesChanged += ValuesChangedSubscriber;
             OnValuesChanged(null);
         }
@@ -391,6 +435,7 @@ namespace KerbalWindTunnel.Graphing
                 if (enumerator.Current == null)
                     continue;
                 graphs.Add(enumerator.Current);
+                graphDict.Add(enumerator.Current.Name, enumerator.Current);
                 enumerator.Current.ValuesChanged += ValuesChangedSubscriber;
             }
             OnValuesChanged(null);
@@ -401,6 +446,7 @@ namespace KerbalWindTunnel.Graphing
             if (newGraph == null)
                 return;
             graphs.Insert(index, newGraph);
+            graphDict.Add(newGraph.Name, newGraph);
             newGraph.ValuesChanged += ValuesChangedSubscriber;
             OnValuesChanged(null);
         }
@@ -410,6 +456,7 @@ namespace KerbalWindTunnel.Graphing
             bool val = graphs.Remove(graph);
             if (val)
             {
+                graphDict.Remove(graphDict.First(p => p.Value == graph).Key);
                 graph.ValuesChanged -= ValuesChangedSubscriber;
                 OnValuesChanged(null);
             }
@@ -419,6 +466,7 @@ namespace KerbalWindTunnel.Graphing
         {
             IGraphable graphable = graphs[index];
             graphs.RemoveAt(index);
+            graphDict.Remove(graphDict.ElementAt(index).Key);
             graphable.ValuesChanged -= ValuesChangedSubscriber;
             OnValuesChanged(null);
         }
@@ -451,9 +499,9 @@ namespace KerbalWindTunnel.Graphing
             if (!System.IO.Directory.Exists(WindTunnel.graphPath))
                 System.IO.Directory.CreateDirectory(WindTunnel.graphPath);
 
-            if (graphs.Count > 1 && graphs.All(g => g is LineGraph))
+            if (graphs.Count > 1 && graphs.All(g => g is LineGraph || !g.Visible))
             {
-                LineGraph[] lineGraphs = graphs.Cast<LineGraph>().ToArray();
+                LineGraph[] lineGraphs = graphs.Select(g => g.Visible).Cast<LineGraph>().ToArray();
                 UnityEngine.Vector2[] basis = lineGraphs[0].Values;
                 int count = basis.Length;
 
@@ -482,7 +530,8 @@ namespace KerbalWindTunnel.Graphing
 
             for(int i = 0; i < graphs.Count; i++)
             {
-                graphs[i].WriteToFile(filename, (sheetName != "" ? sheetName + "_" : "") + graphs[i].Name.Replace("/", "-").Replace("\\", "-"));
+                if (graphs.Count > 1 && !graphs[i].Visible)
+                    graphs[i].WriteToFile(filename, (sheetName != "" ? sheetName + "_" : "") + graphs[i].Name.Replace("/", "-").Replace("\\", "-"));
             }
         }
 
@@ -589,6 +638,7 @@ namespace KerbalWindTunnel.Graphing
 
             for (int i = 0; i < graphs.Count; i++)
             {
+                if (!graphs[i].Visible) continue;
                 if (graphs[i] is Graphable3 surf)
                 {
                     float zMin = surf.ZAxisScale(surf.ZMin);
