@@ -5,6 +5,7 @@ namespace KerbalWindTunnel.Graphing
 {
     public class LineGraph : Graphable
     {
+        public int LineWidth { get; set; } = 1;
         public UnityEngine.Vector2[] _values;
         public UnityEngine.Vector2[] Values
         {
@@ -83,7 +84,15 @@ namespace KerbalWindTunnel.Graphing
             }
 
             for (int i = _values.Length - 2; i >= 0; i--)
+            {
                 DrawingHelper.DrawLine(ref texture, xPix[i], yPix[i], xPix[i + 1], yPix[i + 1], this.Color[ColorFunc((xPix[i] + xPix[i + 1]) / 2, (yPix[i] + yPix[i + 1]) / 2, 0)]);
+                for (int w = 2; w <= LineWidth; w++)
+                {
+                    int l = w % 2 == 0 ? (-w) >> 1 : (w - 1) >> 1;
+                    DrawingHelper.DrawLine(ref texture, xPix[i] + l, yPix[i], xPix[i + 1] + l, yPix[i + 1], this.Color[ColorFunc((xPix[i] + xPix[i + 1]) / 2, (yPix[i] + yPix[i + 1]) / 2, 0)]);
+                    DrawingHelper.DrawLine(ref texture, xPix[i], yPix[i] + l, xPix[i + 1], yPix[i + 1] + l, this.Color[ColorFunc((xPix[i] + xPix[i + 1]) / 2, (yPix[i] + yPix[i + 1]) / 2, 0)]);
+                }
+            }
 
             texture.Apply();
         }
