@@ -402,6 +402,16 @@ namespace KerbalWindTunnel.DataGenerators
                 this(body, lowerBoundSpeed, upperBoundSpeed, (upperBoundSpeed - lowerBoundSpeed) / (speedPts - 1), lowerBoundAltitude, upperBoundAltitude, (upperBoundAltitude - lowerBoundAltitude) / (altitudePts - 1))
             { }
 
+            public override bool Equals(object obj)
+            {
+                if (obj == null)
+                    return false;
+                if (obj.GetType() != typeof(Conditions))
+                    return false;
+                Conditions conditions = (Conditions)obj;
+                return this.Equals(conditions);
+            }
+
             public bool Equals(Conditions conditions)
             {
                 return this.body == conditions.body &&

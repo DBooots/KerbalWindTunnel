@@ -207,6 +207,16 @@ namespace KerbalWindTunnel.DataGenerators
                 this.step = step;
             }
 
+            public override bool Equals(object obj)
+            {
+                if (obj == null)
+                    return false;
+                if (obj.GetType() != typeof(Conditions))
+                    return false;
+                Conditions conditions = (Conditions)obj;
+                return this.Equals(conditions);
+            }
+
             public bool Equals(Conditions conditions)
             {
                 return this.body == conditions.body &&
