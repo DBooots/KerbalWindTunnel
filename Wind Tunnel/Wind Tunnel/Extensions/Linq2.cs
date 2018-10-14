@@ -27,6 +27,8 @@ namespace KerbalWindTunnel.Extensions
         {
             int bound0 = vals.GetUpperBound(0);
             int bound1 = vals.GetUpperBound(1);
+            if (bound0 < 0 || bound1 < 0)
+                return 0;
             float result = float.MinValue;
             for(int i = 0; i < bound0; i++)
             {
@@ -44,6 +46,8 @@ namespace KerbalWindTunnel.Extensions
         {
             int bound0 = vals.GetUpperBound(0);
             int bound1 = vals.GetUpperBound(1);
+            if (bound0 < 0 || bound1 < 0)
+                return 0;
             float result = float.MaxValue;
             for (int i = 0; i < bound0; i++)
             {
@@ -69,6 +73,8 @@ namespace KerbalWindTunnel.Extensions
             else
             {
                 int lengthX = vals.GetUpperBound(0);
+                if (lengthX < 0)
+                    return 0;
                 if (x >= 1)
                 {
                     xI1 = xI2 = lengthX;
@@ -95,6 +101,8 @@ namespace KerbalWindTunnel.Extensions
             else
             {
                 int lengthY = vals.GetUpperBound(1);
+                if (lengthY < 0)
+                    return 0;
                 if (y >= 1)
                 {
                     if (xI1 == xI2) return vals[xI1, 0];
