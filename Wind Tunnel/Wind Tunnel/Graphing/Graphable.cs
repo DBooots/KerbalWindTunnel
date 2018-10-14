@@ -33,7 +33,18 @@ namespace KerbalWindTunnel.Graphing
         Func<float, float> ZAxisScale { get; set; }
     }
 
-    public abstract class Graphable : IGraphable
+    public interface IGraph
+    {
+        ColorMap Color { get; set; }
+        Grapher.CoordsToColorFunc ColorFunc { get; set; }
+    }
+
+    public interface ILineGraph : IGraph
+    {
+        int LineWidth { get; set; }
+    }
+
+    public abstract class Graphable : IGraphable, IGraph
     {
         public string Name { get; set; } = "";
         public bool Visible

@@ -59,6 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Graphing\Graphable.cs" />
+    <Compile Include="Graphing\Line3Graph.cs" />
     <Compile Include="Threading\CalculationManager.cs" />
     <Compile Include="Extensions\KSPClassExtensions.cs" />
     <Compile Include="Graphing\DrawingHelper.cs" />
