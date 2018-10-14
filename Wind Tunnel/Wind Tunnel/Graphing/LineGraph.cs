@@ -227,8 +227,8 @@ namespace KerbalWindTunnel.Graphing
             else
                 strCsv += string.Format("{0}", XUnit != "" ? XUnit : "-");
 
-            if (Name != "")
-                strCsv += String.Format(",{0} [{1}]", Name, YUnit != "" ? YUnit : "-");
+            if (YName != "")
+                strCsv += String.Format(",{0} [{1}]", YName, YUnit != "" ? YUnit : "-");
             else
                 strCsv += String.Format(",{0}", YUnit != "" ? YUnit : "-");
 

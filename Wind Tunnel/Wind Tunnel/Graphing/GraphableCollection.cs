@@ -15,7 +15,11 @@ namespace KerbalWindTunnel.Graphing
             {
                 bool changed = _visible != value;
                 _visible = value;
-                if (changed) OnValuesChanged(null);
+                if (changed)
+                {
+                    OnValuesChanged(null);
+                    SetVisibility(value);
+                }
             }
         }
         private bool _visible = true;
