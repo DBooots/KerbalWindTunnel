@@ -207,7 +207,8 @@ namespace KerbalWindTunnel.Graphing
                 if (yMin < this.YMin || float.IsNaN(this.YMin)) this.YMin = yMin;
                 if (yMax > this.YMax || float.IsNaN(this.YMax)) this.YMax = yMax;
             }
-            
+            if (XMin == float.NaN || XMax == float.NaN || YMin == float.NaN || YMax == float.NaN)
+                XMin = XMax = YMin = YMax = 0;
             if (!(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax))
             {
                 return true;
@@ -341,7 +342,7 @@ namespace KerbalWindTunnel.Graphing
                 if (!graphs[i].Visible || !graphs[i].DisplayValue)
                     continue;
                 string graphValue = graphs[i].GetFormattedValueAt(x, y, withName);
-                if (graphValue != "" && i > 0)
+                if (graphValue != "" && returnValue != "")
                     returnValue += String.Format("\n{0}", graphValue);
                 else
                     returnValue += String.Format("{0}", graphValue);
@@ -691,7 +692,9 @@ namespace KerbalWindTunnel.Graphing
 
             if (dominantColorMap == null)
                 dominantColorMap = ColorMap.Jet_Dark;
-            
+
+            if (XMin == float.NaN || XMax == float.NaN || YMin == float.NaN || YMax == float.NaN || ZMin == float.NaN || ZMax == float.NaN)
+                XMin = XMax = YMin = YMax = ZMin = ZMax = 0;
             if (!(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax && oldLimits[4] == ZMin && oldLimits[5] == ZMax))
             {
                 return true;

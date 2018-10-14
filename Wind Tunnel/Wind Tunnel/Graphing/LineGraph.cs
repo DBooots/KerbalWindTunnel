@@ -6,13 +6,18 @@ namespace KerbalWindTunnel.Graphing
     public class LineGraph : Graphable
     {
         public int LineWidth { get; set; } = 1;
-        public UnityEngine.Vector2[] _values;
+        protected UnityEngine.Vector2[] _values;
         public UnityEngine.Vector2[] Values
         {
             get { return _values; }
             private set
             {
                 _values = value;
+                if (_values.Length <= 0)
+                {
+                    YMin = YMax = XMin = XMax = 0;
+                    return;
+                }
                 float xLeft = float.MaxValue;
                 float xRight = float.MinValue;
                 float yMin = float.MaxValue;
@@ -99,8 +104,11 @@ namespace KerbalWindTunnel.Graphing
 
         public override float ValueAt(float x, float y)
         {
-            if (Transpose) x = y;
+            if (_values.Length <= 0)
+                return 0;
 
+            if (Transpose) x = y;
+            
             if(equalSteps && sorted)
             {
                 if (x <= XMin) return _values[0].y;
@@ -156,6 +164,11 @@ namespace KerbalWindTunnel.Graphing
         public void SetValues(float[] values, float xLeft, float xRight)
         {
             this._values = new UnityEngine.Vector2[values.Length];
+            if (_values.Length <= 0)
+            {
+                YMin = YMax = XMin = XMax = 0;
+                return;
+            }
             float xStep = (xRight - xLeft) / (values.Length - 1);
             float yMin = float.MaxValue;
             float yMax = float.MinValue;
@@ -182,8 +195,17 @@ namespace KerbalWindTunnel.Graphing
             this.Values = values;
         }
 
+        public override string GetFormattedValueAt(float x, float y, bool withName = false)
+        {
+            if (_values.Length <= 0) return "";
+            return base.GetFormattedValueAt(x, y, withName);
+        }
+
         public override void WriteToFile(string filename, string sheetName = "")
         {
+            if (_values.Length <= 0)
+                return;
+
             if (!System.IO.Directory.Exists(WindTunnel.graphPath))
                 System.IO.Directory.CreateDirectory(WindTunnel.graphPath);
 

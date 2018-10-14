@@ -7,7 +7,7 @@ namespace KerbalWindTunnel.Graphing
     {
         public override ColorMap Color { get; set; } = ColorMap.Jet_Dark;
         
-        private float[,] _values;
+        protected float[,] _values;
         public float[,] Values
         {
             get { return _values; }
@@ -25,6 +25,11 @@ namespace KerbalWindTunnel.Graphing
             this.XMax = xRight;
             this.YMin = yBottom;
             this.YMax = yTop;
+            if (_values.GetUpperBound(0) < 0 || _values.GetUpperBound(1) < 0)
+            {
+                ZMin = ZMax = 0;
+                return;
+            }
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
             this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
@@ -80,6 +85,8 @@ namespace KerbalWindTunnel.Graphing
             else
             {
                 int lengthX = _values.GetUpperBound(0);
+                if (lengthX < 0)
+                    return 0;
                 if (x >= XMax)
                 {
                     xI1 = xI2 = lengthX;
@@ -106,6 +113,8 @@ namespace KerbalWindTunnel.Graphing
             else
             {
                 int lengthY = _values.GetUpperBound(1);
+                if (lengthY < 0)
+                    return 0;
                 if (y >= YMax)
                 {
                     if (xI1 == xI2) return _values[xI1, 0];
@@ -196,6 +205,11 @@ namespace KerbalWindTunnel.Graphing
             this.XMax = xRight;
             this.YMin = yBottom;
             this.YMax = yTop;
+            if (_values.GetUpperBound(0) < 0 || _values.GetUpperBound(1) < 0)
+            {
+                ZMin = ZMax = 0;
+                return;
+            }
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
             this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
@@ -208,9 +222,22 @@ namespace KerbalWindTunnel.Graphing
             }
             OnValuesChanged(null);
         }
+        
+        public override string GetFormattedValueAt(float x, float y, bool withName = false)
+        {
+            if (_values.GetUpperBound(0) < 0 || _values.GetUpperBound(1) < 0) return "";
+            return base.GetFormattedValueAt(x, y, withName);
+        }
 
         public override void WriteToFile(string filename, string sheetName = "")
         {
+            int height = _values.GetUpperBound(1);
+            int width = _values.GetUpperBound(0);
+            if (height < 0 || width < 0)
+                return;
+            float xStep = (XMax - XMin) / width;
+            float yStep = (YMax - YMin) / height;
+
             if (!System.IO.Directory.Exists(WindTunnel.graphPath))
                 System.IO.Directory.CreateDirectory(WindTunnel.graphPath);
 
@@ -225,12 +252,7 @@ namespace KerbalWindTunnel.Graphing
                     System.IO.File.Delete(fullFilePath);
             }
             catch (Exception ex) { UnityEngine.Debug.LogFormat("Unable to delete file:{0}", ex.Message); }
-
-            int height = _values.GetUpperBound(1);
-            int width = _values.GetUpperBound(0);
-            float xStep = (XMax - XMin) / width;
-            float yStep = (YMax - YMin) / height;
-
+            
             string strCsv;
             if (Name != "")
                 strCsv = String.Format("{0} [{1}]", Name, ZUnit != "" ? ZUnit : "-");

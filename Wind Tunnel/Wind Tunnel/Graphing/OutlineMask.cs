@@ -12,7 +12,7 @@ namespace KerbalWindTunnel.Graphing
         public int LineWidth { get; set; } = 1;
         public bool ForceClear { get; set; } = false;
 
-        private float[,] _values;
+        protected float[,] _values;
         public float[,] Values
         {
             get { return _values; }
@@ -112,6 +112,8 @@ namespace KerbalWindTunnel.Graphing
             else
             {
                 int lengthX = _values.GetUpperBound(0);
+                if (lengthX < 0)
+                    return 0;
                 if (x >= XMax)
                 {
                     xI1 = xI2 = lengthX;
@@ -138,6 +140,8 @@ namespace KerbalWindTunnel.Graphing
             else
             {
                 int lengthY = _values.GetUpperBound(1);
+                if (lengthY < 0)
+                    return 0;
                 if (y >= YMax)
                 {
                     if (xI1 == xI2) return _values[xI1, 0];
