@@ -31,98 +31,42 @@ namespace KerbalWindTunnel
                     this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
                     //this.vessel = new StockAero();
 
-                switch (graphMode)
+                if (!graphRequested)
                 {
-                    case GraphMode.FlightEnvelope:
-                        if (!graphRequested)
-                        {
+                    switch (graphMode)
+                    {
+                        case GraphMode.FlightEnvelope:
                             EnvelopeSurfGenerator.Calculate(vessel, body, 0, maxSpeed, speedStep, 0, maxAltitude, altitudeStep);
-                            graphRequested = true;
-                        }
-                        switch (EnvelopeSurfGenerator.Status)
-                        {
-                            case CalculationManager.RunStatus.PreStart:
-                            case CalculationManager.RunStatus.Cancelled:
-                            case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(EnvelopeSurfGenerator.PercentComplete);
-                                break;
-                            case CalculationManager.RunStatus.Completed:
-                                /*for (int x = 0; x <= EnvelopeSurf.envelopePoints.GetUpperBound(0); x++)
-                                {
-                                    for (int y = 0; y <= EnvelopeSurf.envelopePoints.GetUpperBound(1); y++)
-                                    {
-                                        EnvelopeSurf.EnvelopePoint pt = EnvelopeSurf.envelopePoints[x, y];
-                                        //Debug.Log(String.Format("{0} / {1} / {2} / {3} / {4} / {5}", pt.altitude, pt.speed, pt.AoA_level, pt.Thrust_available, pt.Thrust_excess, pt.Accel_excess));
-                                        if(pt.speed == 930 && pt.altitude == 22200)
-                                        {
-                                            Debug.Log("AoA Level:        " + pt.AoA_level * 180 / Mathf.PI);
-                                            Debug.Log("Thrust Available: " + pt.Thrust_available);
-                                            Debug.Log("Excess Thrust:    " + pt.Thrust_excess);
-                                            Debug.Log("Excess Accel:     " + pt.Accel_excess);
-                                            Debug.Log("Speed:            " + pt.speed);
-                                            Debug.Log("Altitude:         " + pt.altitude);
-                                            Debug.Log("Force:            " + pt.force);
-                                            Debug.Log("LiftForce:        " + pt.liftforce);
-                                        }
-                                    }
-                                }//*/
-                                grapher.SetCollection(EnvelopeSurfGenerator.Graphables);
-                                grapher.SetVisibilityExcept(false, graphSelect.ToFormattedString());
-                                if (WindTunnelSettings.ShowEnvelopeMask && (WindTunnelSettings.ShowEnvelopeMaskAlways || (CurrentGraphSelect != GraphSelect.ExcessThrust && CurrentGraphSelect != GraphSelect.ExcessAcceleration)))
-                                    grapher["Envelope Mask"].Visible = true;
-
-                                graphDirty = false;
-                                break;
-                        }
-                        break;
-                    case GraphMode.AoACurves:
-                        if (!graphRequested)
-                        {
+                            break;
+                        case GraphMode.AoACurves:
                             AoACurveGenerator.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.Deg2Rad, 20f * Mathf.Deg2Rad, 0.5f * Mathf.Deg2Rad);
-                            graphRequested = true;
-                        }
-                        switch (AoACurveGenerator.Status)
-                        {
-                            case CalculationManager.RunStatus.PreStart:
-                            case CalculationManager.RunStatus.Cancelled:
-                            case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(AoACurveGenerator.PercentComplete);
-                                break;
-                            case CalculationManager.RunStatus.Completed:
-                                grapher.SetCollection(AoACurveGenerator.Graphables);
-                                grapher.SetVisibilityExcept(false, graphSelect.ToFormattedString());
-                                graphDirty = false;
-                                break;
-                        }
-                        break;
-                    case GraphMode.VelocityCurves:
-                        if (!graphRequested)
-                        {
+                            break;
+                        case GraphMode.VelocityCurves:
                             VelCurveGenerator.Calculate(vessel, body, Altitude, 0, maxSpeed, speedStep);
-                            graphRequested = true;
-                        }
-                        switch (VelCurveGenerator.Status)
-                        {
-                            case CalculationManager.RunStatus.PreStart:
-                            case CalculationManager.RunStatus.Cancelled:
-                            case CalculationManager.RunStatus.Running:
-                                DrawProgressBar(VelCurveGenerator.PercentComplete);
-                                break;
-                            case CalculationManager.RunStatus.Completed:
-                                grapher.SetCollection(VelCurveGenerator.Graphables);
-                                grapher.SetVisibilityExcept(false, graphSelect.ToFormattedString());
-                                graphDirty = false;
-                                break;
-                        }
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException("graphMode");
+                            break;
+                    }
+                    graphRequested = true;
                 }
-
-                if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
+                switch (GraphGenerator.Status)
                 {
-                    //grapher.DrawGraphs();
-                    DrawGraph();
+                    case CalculationManager.RunStatus.PreStart:
+                    case CalculationManager.RunStatus.Cancelled:
+                    case CalculationManager.RunStatus.Running:
+                        DrawProgressBar(GraphGenerator.PercentComplete);
+                        break;
+                    case CalculationManager.RunStatus.Completed:
+                        grapher.SetCollection(GraphGenerator.Graphables);
+                        grapher.SetVisibilityExcept(false, graphSelect.ToFormattedString());
+                        if (graphMode == GraphMode.FlightEnvelope)
+                        {
+                            if (WindTunnelSettings.ShowEnvelopeMask && (WindTunnelSettings.ShowEnvelopeMaskAlways || (CurrentGraphSelect != GraphSelect.ExcessThrust && CurrentGraphSelect != GraphSelect.ExcessAcceleration)))
+                                grapher["Envelope Mask"].Visible = true;
+                            grapher["Fuel-Optimal Path"].Visible = true;
+                            grapher["Time-Optimal Path"].Visible = true;
+                        }
+                        DrawGraph();
+                        graphDirty = false;
+                        break;
                 }
 
                 if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0)

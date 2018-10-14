@@ -13,6 +13,30 @@ namespace KerbalWindTunnel.DataGenerators
         public VelPoint[] VelPoints = new VelPoint[0];
         public Conditions currentConditions = Conditions.Blank;
         private Dictionary<Conditions, VelPoint[]> cache = new Dictionary<Conditions, VelPoint[]>();
+
+        public VelCurve()
+        {
+            graphables.Clear();
+            Vector2[] blank = new Vector2[0];
+            graphables.Add(new LineGraph(blank) { Name = "Level AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Max Lift AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Thrust Available", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Excess Thrust", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Pitch Input", YUnit = "", StringFormat = "F3", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Max Lift", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            //graphables.Add(new LineGraph(blank) { Name = "Excess Acceleration", YUnit = "g", StringFormat = "N2", Color = Color.green });
+
+            var e = graphables.GetEnumerator();
+            while (e.MoveNext())
+            {
+                e.Current.XUnit = "m/s";
+                e.Current.XName = "Airspeed";
+                e.Current.Visible = false;
+            }
+        }
         
         public override void Clear()
         {
@@ -41,37 +65,28 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
-                GenerateGraphs();
+                UpdateGraphs();
                 valuesSet = true;
             }
         }
 
-        private void GenerateGraphs()
+        private void UpdateGraphs()
         {
-            graphables.Clear();
             float left = currentConditions.lowerBound;
             float right = currentConditions.upperBound;
             Func<VelPoint, float> scale = (pt) => 1;
             if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.AoA_level * Mathf.Rad2Deg).ToArray(), left, right) { Name = "Level AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.AoA_max * Mathf.Rad2Deg).ToArray(), left, right) { Name = "Max Lift AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.Thrust_available).ToArray(), left, right) { Name = "Thrust Available", YUnit = "kN", StringFormat = "N0", Color = Color.green });
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.drag * scale(pt)).ToArray(), left, right) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right) { Name = "Excess Thrust", YUnit = "kN", StringFormat = "N0", Color = Color.green });
-            graphables.Add(new LineGraph(VelPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input", YUnit = "", StringFormat = "F3", Color = Color.green });
-            //graphs.Add(new LineGraph(VelPoints.Select(pt => pt.Accel_excess).ToArray(), left, right) { Name = "Excess Acceleration", Unit = "g", StringFormat = "N2", Color = Color.green });
-            //graphs.Add(new LineGraph(VelPoints.Select(pt => pt.Lift_max * scale(pt)).ToArray(), left, right) { Name = "Max Lift", Unit = "kN", StringFormat = "N0", Color = Color.green });
-
-            var e = graphables.GetEnumerator();
-            while (e.MoveNext())
-            {
-                e.Current.XUnit = "m/s";
-                e.Current.XName = "Airspeed";
-                e.Current.Visible = false;
-            }
+            ((LineGraph)graphables["Level AoA"]).SetValues(VelPoints.Select(pt => pt.AoA_level * Mathf.Rad2Deg).ToArray(), left, right);
+            ((LineGraph)graphables["Max Lift AoA"]).SetValues(VelPoints.Select(pt => pt.AoA_max * Mathf.Rad2Deg).ToArray(), left, right);
+            ((LineGraph)graphables["Thrust Available"]).SetValues(VelPoints.Select(pt => pt.Thrust_available).ToArray(), left, right);
+            ((LineGraph)graphables["Lift/Drag Ratio"]).SetValues(VelPoints.Select(pt => pt.LDRatio).ToArray(), left, right);
+            ((LineGraph)graphables["Drag"]).SetValues(VelPoints.Select(pt => pt.drag * scale(pt)).ToArray(), left, right);
+            ((LineGraph)graphables["Lift Slope"]).SetValues(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right);
+            ((LineGraph)graphables["Excess Thrust"]).SetValues(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right);
+            ((LineGraph)graphables["Pitch Input"]).SetValues(VelPoints.Select(pt => pt.pitchInput).ToArray(), left, right);
+            ((LineGraph)graphables["Max Lift"]).SetValues(VelPoints.Select(pt => pt.Lift_max * scale(pt)).ToArray(), left, right);
+            //((LineGraph)graphables["Excess Acceleration"]).SetValues(VelPoints.Select(pt => pt.Accel_excess).ToArray(), left, right);
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
@@ -105,7 +120,7 @@ namespace KerbalWindTunnel.DataGenerators
                 cache.Add(conditions, newVelPoints);
                 VelPoints = newVelPoints;
                 currentConditions = conditions;
-                GenerateGraphs();
+                UpdateGraphs();
                 valuesSet = true;
             }
         }

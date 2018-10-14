@@ -15,6 +15,38 @@ namespace KerbalWindTunnel.DataGenerators
         public float AverageLiftSlope { get; private set; } = -1;
         private Dictionary<Conditions, AoAPoint[]> cache = new Dictionary<Conditions, AoAPoint[]>();
 
+        public AoACurve()
+        {
+            graphables.Clear();
+            Vector2[] blank = new Vector2[0];
+            graphables.Add(new LineGraph(blank) { Name = "Lift", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
+            IGraphable[] pitch = new IGraphable[] {
+                new LineGraph(blank) { Name = "Pitch Input (Wet)", YUnit = "", StringFormat = "F2", Color = Color.green },
+                new LineGraph(blank) { Name = "Pitch Input (Dry)", YUnit = "", StringFormat = "F2", Color = Color.yellow }
+            };
+            //graphables.Add(pitch[0]);
+            //graphables.Add(pitch[1]);
+            graphables.Add(new GraphableCollection(pitch) { Name = "Pitch Input" });
+            IGraphable[] torque = new IGraphable[] {
+                new LineGraph(blank) { Name = "Torque (Wet)", YUnit = "kNm", StringFormat = "N0", Color = Color.green },
+                new LineGraph(blank) { Name = "Torque (Dry)", YUnit = "kNm", StringFormat = "N0", Color = Color.yellow }
+            };
+            //graphables.Add(torque[0]);
+            //graphables.Add(torque[1]);
+            graphables.Add(new GraphableCollection(torque) { Name = "Torque" });
+
+            var e = graphables.GetEnumerator();
+            while (e.MoveNext())
+            {
+                e.Current.XUnit = "°";
+                e.Current.XName = "Angle of Attack";
+                e.Current.Visible = false;
+            }
+        }
+
         public override void Clear()
         {
             base.Clear();
@@ -44,39 +76,26 @@ namespace KerbalWindTunnel.DataGenerators
                 AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
                 currentConditions = newConditions;
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
-                GenerateGraphs();
+                UpdateGraphs();
                 valuesSet = true;
             }
         }
 
-        private void GenerateGraphs()
+        private void UpdateGraphs()
         {
-            graphables.Clear();
             float left = currentConditions.lowerBound * Mathf.Rad2Deg;
             float right = currentConditions.upperBound * Mathf.Rad2Deg;
             Func<AoAPoint, float> scale = (pt) => 1;
             if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
-            graphables.Add(new LineGraph(AoAPoints.Select(pt => pt.Lift * scale(pt)).ToArray(), left, right) { Name = "Lift", YUnit = "kN", StringFormat = "N0", Color = Color.green });
-            graphables.Add(new LineGraph(AoAPoints.Select(pt => pt.Drag * scale(pt)).ToArray(), left, right) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
-            graphables.Add(new LineGraph(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
-            graphables.Add(new LineGraph(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
-            IGraphable[] pitch = new IGraphable[] { new LineGraph(AoAPoints.Select(pt => pt.pitchInput).ToArray(), left, right) { Name = "Pitch Input (Wet)", YUnit = "", StringFormat = "F2", Color = Color.green }, new LineGraph(AoAPoints.Select(pt => pt.pitchInput_dry).ToArray(), left, right) { Name = "Pitch Input (Dry)", YUnit = "", StringFormat = "F2", Color = Color.yellow } };
-            graphables.Add(pitch[0]);
-            graphables.Add(pitch[1]);
-            graphables.Add(new GraphableCollection(pitch) { Name = "Pitch Input" });
-            IGraphable[] torque = new IGraphable[] { new LineGraph(AoAPoints.Select(pt => pt.torque).ToArray(), left, right) { Name = "Torque (Wet)", YUnit = "kNm", StringFormat = "N0", Color = Color.green }, new LineGraph(AoAPoints.Select(pt => pt.torque_dry).ToArray(), left, right) { Name = "Torque (Dry)", YUnit = "kNm", StringFormat = "N0", Color = Color.yellow } };
-            graphables.Add(torque[0]);
-            graphables.Add(torque[1]);
-            graphables.Add(new GraphableCollection(torque) { Name = "Torque" });
-
-            var e = graphables.GetEnumerator();
-            while (e.MoveNext())
-            {
-                e.Current.XUnit = "°";
-                e.Current.XName = "Angle of Attack";
-                e.Current.Visible = false;
-            }
+            ((LineGraph)graphables["Lift"]).SetValues(AoAPoints.Select(pt => pt.Lift * scale(pt)).ToArray(), left, right);
+            ((LineGraph)graphables["Drag"]).SetValues(AoAPoints.Select(pt => pt.Drag * scale(pt)).ToArray(), left, right);
+            ((LineGraph)graphables["Lift/Drag Ratio"]).SetValues(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right);
+            ((LineGraph)graphables["Lift Slope"]).SetValues(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right);
+            ((LineGraph)((GraphableCollection)graphables["Pitch Input"])["Pitch Input (Wet)"]).SetValues(AoAPoints.Select(pt => pt.pitchInput).ToArray(), left, right);
+            ((LineGraph)((GraphableCollection)graphables["Pitch Input"])["Pitch Input (Dry)"]).SetValues(AoAPoints.Select(pt => pt.pitchInput_dry).ToArray(), left, right);
+            ((LineGraph)((GraphableCollection)graphables["Torque"])["Torque (Wet)"]).SetValues(AoAPoints.Select(pt => pt.torque).ToArray(), left, right);
+            ((LineGraph)((GraphableCollection)graphables["Torque"])["Torque (Dry)"]).SetValues(AoAPoints.Select(pt => pt.torque_dry).ToArray(), left, right);
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
@@ -111,7 +130,7 @@ namespace KerbalWindTunnel.DataGenerators
                 AoAPoints = newAoAPoints;
                 AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
                 currentConditions = conditions;
-                GenerateGraphs();
+                UpdateGraphs();
                 valuesSet = true;
             }
         }

@@ -14,6 +14,7 @@ namespace KerbalWindTunnel.DataGenerators
         protected bool valuesSet = false;
 
         public IGraphable this[string name] { get => graphables[name]; set => graphables[name] = value; }
+        public static explicit operator GraphableCollection (DataSetGenerator me) => me.Graphables;
 
         public virtual CalculationManager.RunStatus Status
         {
