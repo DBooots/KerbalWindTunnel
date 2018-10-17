@@ -129,6 +129,8 @@ namespace KerbalWindTunnel
                 case 9: EnvelopeSurfGenerator.Graphables["Excess Acceleration"].Visible = true;
                     break;
             }
+            EnvelopeSurfGenerator.Graphables["Fuel-Optimal Path"].Visible = lineFlags[0];
+            EnvelopeSurfGenerator.Graphables["Time-Optimal Path"].Visible = lineFlags[1];
             EnvelopeSurfGenerator.Graphables["Envelope Mask"].Visible = WindTunnelSettings.ShowEnvelopeMask && (WindTunnelSettings.ShowEnvelopeMaskAlways || (itemNumber != 0 && itemNumber != 9));
         }
 

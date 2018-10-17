@@ -5,11 +5,10 @@ using UnityEngine;
 using KerbalWindTunnel.Threading;
 using KerbalWindTunnel.Graphing;
 using KerbalWindTunnel.Extensions;
-using System.Linq;
 
 namespace KerbalWindTunnel.DataGenerators
 {
-    public class EnvelopeSurf : DataSetGenerator
+    public partial class EnvelopeSurf : DataSetGenerator
     {
         protected static readonly ColorMap Jet_Dark_Positive = new ColorMap(ColorMap.Jet_Dark) { Filter = (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v) };
 
@@ -35,6 +34,8 @@ namespace KerbalWindTunnel.DataGenerators
             graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Lift Slope", ZUnit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Pitch Input", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphables.Add(new OutlineMask(blank, left, right, bottom, top)     { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
+            graphables.Add(new LineGraph(new Vector2[0]) { Name = "Fuel-Optimal Path", StringFormat = "N0", Color = Color.black, LineWidth = 3 });
+            graphables.Add(new LineGraph(new Vector2[0]) { Name = "Time-Optimal Path", StringFormat = "N0", Color = Color.white, LineWidth = 3 });
 
             var e = graphables.GetEnumerator();
             while (e.MoveNext())
@@ -52,7 +53,10 @@ namespace KerbalWindTunnel.DataGenerators
             base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
-            envelopePoints = new EnvelopePoint[0,0];
+            envelopePoints = new EnvelopePoint[0, 0];
+
+            ((LineGraph)graphables["Fuel-Optimal Path"]).SetValues(new Vector2[0]);
+            ((LineGraph)graphables["Time-Optimal Path"]).SetValues(new Vector2[0]);
         }
 
         public void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
@@ -119,7 +123,10 @@ namespace KerbalWindTunnel.DataGenerators
             EnvelopePoint[,] newEnvelopePoints = new EnvelopePoint[numPtsX + 1, numPtsY + 1];
             
             GenData rootData = new GenData(vessel, conditions, 0, 0, manager);
-            ThreadPool.QueueUserWorkItem(SetupInBackground, rootData);
+            
+            //System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
+            //timer.Start();
+            ThreadPool.QueueUserWorkItem(SetupInBackground, rootData, true);
 
             while (!manager.Completed)
             {
@@ -128,6 +135,8 @@ namespace KerbalWindTunnel.DataGenerators
                     yield break;
                 yield return 0;
             }
+            //timer.Stop();
+            //Debug.Log("Time taken: " + timer.ElapsedMilliseconds / 1000f);
             
             newEnvelopePoints = ((CalculationManager.State[,])rootData.storeState.Result)
                 .SelectToArray(pt => (EnvelopePoint)pt.Result);
@@ -139,6 +148,8 @@ namespace KerbalWindTunnel.DataGenerators
                 envelopePoints = newEnvelopePoints;
                 currentConditions = conditions;
                 UpdateGraphs();
+                CalculateOptimalLines(vessel, conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0);
+                
                 valuesSet = true;
             }
 

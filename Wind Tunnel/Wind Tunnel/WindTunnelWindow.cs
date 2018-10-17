@@ -213,6 +213,29 @@ namespace KerbalWindTunnel
                 }
             }
         }
+        private float _targetAltitude = 17700;
+        private string targetAltitudeStr = "17700";
+        public float TargetAltitude
+        {
+            get { return _targetAltitude; }
+            set
+            {
+                _targetAltitude = value;
+                targetAltitudeStr = value.ToString("F0");
+            }
+        }
+        private float _targetSpeed = 1410;
+        private string targetSpeedStr = "1410";
+        public float TargetSpeed
+        {
+            get { return _targetSpeed; }
+            set
+            {
+                _targetSpeed = value;
+                targetSpeedStr = value.ToString("F1");
+            }
+        }
+        private bool selectingTarget = false;
 
         private Graphing.Grapher grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes };
 
@@ -341,6 +364,8 @@ namespace KerbalWindTunnel
                     if (newFlags[0] != lineFlags[0][0] || newFlags[1] != lineFlags[0][1])
                     {
                         lineFlags[0] = newFlags;
+                        EnvelopeSurfGenerator.Graphables["Fuel-Optimal Path"].Visible = lineFlags[0][0];
+                        EnvelopeSurfGenerator.Graphables["Time-Optimal Path"].Visible = lineFlags[0][1];
                     }
                     GUILayout.EndHorizontal();
                     GUILayout.Space(3);
@@ -585,13 +610,23 @@ namespace KerbalWindTunnel
 
                 if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
                 {
-                    //conditionDetails = GetConditionDetails((vectMouse.x - graphRect.x) / graphWidth, CurrentGraphMode == GraphMode.FlightEnvelope ? (graphHeight - (vectMouse.y - graphRect.y)) / graphHeight : float.NaN);
-                    selectedCrossHairVect = vectMouse - graphRect.position;
-                    SetConditionsFromGraph(selectedCrossHairVect);
-                    conditionDetails = GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, this.AoA, true);
+                    if (!selectingTarget)
+                    {
+                        selectedCrossHairVect = vectMouse - graphRect.position;
+                        SetConditionsFromGraph(selectedCrossHairVect);
+                        conditionDetails = GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, this.AoA, true);
 
-                    if (Parent.highlightMode != WindTunnel.HighlightMode.Off)
-                        Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                        if (Parent.highlightMode != WindTunnel.HighlightMode.Off)
+                            Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                    }
+                    else
+                    {
+                        selectingTarget = false;
+                        Vector2 targetVect = vectMouse - graphRect.position;
+                        TargetSpeed = (targetVect.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin;
+                        TargetAltitude = ((graphHeight - 1 - targetVect.y) / (graphHeight - 1)) * (grapher.YMax - grapher.YMin) + grapher.YMin;
+                        EnvelopeSurfGenerator.CalculateOptimalLines(vessel, EnvelopeSurfGenerator.currentConditions, TargetSpeed, TargetAltitude, 0, 0);
+                    }
                 }
             }
             if (CurrentGraphMode == GraphMode.FlightEnvelope && cAxisRect.Contains(vectMouse) && Status == CalculationManager.RunStatus.Completed)

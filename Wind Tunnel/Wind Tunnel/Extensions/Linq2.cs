@@ -61,6 +61,27 @@ namespace KerbalWindTunnel.Extensions
             }
             return result;
         }
+        public static int First(this float[,] vals, int dimension, int index, Predicate<float> predicate)
+        {
+            int limit = vals.GetUpperBound(dimension);
+            if (limit < 0)
+                return 0;
+            if (dimension == 0)
+            {
+                for (int i = 0; i <= limit; i++)
+                    if (predicate(vals[i, index]))
+                        return i;
+            }
+            else if (dimension == 1)
+            {
+                for (int i = 0; i <= limit; i++)
+                    if (predicate(vals[index, i]))
+                        return i;
+            }
+            else
+                throw new ArgumentOutOfRangeException("dimension");
+            return -1;
+        }
         public static float Lerp2(this float[,] vals, float x, float y)
         {
             int xI1, xI2;
@@ -132,6 +153,66 @@ namespace KerbalWindTunnel.Extensions
                         vals[xI2, yI2] * fX * fY;
                 }
             }
+        }
+        public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange = -1)
+        {
+            int width = vals.GetUpperBound(0);
+            int height = vals.GetUpperBound(1);
+            if (startX < 0 || startX > width || startY < 0 || startY > height)
+                yield break;
+
+            yield return vals[startX, startY];
+            if (maxRange < 0) maxRange = width + height;
+            for (int r = 1; r <= maxRange; r++)
+            {
+                for (int r2 = 0; r2 < r; r++)
+                {
+                    if (startY + r <= height && startX + r2 <= width) yield return vals[startX + r2, startY + r];
+                    if (startX + r <= width && startY - r2 >= 0) yield return vals[startX + r, startY - r2];
+                    if (startY - r >= 0 && startX - r2 >= 0) yield return vals[startX - r2, startY - r];
+                    if (startX - r >= 0 && startY + r2 <= height) yield return vals[startX - r, startY + r2];
+                }
+            }
+        }
+        public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange = -1,
+            params Quadrant[] quadrants)
+        {
+            bool[] quads = new bool[4];
+            for (int i = 0; i < quadrants.Length; i++)
+                if ((int)quadrants[i] - 1 >= 0)
+                    quads[(int)quadrants[i] - 1] = true;
+
+            return GetTaxicabNeighbors(vals, startX, startY, maxRange, quads);
+        }
+        public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange,
+            bool[] quads)
+        {
+            int width = vals.GetUpperBound(0);
+            int height = vals.GetUpperBound(1);
+            if (startX < 0 || startX > width || startY < 0 || startY > height)
+                yield break;
+
+            yield return vals[startX, startY];
+            if (maxRange < 0) maxRange = width + height;
+            for (int r = 1; r <= maxRange; r++)
+            {
+                for (int r2 = 0; r2 < r; r++)
+                {
+                    if (quads[0] && startY + r <= height && startX + r2 <= width) yield return vals[startX + r2, startY + r];
+                    if (quads[3] && startX + r <= width && startY - r2 >= 0) yield return vals[startX + r, startY - r2];
+                    if (quads[2] && startY - r >= 0 && startX - r2 >= 0) yield return vals[startX - r2, startY - r];
+                    if (quads[1] && startX - r >= 0 && startY + r2 <= height) yield return vals[startX - r, startY + r2];
+                }
+            }
+        }
+
+        public enum Quadrant : int
+        {
+            I = 1,
+            II = 2,
+            III = 3,
+            IV = 4,
+            Default = 0
         }
     }
 }
