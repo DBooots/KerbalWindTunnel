@@ -14,6 +14,7 @@ namespace KerbalWindTunnel
         WindowMoveEventsEnabled = true)]
     public partial class WindTunnelWindow : MonoBehaviourWindowPlus
     {
+        #region Fields and Properties
         public static WindTunnelWindow Instance;
         private DataGenerators.EnvelopeSurf EnvelopeSurfGenerator = new DataGenerators.EnvelopeSurf();
         private DataGenerators.AoACurve AoACurveGenerator = new DataGenerators.AoACurve();
@@ -35,19 +36,12 @@ namespace KerbalWindTunnel
         public WindTunnel Parent { get; internal set; }
 
         DropDownList ddlPlanet;
+        DropDownList ddlEnvelope;
 
         bool inputLocked = false;
         const string lockID = "KWTLock";
 
         public static readonly float gAccel = (float)(Planetarium.fetch.Home.gravParameter / (Planetarium.fetch.Home.Radius * Planetarium.fetch.Home.Radius));
-
-        /*public RootSolverSettings solverSettings = new RootSolverSettings(
-            RootSolver.LeftBound(-15 * Mathf.PI / 180),
-            RootSolver.RightBound(35 * Mathf.PI / 180),
-            RootSolver.LeftGuessBound(-5 * Mathf.PI / 180),
-            RootSolver.RightGuessBound(5 * Mathf.PI / 180),
-            RootSolver.ShiftWithGuess(true),
-            RootSolver.Tolerance(0.0001f));*/
         
         private AeroPredictor vessel = null;
         private CelestialBody body = Planetarium.fetch.CurrentMainBody;
@@ -64,13 +58,14 @@ namespace KerbalWindTunnel
                     Cancel();
 
                     // Save certain settings:
-                    savedGraphSelect[(int)CurrentGraphMode] = CurrentGraphSelect;
+                    //savedGraphSelect[(int)CurrentGraphMode] = CurrentGraphSelect;
+                    // Visibility is now saved by the graphs themselves.
 
                     // Actually change mode
                     _graphMode = value;
 
                     // Load new settings:
-                    _graphSelect = savedGraphSelect[(int)CurrentGraphMode];
+                    //_graphSelect = savedGraphSelect[(int)CurrentGraphMode];
                     GetConditionDetails(CurrentGraphMode, this.Altitude, this.Speed, this.AoA, false);
 
                     // Reset the strings:
@@ -91,18 +86,19 @@ namespace KerbalWindTunnel
             VelocityCurves = 2
         }
 
-        public readonly GraphSelect[][] selectFromIndex = new GraphSelect[][]{
+        /*public readonly GraphSelect[][] selectFromIndex = new GraphSelect[][]{
             new GraphSelect[]{ GraphSelect.ExcessThrust, GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.LiftSlope, GraphSelect.ExcessAcceleration, GraphSelect.FuelBurn, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce },
             new GraphSelect[]{ GraphSelect.LiftForce, GraphSelect.DragForce, GraphSelect.LiftDragRatio, GraphSelect.LiftSlope, GraphSelect.PitchInput, GraphSelect.Torque },
             new GraphSelect[]{ GraphSelect.LevelFlightAoA, GraphSelect.LiftDragRatio, GraphSelect.ThrustAvailable, GraphSelect.DragForce, GraphSelect.LiftSlope, GraphSelect.MaxLiftAoA, GraphSelect.MaxLiftForce } };
+            */
 
-        public readonly int[][] indexFromSelect = new int[][]
+        /*public readonly int[][] indexFromSelect = new int[][]
         {
             new int[]{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0 },
             new int[]{ 0, 0, 2, 0, 3, 0, 0, 0, 0, 0, 1, 4, 5 },
-            new int[]{ 0, 0, 1, 2, 4, 0, 0, 5, 6, 0, 3, 0, 0 } };
+            new int[]{ 0, 0, 1, 2, 4, 0, 0, 5, 6, 0, 3, 0, 0 } };*/
 
-        public enum GraphSelect
+        /*public enum GraphSelect
         {
             ExcessThrust = 0,
             LevelFlightAoA = 1,
@@ -128,9 +124,9 @@ namespace KerbalWindTunnel
             //LiftSlope = 4,
             //MaxLiftAoA = 7,
             //MaxLiftForce = 8,
-        }
-        private GraphSelect _graphSelect = GraphSelect.ExcessThrust;
-        public GraphSelect CurrentGraphSelect
+        }*/
+        //private GraphSelect _graphSelect = GraphSelect.ExcessThrust;
+        /*public GraphSelect CurrentGraphSelect
         {
             get { return _graphSelect; }
             set
@@ -142,16 +138,18 @@ namespace KerbalWindTunnel
                     graphRequested = false;
                 }
             }
-        }
+        }*/
 
-        private GraphSelect[] savedGraphSelect = new GraphSelect[] { GraphSelect.ExcessThrust, GraphSelect.LiftForce, GraphSelect.LevelFlightAoA };
+        bool[][] lineFlags = new bool[3][] { new bool[2], new bool[8], new bool[10] };
+
+        //private GraphSelect[] savedGraphSelect = new GraphSelect[] { GraphSelect.ExcessThrust, GraphSelect.LiftForce, GraphSelect.LevelFlightAoA };
         private readonly string[] graphModes = new string[] { "Flight Envelope", "AoA Curves", "Velocity Curves" };
         private readonly string[][] graphSelections = new string[][] {
-            new string[] { "Excess Thrust", "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Lift Slope", "Excess Acceleration" },
-            new string[] { "Lift Force", "Drag Force", "Lift/Drag Ratio", "Lift Slope", "Pitch Input", "Pitching Torque" },
-            new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Drag Force" }
+            new string[] { "Excess Thrust", "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Max Lift AoA", "Max Lift Force", "Drag Force", "Lift Slope", "Pitch Input", "Excess Acceleration" },
+            new string[] { "Lift Force", "Lift/Drag Ratio", "Pitch Input", "Wet", "Drag Force", "Lift Slope", "Pitching Torque", "Dry" },
+            new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Excess Thrust", "Excess Accleration", "Max Lift AoA", "Lift Slope", "Drag Force", "Max Lift", "Pitch Input" }
         };
-        private readonly string[] highliftModeStrings = new string[] { "Off", "Drag", "Lift" };
+        private readonly string[] highlightModeStrings = new string[] { "Off", "Drag", "Lift" };
 
         private bool graphDirty = true;
         private bool graphRequested = false;
@@ -220,7 +218,7 @@ namespace KerbalWindTunnel
 
         internal const float AoAdelta = 0.1f * Mathf.Deg2Rad;
 
-        private List<cbItem> lstPlanets = new List<cbItem>();
+        private List<CBItem> lstPlanets = new List<CBItem>();
         private CelestialBody cbStar;
 
         private GUIStyle exitButton = new GUIStyle(HighLogic.Skin.button);
@@ -236,56 +234,64 @@ namespace KerbalWindTunnel
 
         Vector2 selectedCrossHairVect = new Vector2(-1, -1);
 
-        internal override void Start()
+        private string conditionDetails = "";
+        private GUIStyle styleSelectedCrossHair = new GUIStyle();
+        private GUIStyle stylePlotCrossHair = new GUIStyle();
+
+        public CalculationManager.RunStatus Status { get => GraphGenerator.Status; }
+        #endregion Fields and Properties
+
+        #region Window Drawing Methods
+        internal override void DrawWindow(int id)
         {
-            base.Start();
+            DrawTopRowButtons();
 
-            hAxisMarks.normal.textColor = hAxisMarks.focused.textColor = hAxisMarks.hover.textColor = hAxisMarks.active.textColor = Color.white;
-            vAxisMarks.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = Color.white;
-            exitButton.normal.textColor = exitButton.focused.textColor = exitButton.hover.textColor = exitButton.active.textColor = Color.red;
-            downButton.normal = downButton.active;
-            
-            crossHair.SetPixel(0, 0, new Color32(255, 25, 255, 192));
-            crossHair.Apply();
-            stylePlotCrossHair.normal.background = crossHair;
-
-            selectedCrossHair.SetPixel(0, 0, new Color32(255, 255, 255, 192));
-            selectedCrossHair.Apply();
-            styleSelectedCrossHair.normal.background = selectedCrossHair;
-
-            clearTex.SetPixel(0, 0, Color.clear);
-            clearTex.Apply();
-            clearBox.normal.background = clearTex;
-
-            settingsTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_settings));
-            saveIconTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_save));
-
-            onWindowVisibleChanged += (MonoBehaviourWindow sender, bool visible) => { if (inputLocked && !visible && sender == this) { EditorLogic.fetch.Unlock(lockID); inputLocked = false; } };
-        }
-
-        internal override void Update()
-        {
-            base.Update();
-
-            if (Visible && this.WindowRect.Contains(Event.current.mousePosition))
+            GUILayout.BeginVertical();      // Main window - laid out vertically
+            if (!Minimized)
             {
-                if (!inputLocked)
+                GUILayout.BeginHorizontal();    // Top region
+
+                GUILayout.BeginVertical(GUILayout.Width(graphWidth + axisWidth + 55 + 12));  // Graphing frame
+                CurrentGraphMode = (GraphMode)GUILayout.SelectionGrid((int)CurrentGraphMode, graphModes, 3);
+                DrawGraph(CurrentGraphMode);
+                GUILayout.EndVertical();        // \Graphing frame
+
+                GUILayout.BeginVertical(GUILayout.Width(200));  // Button and info frame
+                ddlPlanet.DrawButton();
+                GUILayout.Space(2);
+                if (GUILayout.Button("Update Vessel", GUILayout.Height(25)))
                 {
-                    EditorLogic.fetch.Lock(false, false, false, lockID);
-                    inputLocked = true;
+                    OnVesselChanged();
+                    this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
                 }
+                // Display selected point details.
+                GUILayout.Label(this.conditionDetails);
+                if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == CalculationManager.RunStatus.Completed)
+                {
+                    DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
+                    GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°\nCL_Alpha_avg:\t{1:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure, AoACurveGenerator.AverageLiftSlope));
+                }
+                GUILayout.EndVertical();        // \Button and info frame
+
+                GUILayout.EndHorizontal();      // \Top region
+
+                DrawSelectionOptions();
+
+                DrawHighlightingOptions();
+
+                DrawSaveIcon();
             }
             else
             {
-                if (inputLocked)
-                {
-                    EditorLogic.fetch.Unlock(lockID);
-                    inputLocked = false;
-                }
+                DrawHighlightingOptions();
+                DrawConditionOptions();
             }
+            GUILayout.EndVertical();
+
+            HandleMouseEvents();
         }
 
-        internal override void DrawWindow(int id)
+        private void DrawTopRowButtons()
         {
             if (GUI.Button(new Rect(this.WindowRect.width - 27, 2, 25, 25), "X", exitButton))
             {
@@ -303,165 +309,166 @@ namespace KerbalWindTunnel
                 }
             }
 
-            
             if (GUI.Button(new Rect(this.WindowRect.width - 81, 2, 25, 25), settingsTex))
             {
                 settingsDialog = SpawnDialog();
                 this.Visible = false;
             }
+        }
 
-            GUILayout.BeginVertical();
-            GUILayout.BeginHorizontal();
-            GUILayout.BeginVertical(GUILayout.Width(graphWidth + 55 + axisWidth));
-
-            if (!Minimized)
+        private void DrawSaveIcon()
+        {
+            if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
             {
-                if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
+                if (GUI.Button(new Rect(12, 80 + graphHeight + 9 + 11 - (CurrentGraphMode != GraphMode.FlightEnvelope ? 28 : 0), 25, 25), saveIconTex))
                 {
-                    if (GUI.Button(new Rect(12, 80 + graphHeight + 9 + 11 - (CurrentGraphMode != GraphMode.FlightEnvelope ? 28 : 0), 25, 25), saveIconTex))
-                    {
-                        if (EditorLogic.fetch.ship != null)
-                            grapher.WriteToFile(EditorLogic.fetch.ship.shipName);
-                    }
+                    if (EditorLogic.fetch.ship != null)
+                        grapher.WriteToFile(EditorLogic.fetch.ship.shipName);
                 }
-
-                CurrentGraphMode = (GraphMode)GUILayout.SelectionGrid((int)CurrentGraphMode, graphModes, 3);
-
-                DrawGraph(CurrentGraphMode, CurrentGraphSelect);
-                /*if (GUILayout.Button("Test!"))
-                {
-                    Debug.Log("Testing!");
-
-                    float atmPressure, atmDensity, mach;
-                    bool oxygenAvailable;
-                    lock (body)
-                    {
-                        atmPressure = (float)body.GetPressure(Altitude);
-                        atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, Altitude);
-                        mach = (float)(Speed / body.GetSpeedOfSound(atmPressure, atmDensity));
-                        oxygenAvailable = body.atmosphereContainsOxygen;
-                    }
-
-                    //Debug.Log("Aero Force (stock): " + stockVessel.GetAeroForce(body, speed, altitude, 2.847f * Mathf.PI / 180, mach));
-                    //Debug.Log("Lift Force (stock): " + stockVessel.GetLiftForce(body, speed, altitude, 2.847f * Mathf.PI / 180));
-
-                    VesselCache.SimulatedVessel testVessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
-
-                    float weight = (float)(testVessel.Mass * body.gravParameter / ((body.Radius + Altitude) * (body.Radius + Altitude))); // TODO: Minus centrifugal force...
-                    Vector3 thrustForce = testVessel.GetThrustForce(mach, atmDensity, atmPressure, oxygenAvailable);
-
-                    DataGenerators.EnvelopeSurf.EnvelopePoint pt = new DataGenerators.EnvelopeSurf.EnvelopePoint(VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body)), body, Altitude, Speed, this.rootSolver, 0);
-                    Debug.Log("AoA Level:        " + pt.AoA_level * 180 / Mathf.PI);
-                    Debug.Log("Thrust Available: " + pt.Thrust_available);
-                    Debug.Log("Excess Thrust:    " + pt.Thrust_excess);
-                    Debug.Log("Excess Accel:     " + pt.Accel_excess);
-                    Debug.Log("Speed:            " + pt.speed);
-                    Debug.Log("Altitude:         " + pt.altitude);
-                    Debug.Log("Force:            " + pt.force);
-                    Debug.Log("LiftForce:        " + pt.liftforce);
-                    Debug.Log("");
-                    AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, Speed, Altitude);
-                    Debug.Log("Aero Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetAeroForce(conditions, pt.AoA_level, 0, out Vector3 torque), pt.AoA_level));
-                    Debug.Log("Lift Force (sim'd): " + AeroPredictor.ToFlightFrame(testVessel.GetLiftForce(conditions, pt.AoA_level, 0, out Vector3 lTorque), pt.AoA_level));
-                    Debug.Log("Aero torque: " + torque);
-                    Debug.Log("Lift torque: " + lTorque);
-                    Debug.Log("Aero torque1:  " + testVessel.GetAeroTorque(conditions, pt.AoA_level, 1));
-                    Debug.Log("Aero torque-1: " + testVessel.GetAeroTorque(conditions, pt.AoA_level, -1));
-                    Debug.Log("");
-                }//*/
-
-                CurrentGraphSelect = selectFromIndex[(int)CurrentGraphMode][GUILayout.SelectionGrid(indexFromSelect[(int)CurrentGraphMode][(int)CurrentGraphSelect], graphSelections[(int)CurrentGraphMode], 3)];
             }
+        }
 
-            if (Minimized || CurrentGraphMode == GraphMode.AoACurves || CurrentGraphMode == GraphMode.VelocityCurves)
+        private void DrawSelectionOptions()
+        {
+            bool[] newFlags;
+            switch (CurrentGraphMode)
             {
-                GUILayout.BeginHorizontal(GUILayout.Height(25), GUILayout.ExpandHeight(false));
-                GUILayout.Label("Altitude: ", GUILayout.Width(62));
-                altitudeStr = GUILayout.TextField(altitudeStr, GUILayout.Width(105));
-
-                if (CurrentGraphMode == GraphMode.AoACurves || Minimized)
-                {
-                    Rect toggleRect = GUILayoutUtility.GetRect(new GUIContent(""), HighLogic.Skin.label, GUILayout.Width(20));
-                    toggleRect.position -= new Vector2(7, 3);
-                    Mach = GUI.Toggle(toggleRect, Mach, "    ", new GUIStyle(HighLogic.Skin.toggle) { padding = new RectOffset(6, 2, -6, -6), contentOffset = new Vector2(6, 2) });
-                    //Mach = GUILayout.Toggle(Mach, "", GUILayout.Width(30), GUILayout.Height(20));
-                    if (!Mach)
+                case GraphMode.FlightEnvelope:
+                    GUILayout.BeginHorizontal(GUILayout.Height(30));
+                    ddlEnvelope.DrawButton(GUILayout.Width(350));
+                    GUILayout.Space(5);
+                    newFlags = Extensions.GUILayoutHelper.ToggleGrid(new string[] { "Fuel-Optimal Path", "Time-Optimal Path" }, lineFlags[0], 2);
+                    if (newFlags[0] != lineFlags[0][0] || newFlags[1] != lineFlags[0][1])
                     {
-                        GUILayout.Label("Speed (m/s): ", GUILayout.Width(101));
-                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132));
+                        lineFlags[0] = newFlags;
                     }
-                    else
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(3);
+                    GUILayout.BeginHorizontal(GUILayout.Height(30));
+                    GUILayout.Label("Ascent Path Target: Altitude:");
+                    targetAltitudeStr = GUILayout.TextField(targetAltitudeStr, GUILayout.Width(119));
+                    GUILayout.Label("Speed:");
+                    targetSpeedStr = GUILayout.TextField(targetSpeedStr, GUILayout.Width(111));
+                    if (GUILayout.Button("Apply") &&
+                        float.TryParse(targetAltitudeStr, out float tempA) && float.TryParse(targetSpeedStr, out float tempS))
                     {
-                        GUILayout.Label("Speed (Mach): ", GUILayout.Width(101));
-                        speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132));
+                        TargetAltitude = tempA;
+                        TargetSpeed = tempS;
+                        EnvelopeSurfGenerator.CalculateOptimalLines(vessel, EnvelopeSurfGenerator.currentConditions, TargetSpeed, TargetAltitude, 0, 0);
                     }
-                }
-                else
-                {
-                    GUILayout.Label("", GUILayout.Width(20));
-                    GUILayout.Label("", GUILayout.Width(101));
-                    GUILayout.Label("", GUILayout.Width(132));
-                }
-
-                if (GUILayout.Button("Apply"))
-                {
-                    if (float.TryParse(altitudeStr, out float altitude) && (CurrentGraphMode != GraphMode.AoACurves | float.TryParse(speedStr, out float speed)))
+                    if (GUILayout.Button("Select on Graph", selectingTarget ? downButton : HighLogic.Skin.button))
+                        selectingTarget = !selectingTarget;
+                    GUILayout.EndHorizontal();
+                    // Dropdown for graphSelect
+                    // Toggles for time- and fuel-optimal ascent paths
+                    break;
+                case GraphMode.AoACurves:
+                    newFlags = Extensions.GUILayoutHelper.ToggleGrid(graphSelections[1], lineFlags[1], 4);
+                    GUILayout.Space(4);
+                    GUILayout.Label("", HighLogic.Skin.horizontalSlider, GUILayout.Height(15));
+                    for (int i = newFlags.Length - 1; i >= 0; i--)
                     {
-                        if(this.Altitude != altitude || this.Speed != speed)
+                        if (newFlags[i] != lineFlags[1][i])
                         {
-                            this.Altitude = altitude;
-                            if (CurrentGraphMode == GraphMode.AoACurves)
+                            lineFlags[1][i] = newFlags[i];
+                            switch (i)
                             {
-
-                                if (Mach)
-                                    lock (body)
-                                        _speed *= (float)body.GetSpeedOfSound(body.GetPressure(Altitude), Extensions.KSPClassExtensions.GetDensity(body, Altitude));
-                                this.Speed = speed;
+                                case 0:
+                                case 4:     // Lift and/or Drag
+                                    if (lineFlags[1][i])
+                                        lineFlags[1][1] = lineFlags[1][2]= lineFlags[1][5] = lineFlags[1][6] = false;
+                                    break;
+                                case 1:     //Lift/Drag Ratio
+                                    if (lineFlags[1][i])
+                                        lineFlags[1][0] = lineFlags[1][2] = lineFlags[1][4] = lineFlags[1][5] = lineFlags[1][6] = false;
+                                    break;
+                                case 2:     // Pitch Input
+                                    if (lineFlags[1][i])
+                                        lineFlags[1][0] = lineFlags[1][1] = lineFlags[1][4] = lineFlags[1][5] = lineFlags[1][6] = false;
+                                    break;
+                                case 3:     // Set pitch and torque to include wet
+                                    if (!lineFlags[1][7]) lineFlags[1][7] = true;
+                                    break;
+                                case 5:     // Lift Slope
+                                    if (lineFlags[1][i])
+                                        lineFlags[1][0] = lineFlags[1][1] = lineFlags[1][2] = lineFlags[1][4] = lineFlags[1][6] = false;
+                                    break;
+                                case 6:     // Torque
+                                    if (lineFlags[1][i])
+                                        lineFlags[1][0] = lineFlags[1][1] = lineFlags[1][2] = lineFlags[1][4] = lineFlags[1][5] = false;
+                                    break;
+                                case 7:     // Set pitch and torque to include dry
+                                    if (!lineFlags[1][3]) lineFlags[1][3] = true;
+                                    break;
+                                default: throw new ArgumentOutOfRangeException("AoA line graph #");
                             }
-
-                            Cancel();
-
-                            graphDirty = true;
-                            graphRequested = false;
-                            Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                            SetAoAGraphs(lineFlags[1]);
+                            break;
                         }
                     }
-                }
-                GUILayout.EndHorizontal();
+                    //CurrentGraphSelect = selectFromIndex[(int)CurrentGraphMode][GUILayout.SelectionGrid(indexFromSelect[(int)CurrentGraphMode][(int)CurrentGraphSelect], graphSelections[(int)CurrentGraphMode], 3, GUILayout.Height(64))];
+                    DrawConditionOptions();
+                    // Toggles for each graph option - graphSelect is not used
+                    break;
+                case GraphMode.VelocityCurves:
+                    newFlags = Extensions.GUILayoutHelper.ToggleGrid(graphSelections[2], lineFlags[2], 5);
+                    GUILayout.Space(4);
+                    GUILayout.Label("", HighLogic.Skin.horizontalSlider, GUILayout.Height(15));
+                    for (int i = newFlags.Length - 1; i >= 0; i--)
+                    {
+                        if (newFlags[i] != lineFlags[2][i])
+                        {
+                            lineFlags[2][i] = newFlags[i];
+                            switch (i)
+                            {
+                                case 0:
+                                case 5:     // Level flight and/or max lift AoA
+                                    if (lineFlags[2][i])
+                                        lineFlags[2][1] = lineFlags[2][2] = lineFlags[2][3] = lineFlags[2][4] = lineFlags[2][6] = lineFlags[2][7] = lineFlags[2][8] = lineFlags[2][9] = false;
+                                    break;
+                                case 1:     // Lift/Drag Ratio
+                                    if (lineFlags[2][i])
+                                        lineFlags[2][0] = lineFlags[2][2] = lineFlags[2][3] = lineFlags[2][4] = lineFlags[2][5] = lineFlags[2][6] = lineFlags[2][7] = lineFlags[2][8] = lineFlags[2][9] = false;
+                                    break;
+                                case 2:
+                                case 3:
+                                case 7:
+                                case 8:     // Thrust available and/or Excess Thrust and/or Drag Force and/or Max Lift Force
+                                    if (lineFlags[2][i])
+                                        lineFlags[2][0] = lineFlags[2][1] = lineFlags[2][4] = lineFlags[2][5] = lineFlags[2][6] = lineFlags[2][9] = false;
+                                    break;
+                                case 4:     // Excess Acceleration
+                                    if (lineFlags[2][i])
+                                        lineFlags[2][0] = lineFlags[2][1] = lineFlags[2][2] = lineFlags[2][3] = lineFlags[2][5] = lineFlags[2][6] = lineFlags[2][7] = lineFlags[2][8] = lineFlags[2][9] = false;
+                                    break;
+                                case 6:     // Lift Slope
+                                    if (lineFlags[2][i])
+                                        lineFlags[2][0] = lineFlags[2][1] = lineFlags[2][2] = lineFlags[2][3] = lineFlags[2][4] = lineFlags[2][5] = lineFlags[2][7] = lineFlags[2][8] = lineFlags[2][9] = false;
+                                    break;
+                                case 9:     // Pitch Input
+                                    if (lineFlags[2][i])
+                                        lineFlags[2][0] = lineFlags[2][1] = lineFlags[2][2] = lineFlags[2][3] = lineFlags[2][4] = lineFlags[2][5] = lineFlags[2][6] = lineFlags[2][7] = lineFlags[2][8] = false;
+                                    break;
+                                default: throw new ArgumentOutOfRangeException("Velocity line graph #");
+                            }
+                            SetVelGraphs(lineFlags[2]);
+                            break;
+                        }
+                    }
+                    //CurrentGraphSelect = selectFromIndex[(int)CurrentGraphMode][GUILayout.SelectionGrid(indexFromSelect[(int)CurrentGraphMode][(int)CurrentGraphSelect], graphSelections[(int)CurrentGraphMode], 3, GUILayout.Height(64))];
+                    DrawConditionOptions();
+                    // Toggle for each graph option - graphSelect is not used
+                    break;
             }
-            GUILayout.EndVertical();
+        }
 
-            if (!Minimized)
-            {
-                GUILayout.BeginVertical(GUILayout.Width(200));
-
-                ddlPlanet.DrawButton();
-                
-                GUILayout.Space(2);
-
-                if (GUILayout.Button("Update Vessel", GUILayout.Height(25)))
-                {
-                    OnVesselChanged();
-                    this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
-                }
-
-                // Display selected point details.
-                GUILayout.Label(this.conditionDetails);
-                if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == CalculationManager.RunStatus.Completed)
-                {
-                    DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
-                    GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°\nCL_Alpha_avg:\t{1:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure, AoACurveGenerator.AverageLiftSlope));
-                }
-
-                GUILayout.EndVertical();
-            }
-            GUILayout.EndHorizontal();
-
+        private void DrawHighlightingOptions()
+        {
             GUILayout.BeginHorizontal();
             GUILayout.Label("Part Highlighting: ");
-            WindTunnel.HighlightMode newhighlightMode = (WindTunnel.HighlightMode)GUILayout.SelectionGrid((int)WindTunnel.Instance.highlightMode, highliftModeStrings, 3);
+            WindTunnel.HighlightMode newhighlightMode = (WindTunnel.HighlightMode)GUILayout.SelectionGrid((int)WindTunnel.Instance.highlightMode, highlightModeStrings, 3);
 
-            if(newhighlightMode != Parent.highlightMode)
+            if (newhighlightMode != Parent.highlightMode)
             {
                 Parent.UpdateHighlighting(newhighlightMode, this.body, this.Altitude, this.Speed, this.AoA);
                 if (newhighlightMode == WindTunnel.HighlightMode.Off)
@@ -488,8 +495,67 @@ namespace KerbalWindTunnel
                 }
                 GUILayout.EndHorizontal();
             }
-            GUILayout.EndVertical();
-            
+        }
+
+        private void DrawConditionOptions()
+        {
+            GUILayout.BeginHorizontal(GUILayout.Height(25), GUILayout.ExpandHeight(false));
+            GUILayout.Label("Altitude: ", GUILayout.Width(62));
+            altitudeStr = GUILayout.TextField(altitudeStr, GUILayout.Width(105));
+
+            if (CurrentGraphMode == GraphMode.AoACurves || Minimized)
+            {
+                Rect toggleRect = GUILayoutUtility.GetRect(new GUIContent(""), HighLogic.Skin.label, GUILayout.Width(20));
+                toggleRect.position -= new Vector2(7, 3);
+                Mach = GUI.Toggle(toggleRect, Mach, "    ", new GUIStyle(HighLogic.Skin.toggle) { padding = new RectOffset(6, 2, -6, -6), contentOffset = new Vector2(6, 2) });
+                //Mach = GUILayout.Toggle(Mach, "", GUILayout.Width(30), GUILayout.Height(20));
+                if (!Mach)
+                {
+                    GUILayout.Label("Speed (m/s): ", GUILayout.Width(101));
+                    speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132));
+                }
+                else
+                {
+                    GUILayout.Label("Speed (Mach): ", GUILayout.Width(101));
+                    speedStr = GUILayout.TextField(speedStr, GUILayout.Width(132));
+                }
+            }
+            else
+            {
+                GUILayout.Label("", GUILayout.Width(20));
+                GUILayout.Label("", GUILayout.Width(101));
+                GUILayout.Label("", GUILayout.Width(132));
+            }
+
+            if (GUILayout.Button("Apply"))
+            {
+                if (float.TryParse(altitudeStr, out float altitude) && (CurrentGraphMode != GraphMode.AoACurves | float.TryParse(speedStr, out float speed)))
+                {
+                    if (this.Altitude != altitude || this.Speed != speed)
+                    {
+                        this.Altitude = altitude;
+                        if (CurrentGraphMode == GraphMode.AoACurves)
+                        {
+
+                            if (Mach)
+                                lock (body)
+                                    _speed *= (float)body.GetSpeedOfSound(body.GetPressure(Altitude), Extensions.KSPClassExtensions.GetDensity(body, Altitude));
+                            this.Speed = speed;
+                        }
+
+                        Cancel();
+
+                        graphDirty = true;
+                        graphRequested = false;
+                        Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                    }
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
+
+        private void HandleMouseEvents()
+        {
             Vector2 vectMouse = Event.current.mousePosition;
 
             if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0 && Status == CalculationManager.RunStatus.Completed)
@@ -517,7 +583,7 @@ namespace KerbalWindTunnel
                     labelSize.y = 15;
                 GUI.Label(new Rect(vectMouse.x + 5, vectMouse.y - 20, labelSize.x, labelSize.y), labelContent, SkinsLibrary.CurrentTooltip);
 
-                if(Event.current.type == EventType.MouseDown && Event.current.button == 0)
+                if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
                 {
                     //conditionDetails = GetConditionDetails((vectMouse.x - graphRect.x) / graphWidth, CurrentGraphMode == GraphMode.FlightEnvelope ? (graphHeight - (vectMouse.y - graphRect.y)) / graphHeight : float.NaN);
                     selectedCrossHairVect = vectMouse - graphRect.position;
@@ -528,7 +594,7 @@ namespace KerbalWindTunnel
                         Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
                 }
             }
-            if(CurrentGraphMode == GraphMode.FlightEnvelope && cAxisRect.Contains(vectMouse) && Status == CalculationManager.RunStatus.Completed)
+            if (CurrentGraphMode == GraphMode.FlightEnvelope && cAxisRect.Contains(vectMouse) && Status == CalculationManager.RunStatus.Completed)
             {
                 GUI.Box(new Rect(vectMouse.x, cAxisRect.y, 1, cAxisRect.height), "", stylePlotCrossHair);
                 float showValue = (vectMouse.x - cAxisRect.x) / (cAxisRect.width - 1) * (grapher.colorAxis.Max - grapher.colorAxis.Min) + grapher.colorAxis.Min;
@@ -538,21 +604,7 @@ namespace KerbalWindTunnel
                     SkinsLibrary.CurrentTooltip);
             }
         }
-
-        private void OnVesselChanged()
-        {
-            graphDirty = true;
-            graphRequested = false;
-            EnvelopeSurfGenerator.Clear();
-            AoACurveGenerator.Clear();
-            VelCurveGenerator.Clear();
-            this.conditionDetails = "";
-
-            if (vessel is VesselCache.SimulatedVessel releasable)
-                releasable.Release();
-
-            selectedCrossHairVect = new Vector2(-1, -1);
-        }
+        #endregion Window Drawing Methods
 
         private void SetConditionsFromGraph(Vector2 crossHairs)
         {
@@ -587,56 +639,22 @@ namespace KerbalWindTunnel
             }
         }
 
-        public void Cancel()
+        public void Cancel() => GraphGenerator.Cancel();
+
+        #region Triggered Methods
+        private void OnVesselChanged()
         {
-            GraphGenerator.Cancel();
-        }
+            graphDirty = true;
+            graphRequested = false;
+            EnvelopeSurfGenerator.Clear();
+            AoACurveGenerator.Clear();
+            VelCurveGenerator.Clear();
+            this.conditionDetails = "";
 
-        private string conditionDetails = "";
-        private GUIStyle styleSelectedCrossHair = new GUIStyle();
-        private GUIStyle stylePlotCrossHair = new GUIStyle();
+            if (vessel is VesselCache.SimulatedVessel releasable)
+                releasable.Release();
 
-        public CalculationManager.RunStatus Status
-        {
-            get { return GraphGenerator.Status; }
-        }
-
-        internal override void Awake()
-        {
-            base.Awake();
-
-            if (Instance)
-                Destroy(Instance);
-            Instance = this;
-
-            // Fetch Celestial Bodies per TransferWindowPlanner method:
-            cbStar = FlightGlobals.Bodies.FirstOrDefault(x => x.referenceBody == x.referenceBody);
-            BodyParseChildren(cbStar);
-            // Filter to only include planets with Atmospheres
-            lstPlanets.RemoveAll(x => x.CB.atmosphere != true);
-            
-            int planetIndex = lstPlanets.FindIndex(x => x.CB == FlightGlobals.GetHomeBody());
-            body = lstPlanets[planetIndex].CB;
-
-            ddlPlanet = new DropDownList(lstPlanets.Select(p => p.NameFormatted), planetIndex, this);
-            ddlPlanet.OnSelectionChanged += OnPlanetSelected;
-            ddlManager.AddDDL(ddlPlanet);
-
-            GameEvents.onEditorLoad.Add(OnVesselLoaded);
-            GameEvents.onEditorNewShipDialogDismiss.Add(OnNewVessel);
-            GameEvents.onEditorPodPicked.Add(OnRootChanged);
-        }
-
-        internal override void OnGUIOnceOnly()
-        {
-            GUIStyle glyphStyle = new GUIStyle(HighLogic.Skin.button) { alignment = TextAnchor.MiddleCenter };
-            GUIStyle blank = new GUIStyle();
-            glyphStyle.active.background = blank.active.background;
-            glyphStyle.focused.background = blank.focused.background;
-            glyphStyle.hover.background = blank.hover.background;
-            glyphStyle.normal.background = blank.normal.background;
-            ddlManager.DropDownGlyphs = new GUIContentWithStyle("▼", glyphStyle);
-            ddlManager.DropDownSeparators = new GUIContentWithStyle("|", glyphStyle);
+            selectedCrossHairVect = new Vector2(-1, -1);
         }
 
         private void OnNewVessel()
@@ -714,6 +732,112 @@ namespace KerbalWindTunnel
             }
         }
 
+        private void OnEnvelopeGraphChanged(DropDownList sender, int OldIndex, int NewIndex)
+        {
+            if (OldIndex == NewIndex)
+                return;
+            SetEnvGraphs(NewIndex, lineFlags[0]);
+        }
+        #endregion Triggered Methods
+
+        #region MonoBehaviour Methods
+        internal override void Start()
+        {
+            base.Start();
+
+            lineFlags[1][0] = lineFlags[1][3] = lineFlags[1][7] = lineFlags[2][0] = true;
+            SetEnvGraphs(0, lineFlags[0]);
+            SetAoAGraphs(lineFlags[1]);
+            SetVelGraphs(lineFlags[2]);
+
+            hAxisMarks.normal.textColor = hAxisMarks.focused.textColor = hAxisMarks.hover.textColor = hAxisMarks.active.textColor = Color.white;
+            vAxisMarks.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = Color.white;
+            exitButton.normal.textColor = exitButton.focused.textColor = exitButton.hover.textColor = exitButton.active.textColor = Color.red;
+            downButton.normal = downButton.active;
+
+            crossHair.SetPixel(0, 0, new Color32(255, 25, 255, 192));
+            crossHair.Apply();
+            stylePlotCrossHair.normal.background = crossHair;
+
+            selectedCrossHair.SetPixel(0, 0, new Color32(255, 255, 255, 192));
+            selectedCrossHair.Apply();
+            styleSelectedCrossHair.normal.background = selectedCrossHair;
+
+            clearTex.SetPixel(0, 0, Color.clear);
+            clearTex.Apply();
+            clearBox.normal.background = clearTex;
+
+            settingsTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_settings));
+            saveIconTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_save));
+
+            onWindowVisibleChanged += (MonoBehaviourWindow sender, bool visible) => { if (inputLocked && !visible && sender == this) { EditorLogic.fetch.Unlock(lockID); inputLocked = false; } };
+        }
+
+        internal override void Update()
+        {
+            base.Update();
+
+            if (Visible && this.WindowRect.Contains(Event.current.mousePosition))
+            {
+                if (!inputLocked)
+                {
+                    EditorLogic.fetch.Lock(false, false, false, lockID);
+                    inputLocked = true;
+                }
+            }
+            else
+            {
+                if (inputLocked)
+                {
+                    EditorLogic.fetch.Unlock(lockID);
+                    inputLocked = false;
+                }
+            }
+        }
+
+        internal override void Awake()
+        {
+            base.Awake();
+
+            if (Instance)
+                Destroy(Instance);
+            Instance = this;
+
+            // Fetch Celestial Bodies per TransferWindowPlanner method:
+            cbStar = FlightGlobals.Bodies.FirstOrDefault(x => x.referenceBody == x.referenceBody);
+            BodyParseChildren(cbStar);
+            // Filter to only include planets with Atmospheres
+            lstPlanets.RemoveAll(x => x.CB.atmosphere != true);
+
+            int planetIndex = lstPlanets.FindIndex(x => x.CB == FlightGlobals.GetHomeBody());
+            body = lstPlanets[planetIndex].CB;
+
+            ddlPlanet = new DropDownList(lstPlanets.Select(p => p.NameFormatted), planetIndex, this);
+            ddlPlanet.OnSelectionChanged += OnPlanetSelected;
+            ddlManager.AddDDL(ddlPlanet);
+
+            ddlEnvelope = new DropDownList(graphSelections[(int)GraphMode.FlightEnvelope], 0, this);
+            ddlEnvelope.OnSelectionChanged += OnEnvelopeGraphChanged;
+            //ddlEnvelope.styleButton.fixedWidth = ;
+            ddlManager.AddDDL(ddlEnvelope);
+
+            GameEvents.onEditorLoad.Add(OnVesselLoaded);
+            GameEvents.onEditorNewShipDialogDismiss.Add(OnNewVessel);
+            GameEvents.onEditorPodPicked.Add(OnRootChanged);
+        }
+
+        internal override void OnGUIOnceOnly()
+        {
+            GUIStyle glyphStyle = new GUIStyle(HighLogic.Skin.button) { alignment = TextAnchor.MiddleCenter };
+            GUIStyle blank = new GUIStyle();
+            glyphStyle.active.background = blank.active.background;
+            glyphStyle.focused.background = blank.focused.background;
+            glyphStyle.hover.background = blank.hover.background;
+            glyphStyle.normal.background = blank.normal.background;
+            ddlManager.DropDownGlyphs = new GUIContentWithStyle("▼", glyphStyle);
+            ddlManager.DropDownSeparators = new GUIContentWithStyle("|", glyphStyle);
+        }
+
         internal override void OnDestroy()
         {
             Cancel();
@@ -730,11 +854,13 @@ namespace KerbalWindTunnel
             if (inputLocked)
                 EditorLogic.fetch.Unlock(lockID);
         }
+        #endregion MonoBehaviour Methods
 
+        #region CelestialBody Parsing
         private void BodyParseChildren(CelestialBody cbRoot, int Depth = 0)
         {
-            List<cbItem> bodies = FlightGlobals.Bodies.Select(p => (cbItem)p).ToList();
-            foreach (cbItem item in bodies.Where(x => x.Parent == cbRoot).OrderBy(x => x.SemiMajorRadius))
+            List<CBItem> bodies = FlightGlobals.Bodies.Select(p => (CBItem)p).ToList();
+            foreach (CBItem item in bodies.Where(x => x.Parent == cbRoot).OrderBy(x => x.SemiMajorRadius))
             {
                 item.Depth = Depth;
                 if (item.CB != cbStar)
@@ -747,12 +873,10 @@ namespace KerbalWindTunnel
                 }
             }
         }
-
-#pragma warning disable IDE1006 // Naming Styles
-        internal class cbItem
-#pragma warning restore IDE1006 // Naming Styles
+        
+        internal class CBItem
         {
-            internal cbItem(CelestialBody CB)
+            internal CBItem(CelestialBody CB)
             {
                 this.CB = CB;
                 if (CB.referenceBody != CB)
@@ -766,14 +890,15 @@ namespace KerbalWindTunnel
             internal double SemiMajorRadius { get; private set; }
             internal CelestialBody Parent { get { return CB.referenceBody; } }
 
-            public static implicit operator cbItem(CelestialBody body)
+            public static implicit operator CBItem(CelestialBody body)
             {
-                return new cbItem(body);
+                return new CBItem(body);
             }
         }
+        #endregion CelestialBody Parsing
     }
 
-    public static class EnumParser
+    /*public static class EnumParser
     {
         public static string ToFormattedString(this WindTunnelWindow.GraphSelect graphSelect)
         {
@@ -809,5 +934,5 @@ namespace KerbalWindTunnel
                     throw new ArgumentException();
             }
         }
-    }
+    }*/
 }

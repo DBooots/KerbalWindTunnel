@@ -27,7 +27,7 @@ namespace KerbalWindTunnel.DataGenerators
             graphables.Add(new LineGraph(blank) { Name = "Excess Thrust", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Pitch Input", YUnit = "", StringFormat = "F3", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Max Lift", YUnit = "kN", StringFormat = "N0", Color = Color.green });
-            //graphables.Add(new LineGraph(blank) { Name = "Excess Acceleration", YUnit = "g", StringFormat = "N2", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Excess Acceleration", YUnit = "g", StringFormat = "N2", Color = Color.green });
 
             var e = graphables.GetEnumerator();
             while (e.MoveNext())
@@ -86,7 +86,7 @@ namespace KerbalWindTunnel.DataGenerators
             ((LineGraph)graphables["Excess Thrust"]).SetValues(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right);
             ((LineGraph)graphables["Pitch Input"]).SetValues(VelPoints.Select(pt => pt.pitchInput).ToArray(), left, right);
             ((LineGraph)graphables["Max Lift"]).SetValues(VelPoints.Select(pt => pt.Lift_max * scale(pt)).ToArray(), left, right);
-            //((LineGraph)graphables["Excess Acceleration"]).SetValues(VelPoints.Select(pt => pt.Accel_excess).ToArray(), left, right);
+            ((LineGraph)graphables["Excess Acceleration"]).SetValues(VelPoints.Select(pt => pt.Accel_excess).ToArray(), left, right);
         }
 
         private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
@@ -155,6 +155,7 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float AoA_max;
             public readonly float Thrust_available;
             public readonly float Thrust_excess;
+            public readonly float Accel_excess;
             public readonly float drag;
             public readonly float altitude;
             public readonly float speed;
@@ -187,6 +188,7 @@ namespace KerbalWindTunnel.DataGenerators
                 Vector3 force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
                 drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                 Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
+                Accel_excess = Thrust_excess / vessel.Mass / WindTunnelWindow.gAccel;
                 LDRatio = Mathf.Abs(AeroPredictor.GetLiftForceMagnitude(force, AoA_level) / drag);
                 dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) -
                     vessel.GetLiftForceMagnitude(conditions, AoA_level, pitchInput)) / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);

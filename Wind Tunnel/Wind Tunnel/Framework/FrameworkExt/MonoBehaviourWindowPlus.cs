@@ -406,14 +406,14 @@ namespace KSPPluginFramework
             }
 
             //Draw the actual button for the list
-            internal Boolean DrawButton()
+            internal Boolean DrawButton(params GUILayoutOption[] options)
             {
                 Boolean blnReturn = false;
 
                 if (styleButtonToDraw == null)
-                    blnReturn = GUILayout.Button(SelectedValue);
+                    blnReturn = GUILayout.Button(SelectedValue, options);
                 else
-                    blnReturn = GUILayout.Button(SelectedValue, styleButtonToDraw);
+                    blnReturn = GUILayout.Button(SelectedValue, styleButtonToDraw, options);
 
                 if (blnReturn) ListVisible = !ListVisible;
 

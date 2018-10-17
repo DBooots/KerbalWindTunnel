@@ -58,6 +58,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Extensions\GUILayoutHelper.cs" />
     <Compile Include="Graphing\Graphable.cs" />
     <Compile Include="Graphing\Legend.cs" />
     <Compile Include="Graphing\Line3Graph.cs" />

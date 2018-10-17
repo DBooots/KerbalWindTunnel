@@ -23,13 +23,12 @@ namespace KerbalWindTunnel
         private Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
         private Rect cAxisRect = new Rect(0, 0, graphWidth, axisWidth);
 
-        private void DrawGraph(GraphMode graphMode, GraphSelect graphSelect)
+        private void DrawGraph(GraphMode graphMode)
         {
             if (graphDirty)
             {
                 if (this.vessel == null)
                     this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
-                    //this.vessel = new StockAero();
 
                 if (!graphRequested)
                 {
@@ -56,14 +55,6 @@ namespace KerbalWindTunnel
                         break;
                     case CalculationManager.RunStatus.Completed:
                         grapher.SetCollection(GraphGenerator.Graphables);
-                        grapher.SetVisibilityExcept(false, graphSelect.ToFormattedString());
-                        if (graphMode == GraphMode.FlightEnvelope)
-                        {
-                            if (WindTunnelSettings.ShowEnvelopeMask && (WindTunnelSettings.ShowEnvelopeMaskAlways || (CurrentGraphSelect != GraphSelect.ExcessThrust && CurrentGraphSelect != GraphSelect.ExcessAcceleration)))
-                                grapher["Envelope Mask"].Visible = true;
-                            grapher["Fuel-Optimal Path"].Visible = true;
-                            grapher["Time-Optimal Path"].Visible = true;
-                        }
                         DrawGraph();
                         graphDirty = false;
                         break;
@@ -82,6 +73,63 @@ namespace KerbalWindTunnel
             {
                 DrawGraph();
             }
+        }
+
+        public void SetAoAGraphs(bool[] lineFlags)
+        {
+            AoACurveGenerator.Graphables["Lift"].Visible = lineFlags[0];
+            AoACurveGenerator.Graphables["Drag"].Visible = lineFlags[4];
+            AoACurveGenerator.Graphables["Lift/Drag Ratio"].Visible = lineFlags[1];
+            AoACurveGenerator.Graphables["Lift Slope"].Visible = lineFlags[5];
+            AoACurveGenerator.Graphables["Pitch Input"].Visible = lineFlags[2];
+            AoACurveGenerator.Graphables["Torque"].Visible = lineFlags[6];
+            ((GraphableCollection)AoACurveGenerator.Graphables["Pitch Input"])["Pitch Input (Wet)"].Visible = lineFlags[3];
+            ((GraphableCollection)AoACurveGenerator.Graphables["Pitch Input"])["Pitch Input (Dry)"].Visible = lineFlags[7];
+            ((GraphableCollection)AoACurveGenerator.Graphables["Torque"])["Torque (Wet)"].Visible = lineFlags[3];
+            ((GraphableCollection)AoACurveGenerator.Graphables["Torque"])["Torque (Dry)"].Visible = lineFlags[7];
+        }
+
+        public void SetVelGraphs(bool[] lineFlags)
+        {
+            VelCurveGenerator.Graphables["Level AoA"].Visible = lineFlags[0];
+            VelCurveGenerator.Graphables["Max Lift AoA"].Visible = lineFlags[5];
+            VelCurveGenerator.Graphables["Thrust Available"].Visible = lineFlags[2];
+            VelCurveGenerator.Graphables["Lift/Drag Ratio"].Visible = lineFlags[1];
+            VelCurveGenerator.Graphables["Drag"].Visible = lineFlags[7];
+            VelCurveGenerator.Graphables["Lift Slope"].Visible = lineFlags[6];
+            VelCurveGenerator.Graphables["Excess Thrust"].Visible = lineFlags[3];
+            VelCurveGenerator.Graphables["Pitch Input"].Visible = lineFlags[9];
+            VelCurveGenerator.Graphables["Max Lift"].Visible = lineFlags[8];
+            VelCurveGenerator.Graphables["Excess Acceleration"].Visible = lineFlags[4];
+        }
+
+        public void SetEnvGraphs(int itemNumber, bool[] lineFlags)
+        {
+            EnvelopeSurfGenerator.Graphables.SetVisibility(false);
+            switch (itemNumber)
+            {
+                case 0: EnvelopeSurfGenerator.Graphables["Excess Thrust"].Visible = true;
+                    break;
+                case 1: EnvelopeSurfGenerator.Graphables["Level AoA"].Visible = true;
+                    break;
+                case 2: EnvelopeSurfGenerator.Graphables["Lift/Drag Ratio"].Visible = true;
+                    break;
+                case 3: EnvelopeSurfGenerator.Graphables["Thrust Available"].Visible = true;
+                    break;
+                case 4: EnvelopeSurfGenerator.Graphables["Max Lift AoA"].Visible = true;
+                    break;
+                case 5: EnvelopeSurfGenerator.Graphables["Max Lift"].Visible = true;
+                    break;
+                case 6: EnvelopeSurfGenerator.Graphables["Drag"].Visible = true;
+                    break;
+                case 7: EnvelopeSurfGenerator.Graphables["Lift Slope"].Visible = true;
+                    break;
+                case 8: EnvelopeSurfGenerator.Graphables["Pitch Input"].Visible = true;
+                    break;
+                case 9: EnvelopeSurfGenerator.Graphables["Excess Acceleration"].Visible = true;
+                    break;
+            }
+            EnvelopeSurfGenerator.Graphables["Envelope Mask"].Visible = WindTunnelSettings.ShowEnvelopeMask && (WindTunnelSettings.ShowEnvelopeMaskAlways || (itemNumber != 0 && itemNumber != 9));
         }
 
         public float GetGraphValue(int x, int y = -1)
@@ -185,7 +233,7 @@ namespace KerbalWindTunnel
         private void DrawProgressBar(float percentComplete)
         {
             //GUI.Label(new Rect(PlotPosition.x, PlotPosition.y + graphHeight / 2 - 30, graphWidth + 45, 20), "Calculating... (" + percentComplete * 100 + "%)");
-            GUILayout.Label(String.Format("Calculating... ({0:N1}%)", percentComplete * 100), labelCentered, GUILayout.Height(graphHeight + axisWidth + 20 + (CurrentGraphMode == GraphMode.FlightEnvelope ? 28 : 0)), GUILayout.Width(graphWidth));
+            GUILayout.Label(String.Format("Calculating... ({0:N1}%)", percentComplete * 100), labelCentered, GUILayout.Height(graphHeight + axisWidth + 32 + (CurrentGraphMode == GraphMode.FlightEnvelope ? 28 : 0)), GUILayout.Width(graphWidth));
             //Rect rectBar = new Rect(PlotPosition.x, PlotPosition.y + 292 / 2 - 10, 292 + 45, 20);
             //blnReturn = Drawing.DrawBar(styleBack, out rectBar, Width);
             //GUI.Button(rectBar, "");
