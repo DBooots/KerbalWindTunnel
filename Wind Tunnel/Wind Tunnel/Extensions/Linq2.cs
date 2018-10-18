@@ -61,7 +61,7 @@ namespace KerbalWindTunnel.Extensions
             }
             return result;
         }
-        public static int First(this float[,] vals, int dimension, int index, Predicate<float> predicate)
+        public static int First<T>(this T[,] vals, int dimension, int index, Predicate<T> predicate)
         {
             int limit = vals.GetUpperBound(dimension);
             if (limit < 0)
