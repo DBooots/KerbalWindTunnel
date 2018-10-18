@@ -330,7 +330,7 @@ namespace KerbalWindTunnel.DataGenerators
                 }
                 this.mach = conditions.mach;
                 this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
-                float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))); // TODO: Minus centrifugal force...
+                float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))) - (vessel.Mass * speed * speed / (radius + altitude));
                 Vector3 thrustForce = vessel.GetThrustForce(conditions);
                 //AoA_max = vessel.GetMaxAoA(conditions, out Lift_max, maxA_guess);
                 if (float.IsNaN(maxA_guess))
