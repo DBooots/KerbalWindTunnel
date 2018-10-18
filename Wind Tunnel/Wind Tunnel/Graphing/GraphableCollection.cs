@@ -600,7 +600,7 @@ namespace KerbalWindTunnel.Graphing
         {
             get
             {
-                IGraphable3 graphable3 = (IGraphable3)graphs.FirstOrDefault(g => g is IGraphable3);
+                IGraphable3 graphable3 = (IGraphable3)graphs.FirstOrDefault(g => g is IGraphable3 && g.Visible);
                 return graphable3 != null ? graphable3.ZUnit : "";
             }
             set
@@ -614,7 +614,7 @@ namespace KerbalWindTunnel.Graphing
         {
             get
             {
-                IGraphable3 graphable3 = (IGraphable3)graphs.FirstOrDefault(g => g is IGraphable3);
+                IGraphable3 graphable3 = (IGraphable3)graphs.FirstOrDefault(g => g is IGraphable3 && g.Visible);
                 return graphable3 != null ? graphable3.ZName : "";
             }
             set
