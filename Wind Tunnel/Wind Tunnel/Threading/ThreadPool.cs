@@ -54,7 +54,7 @@ namespace KerbalWindTunnel.Threading
             }
             threadCount = threads;
             started = true;
-            UnityEngine.Debug.LogFormat("Custom thread pool started: {0}", threadCount);
+            //UnityEngine.Debug.LogFormat("Custom thread pool started: {0}", threadCount);
 
             lock (pool)
             {
