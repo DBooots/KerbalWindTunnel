@@ -20,13 +20,13 @@ namespace KerbalWindTunnel.DataGenerators
             Vector2[] blank = new Vector2[0];
             graphables.Add(new LineGraph(blank) { Name = "Level AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Max Lift AoA", YUnit = "°", StringFormat = "F2", Color = Color.green });
-            graphables.Add(new LineGraph(blank) { Name = "Thrust Available", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Thrust Available", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
-            graphables.Add(new LineGraph(blank) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Drag", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
-            graphables.Add(new LineGraph(blank) { Name = "Excess Thrust", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Excess Thrust", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Pitch Input", YUnit = "", StringFormat = "F3", Color = Color.green });
-            graphables.Add(new LineGraph(blank) { Name = "Max Lift", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Max Lift", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Excess Acceleration", YUnit = "g", StringFormat = "N2", Color = Color.green });
 
             var e = graphables.GetEnumerator();

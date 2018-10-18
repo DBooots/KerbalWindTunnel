@@ -19,8 +19,8 @@ namespace KerbalWindTunnel.DataGenerators
         {
             graphables.Clear();
             Vector2[] blank = new Vector2[0];
-            graphables.Add(new LineGraph(blank) { Name = "Lift", YUnit = "kN", StringFormat = "N0", Color = Color.green });
-            graphables.Add(new LineGraph(blank) { Name = "Drag", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Lift", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Drag", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
             IGraphable[] pitch = new IGraphable[] {
@@ -87,7 +87,18 @@ namespace KerbalWindTunnel.DataGenerators
             float right = currentConditions.upperBound * Mathf.Rad2Deg;
             Func<AoAPoint, float> scale = (pt) => 1;
             if (WindTunnelSettings.UseCoefficients)
+            {
                 scale = (pt) => 1 / pt.dynamicPressure;
+                graphables["Lift"].YName = graphables["Drag"].YName = "Coefficient";
+                graphables["Lift"].YUnit = graphables["Drag"].YUnit = "";
+                ((LineGraph)graphables["Lift"]).StringFormat = ((LineGraph)graphables["Drag"]).StringFormat = "N3";
+            }
+            else
+            {
+                graphables["Lift"].YName = graphables["Drag"].YName = "Force";
+                graphables["Lift"].YUnit = graphables["Drag"].YUnit = "kN";
+                ((LineGraph)graphables["Lift"]).StringFormat = ((LineGraph)graphables["Drag"]).StringFormat = "N0";
+            }
             ((LineGraph)graphables["Lift"]).SetValues(AoAPoints.Select(pt => pt.Lift * scale(pt)).ToArray(), left, right);
             ((LineGraph)graphables["Drag"]).SetValues(AoAPoints.Select(pt => pt.Drag * scale(pt)).ToArray(), left, right);
             ((LineGraph)graphables["Lift/Drag Ratio"]).SetValues(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right);
