@@ -389,7 +389,7 @@ namespace KerbalWindTunnel
                     break;
                 case GraphMode.AoACurves:
                     newFlags = Extensions.GUILayoutHelper.ToggleGrid(graphSelections[1], lineFlags[1], 4);
-                    GUILayout.Space(4);
+                    GUILayout.Space(5);
                     GUILayout.Label("", HighLogic.Skin.horizontalSlider, GUILayout.Height(15));
                     for (int i = newFlags.Length - 1; i >= 0; i--)
                     {
@@ -437,7 +437,7 @@ namespace KerbalWindTunnel
                     break;
                 case GraphMode.VelocityCurves:
                     newFlags = Extensions.GUILayoutHelper.ToggleGrid(graphSelections[2], lineFlags[2], 5);
-                    GUILayout.Space(4);
+                    GUILayout.Space(5);
                     GUILayout.Label("", HighLogic.Skin.horizontalSlider, GUILayout.Height(15));
                     for (int i = newFlags.Length - 1; i >= 0; i--)
                     {
