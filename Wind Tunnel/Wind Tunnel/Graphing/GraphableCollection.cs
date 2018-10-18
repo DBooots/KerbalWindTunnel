@@ -48,7 +48,11 @@ namespace KerbalWindTunnel.Graphing
 
         public string XUnit
         {
-            get => graphs.Count > 0 ? graphs[0].XUnit : "";
+            get
+            {
+                int index = graphs.FindIndex(g => g.Visible);
+                return index >= 0 ? graphs[index].XUnit : "";
+            }
             set
             {
                 for (int i = graphs.Count - 1; i >= 0; i--)
@@ -57,7 +61,12 @@ namespace KerbalWindTunnel.Graphing
         }
         public string YUnit
         {
-            get => graphs.Count > 0 ? graphs[0].YUnit : "";
+
+            get
+            {
+                int index = graphs.FindIndex(g => g.Visible);
+                return index >= 0 ? graphs[index].YUnit : "";
+            }
             set
             {
                 for (int i = graphs.Count - 1; i >= 0; i--)
@@ -66,7 +75,11 @@ namespace KerbalWindTunnel.Graphing
         }
         public string XName
         {
-            get => graphs.Count > 0 ? graphs[0].XName : "";
+            get
+            {
+                int index = graphs.FindIndex(g => g.Visible);
+                return index >= 0 ? graphs[index].XName : "";
+            }
             set
             {
                 for (int i = graphs.Count - 1; i >= 0; i--)
@@ -77,14 +90,15 @@ namespace KerbalWindTunnel.Graphing
         {
             get
             {
-                if (graphs.Count <= 0) return "";
-                if (graphs[0] is Graphable graph && graph.yName == null)
+                IGraphable yGraph = graphs.FirstOrDefault(g => g.Visible);
+                if (yGraph == null) return "";
+                if (yGraph is Graphable graph && graph.yName == null)
                 {
                     string nameSubstring = GetNameSubstring();
                     if (nameSubstring != "")
                         return nameSubstring.Trim();
                 }
-                return graphs[0].YName;
+                return yGraph.YName;
             }
             set
             {
