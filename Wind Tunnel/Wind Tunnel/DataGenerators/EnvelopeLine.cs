@@ -14,7 +14,7 @@ namespace KerbalWindTunnel.DataGenerators
         public void CalculateOptimalLines(AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
         {
             float[,] excessP = envelopePoints.SelectToArray(pt => pt.Accel_excess * vessel.Mass * WindTunnelWindow.gAccel * pt.speed);
-            float[,] burnRate = envelopePoints.SelectToArray(pt => pt.Thrust_available);
+            float[,] burnRate = envelopePoints.SelectToArray(pt => pt.fuelBurnRate);
             CostIncreaseFunction fuelToClimb = (current, last) =>
             {
                 float dE = Mathf.Abs(WindTunnelWindow.gAccel * (last.y - current.y) / ((current.x + last.x) / 2) + (last.x - current.x));
