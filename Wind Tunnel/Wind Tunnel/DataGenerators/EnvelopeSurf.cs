@@ -33,6 +33,8 @@ namespace KerbalWindTunnel.DataGenerators
             graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Drag", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Lift Slope", ZUnit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Pitch Input", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Fuel Burn Rate", ZUnit = "kg/s", StringFormat = "F3", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Fuel Economy", ZUnit = "kg/100 km", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphables.Add(new OutlineMask(blank, left, right, bottom, top)     { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
             graphables.Add(new LineGraph(new Vector2[0]) { Name = "Fuel-Optimal Path", StringFormat = "N0", Color = Color.black, LineWidth = 3 });
             graphables.Add(new LineGraph(new Vector2[0]) { Name = "Time-Optimal Path", StringFormat = "N0", Color = Color.white, LineWidth = 3 });
@@ -113,6 +115,15 @@ namespace KerbalWindTunnel.DataGenerators
             ((SurfGraph)graphables["Drag"]).SetValues(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true);
             ((SurfGraph)graphables["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true);
             ((SurfGraph)graphables["Pitch Input"]).SetValues(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true);
+            ((SurfGraph)graphables["Fuel Burn Rate"]).SetValues(envelopePoints.SelectToArray(pt => pt.fuelBurnRate), left, right, bottom, top, true);
+            float[,] economy = envelopePoints.SelectToArray(pt => pt.fuelBurnRate / pt.speed * 1000 * 100);
+            int stallpt = CoordLocator.GenerateCoordLocators(envelopePoints.SelectToArray(pt=>pt.Thrust_excess)).First(0, 0, c => c.value>=0);
+            toModify = (SurfGraph)graphables["Fuel Economy"];
+            toModify.SetValues(economy, left, right, bottom, top, true);
+            float minEconomy = economy[stallpt, 0] / 3;
+            toModify.ColorFunc = (x, y, z) => z / minEconomy;
+            toModify.ZAxisScaler = minEconomy / Axis.GetMax(0, minEconomy);
+            toModify.ZAxisScale = (f) => f <= minEconomy ? f : minEconomy;
             ((OutlineMask)graphables["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
         }
 
@@ -316,6 +327,7 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float dLift;
             public readonly float drag;
             public readonly float pitchInput;
+            public readonly float fuelBurnRate;
 
             public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
             {
@@ -332,6 +344,7 @@ namespace KerbalWindTunnel.DataGenerators
                 this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
                 float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))) - (vessel.Mass * speed * speed / (radius + altitude));
                 Vector3 thrustForce = vessel.GetThrustForce(conditions);
+                fuelBurnRate = vessel.GetFuelBurnRate(conditions);
                 //AoA_max = vessel.GetMaxAoA(conditions, out Lift_max, maxA_guess);
                 if (float.IsNaN(maxA_guess))
                     AoA_max = vessel.GetMaxAoA(conditions, out Lift_max, maxA_guess);

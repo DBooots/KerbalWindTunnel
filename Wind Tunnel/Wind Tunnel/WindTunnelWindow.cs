@@ -145,7 +145,7 @@ namespace KerbalWindTunnel
         //private GraphSelect[] savedGraphSelect = new GraphSelect[] { GraphSelect.ExcessThrust, GraphSelect.LiftForce, GraphSelect.LevelFlightAoA };
         private readonly string[] graphModes = new string[] { "Flight Envelope", "AoA Curves", "Velocity Curves" };
         private readonly string[][] graphSelections = new string[][] {
-            new string[] { "Excess Thrust", "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Max Lift AoA", "Max Lift Force", "Drag Force", "Lift Slope", "Pitch Input", "Excess Acceleration" },
+            new string[] { "Excess Thrust", "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Max Lift AoA", "Max Lift Force", "Fuel Economy", "Fuel Burn Rate", "Drag Force", "Lift Slope", "Pitch Input", "Excess Acceleration" },
             new string[] { "Lift Force", "Lift/Drag Ratio", "Pitch Input", "Wet", "Drag Force", "Lift Slope", "Pitching Torque", "Dry" },
             new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Excess Thrust", "Excess Accleration", "Max Lift AoA", "Lift Slope", "Drag Force", "Max Lift", "Pitch Input" }
         };

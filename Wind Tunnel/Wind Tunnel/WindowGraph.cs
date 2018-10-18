@@ -120,18 +120,22 @@ namespace KerbalWindTunnel
                     break;
                 case 5: EnvelopeSurfGenerator.Graphables["Max Lift"].Visible = true;
                     break;
-                case 6: EnvelopeSurfGenerator.Graphables["Drag"].Visible = true;
+                case 6: EnvelopeSurfGenerator.Graphables["Fuel Economy"].Visible = true;
                     break;
-                case 7: EnvelopeSurfGenerator.Graphables["Lift Slope"].Visible = true;
+                case 7: EnvelopeSurfGenerator.Graphables["Fuel Burn Rate"].Visible = true;
                     break;
-                case 8: EnvelopeSurfGenerator.Graphables["Pitch Input"].Visible = true;
+                case 8: EnvelopeSurfGenerator.Graphables["Drag"].Visible = true;
                     break;
-                case 9: EnvelopeSurfGenerator.Graphables["Excess Acceleration"].Visible = true;
+                case 9: EnvelopeSurfGenerator.Graphables["Lift Slope"].Visible = true;
+                    break;
+                case 10: EnvelopeSurfGenerator.Graphables["Pitch Input"].Visible = true;
+                    break;
+                case 11: EnvelopeSurfGenerator.Graphables["Excess Acceleration"].Visible = true;
                     break;
             }
             EnvelopeSurfGenerator.Graphables["Fuel-Optimal Path"].Visible = lineFlags[0];
             EnvelopeSurfGenerator.Graphables["Time-Optimal Path"].Visible = lineFlags[1];
-            EnvelopeSurfGenerator.Graphables["Envelope Mask"].Visible = WindTunnelSettings.ShowEnvelopeMask && (WindTunnelSettings.ShowEnvelopeMaskAlways || (itemNumber != 0 && itemNumber != 9));
+            EnvelopeSurfGenerator.Graphables["Envelope Mask"].Visible = WindTunnelSettings.ShowEnvelopeMask && (WindTunnelSettings.ShowEnvelopeMaskAlways || (itemNumber != 0 && itemNumber != 11));
         }
 
         public float GetGraphValue(int x, int y = -1)
