@@ -76,7 +76,14 @@ namespace KerbalWindTunnel.Threading
         }
         public static void QueueUserWorkItem(WaitCallback callback, object state, bool verbose = false)
         {
-            System.Threading.ThreadPool.QueueUserWorkItem(callback, state);
+            //if (verbose)
+            //    UnityEngine.Debug.Log("Queuing item.");
+            //System.Threading.ThreadPool.QueueUserWorkItem(callback, state);
+            queue.Enqueue(new CallbackStatePair(callback, state));
+            //if (verbose)
+            //    UnityEngine.Debug.Log("Item queued. Threads: " + ThreadCount);
+            //if (verbose)
+            //    UnityEngine.Debug.Log("Remaining tasks: " + queue.Count);
         }
 
         private static void ThreadTask(object idObj)
