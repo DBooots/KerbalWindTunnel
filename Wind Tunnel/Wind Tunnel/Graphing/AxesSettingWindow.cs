@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace KerbalWindTunnel.Graphing
@@ -83,6 +84,15 @@ namespace KerbalWindTunnel.Graphing
                 }, false),
                 new DialogGUIButton("Close", () => { }, true)
             };
+
+            if (grapher.All(g => !(g is IGraphable3)))
+            {
+                dialog.RemoveAt(14);
+                dialog.RemoveAt(13);
+                dialog.RemoveAt(12);
+                dialog.RemoveAt(11);
+                dialog.RemoveAt(10);
+            }
 
             return PopupDialog.SpawnPopupDialog(new Vector2(0, 1), new Vector2(0, 1),
                 new MultiOptionDialog("KWTAxesSettings", "", "Axes Settings", UISkinManager.defaultSkin, 150,
