@@ -12,6 +12,8 @@ namespace KerbalWindTunnel.Graphing
         public UnityEngine.Texture2D hAxisTex;
         public UnityEngine.Texture2D vAxisTex;
         public UnityEngine.Texture2D cAxisTex;
+
+        private AxesSettingWindow axesWindow;
         
         public override bool AutoFitAxes
         {
@@ -49,11 +51,15 @@ namespace KerbalWindTunnel.Graphing
             this.cAxisTex = new UnityEngine.Texture2D(width, axisWidth, UnityEngine.TextureFormat.ARGB32, false);
 
             setXmin = setXmax = setYmin = setYmax = setZmin = setZmax = float.NaN;
+
+            axesWindow = new AxesSettingWindow(this);
         }
         public Grapher(int width, int height, int axisWidth, IEnumerable<IGraphable> graphs) : this(width, height, axisWidth)
         {
             AddRange(graphs);
         }
+
+        public PopupDialog SpawnAxesWindow() => axesWindow.SpawnPopupDialog();
         
         public void SetAxesLimits(int index, float min, float max, bool delayRecalculate = false)
         {

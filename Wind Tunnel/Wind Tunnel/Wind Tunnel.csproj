@@ -60,6 +60,7 @@
   <ItemGroup>
     <Compile Include="DataGenerators\EnvelopeLine.cs" />
     <Compile Include="Extensions\GUILayoutHelper.cs" />
+    <Compile Include="Graphing\AxesSettingWindow.cs" />
     <Compile Include="Graphing\Graphable.cs" />
     <Compile Include="Graphing\Legend.cs" />
     <Compile Include="Graphing\Line3Graph.cs" />
