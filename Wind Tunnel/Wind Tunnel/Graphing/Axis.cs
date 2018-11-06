@@ -27,7 +27,7 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
-        public Axis(float min, float max, bool forX = true)
+        public Axis(float min, float max, bool forX = true, bool forceBounds = false)
         {
             // I have to initialize the fields before calling the proper
             // initialization method...
@@ -36,10 +36,10 @@ namespace KerbalWindTunnel.Graphing
             TickCount = 0;
             this.labels = new List<string>();
             this.forX = forX;
-            CalculateBounds(min, max, forX);
+            CalculateBounds(min, max, forX, forceBounds);
         }
 
-        private void CalculateBounds(float min, float max, bool forX = true)
+        private void CalculateBounds(float min, float max, bool forX = true, bool forceBounds = false)
         {
             if (min > max)
             {
@@ -57,14 +57,23 @@ namespace KerbalWindTunnel.Graphing
                 return;
             }
             this.MajorUnit = GetMajorUnit(max, min, forX);
-            if (min % MajorUnit == 0)
+            if (!forceBounds || (min % MajorUnit == 0 && max % MajorUnit == 0))
+            {
+                if (min % MajorUnit == 0)
+                    this._min = min;
+                else
+                    this._min = Mathf.Floor(Mathf.Min(min, 0) / MajorUnit * 1.05f) * MajorUnit;
+                if (max % MajorUnit == 0)
+                    this._max = max;
+                else
+                    this._max = Mathf.Ceil(Mathf.Max(max, 0) / MajorUnit * 1.05f) * MajorUnit;
+            }
+            else
+            {
+                this.MajorUnit = (max - min) / 10f;
                 this._min = min;
-            else
-                this._min = Mathf.Floor(Mathf.Min(min, 0) / MajorUnit * 1.05f) * MajorUnit;
-            if (max % MajorUnit == 0)
                 this._max = max;
-            else
-                this._max = Mathf.Ceil(Mathf.Max(max, 0) / MajorUnit * 1.05f) * MajorUnit;
+            }
 
             TickCount = Mathf.RoundToInt((_max - _min) / MajorUnit);
 
