@@ -23,6 +23,8 @@ namespace KerbalWindTunnel
         private Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
         private Rect cAxisRect = new Rect(0, 0, graphWidth, axisWidth);
 
+        private PopupDialog axesWindow = null;
+
         private void DrawGraph(GraphMode graphMode)
         {
             if (graphDirty)
@@ -233,6 +235,12 @@ namespace KerbalWindTunnel
             {
                 GUI.Label(new Rect(43 + Mathf.RoundToInt(graphWidth / (float)grapher.horizontalAxis.TickCount * i), 80 + graphHeight, 40, 15),
                     grapher.horizontalAxis.labels[i], hAxisMarks);
+            }
+
+            if (GUI.Button(new Rect(12, 80 + 5 + graphHeight - 10, 25, 25), settingsTex))
+            {
+                axesWindow = grapher.SpawnAxesWindow();
+                axesWindow.RTrf.anchoredPosition = new Vector2(WindowRect.x + WindowRect.width, -WindowRect.y);
             }
         }
 

@@ -76,6 +76,10 @@ namespace KerbalWindTunnel
                     // Request a new graph;
                     graphDirty = true;
                     graphRequested = false;
+
+                    // Close axes setting window:
+                    if (axesWindow != null)
+                        axesWindow.Dismiss();
                 }
             }
         }
@@ -343,7 +347,7 @@ namespace KerbalWindTunnel
         {
             if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
             {
-                if (GUI.Button(new Rect(12, 80 + graphHeight + 9 + 11 - (CurrentGraphMode != GraphMode.FlightEnvelope ? 28 : 0), 25, 25), saveIconTex))
+                if (GUI.Button(new Rect(80 + graphWidth, 80 + 5 + graphHeight - 10, 25, 25), saveIconTex))
                 {
                     if (EditorLogic.fetch.ship != null)
                         grapher.WriteToFile(EditorLogic.fetch.ship.shipName);
@@ -805,7 +809,16 @@ namespace KerbalWindTunnel
             settingsTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_settings));
             saveIconTex.LoadImage(System.IO.File.ReadAllBytes(WindTunnel.texPath + WindTunnel.iconPath_save));
 
-            onWindowVisibleChanged += (MonoBehaviourWindow sender, bool visible) => { if (inputLocked && !visible && sender == this) { EditorLogic.fetch.Unlock(lockID); inputLocked = false; } };
+            onWindowVisibleChanged += (MonoBehaviourWindow sender, bool visible) =>
+            {
+                if (!visible && inputLocked && sender == this)
+                {
+                    EditorLogic.fetch.Unlock(lockID);
+                    inputLocked = false;
+                }
+                if (!visible && sender == this && axesWindow != null)
+                    axesWindow.Dismiss();
+            };
         }
 
         internal override void Update()
@@ -828,6 +841,8 @@ namespace KerbalWindTunnel
                     inputLocked = false;
                 }
             }
+            if (Visible && axesWindow != null)
+                axesWindow.RTrf.anchoredPosition = new Vector2(WindowRect.x + WindowRect.width, -WindowRect.y);
         }
 
         internal override void Awake()
