@@ -34,6 +34,10 @@ namespace KerbalWindTunnel.Graphing
         public Axis verticalAxis = new Axis(0, 0, false);
         public Axis colorAxis = new Axis(0, 0);
 
+        private float selfXmin, selfXmax, selfYmin, selfYmax, selfZmin, selfZmax;
+        internal float setXmin, setXmax, setYmin, setYmax, setZmin, setZmax;
+        protected internal bool[] useSelfAxes = new bool[] { true, true, true };
+
         protected bool axesDirty = true;
         protected bool graphDirty = true;
 
@@ -43,28 +47,87 @@ namespace KerbalWindTunnel.Graphing
             this.hAxisTex = new UnityEngine.Texture2D(width, axisWidth, UnityEngine.TextureFormat.ARGB32, false);
             this.vAxisTex = new UnityEngine.Texture2D(axisWidth, height, UnityEngine.TextureFormat.ARGB32, false);
             this.cAxisTex = new UnityEngine.Texture2D(width, axisWidth, UnityEngine.TextureFormat.ARGB32, false);
+
+            setXmin = setXmax = setYmin = setYmax = setZmin = setZmax = float.NaN;
         }
         public Grapher(int width, int height, int axisWidth, IEnumerable<IGraphable> graphs) : this(width, height, axisWidth)
         {
             AddRange(graphs);
         }
         
+        public void SetAxesLimits(int index, float min, float max, bool delayRecalculate = false)
+        {
+            if (index > 2 || float.IsNaN(min) || float.IsNaN(max))
+                return;
+
+            useSelfAxes[index] = false;
+            switch (index)
+            {
+                case 0:
+                    setXmin = min;
+                    setXmax = max;
+                    break;
+                case 1:
+                    setYmin = min;
+                    setYmax = max;
+                    break;
+                case 2:
+                    setZmin = min;
+                    setZmax = max;
+                    break;
+            }
+            if (!delayRecalculate)
+                RecalculateLimits();
+        }
+        public void ReleaseAxesLimits(int index, bool delayRecalculate = false)
+        {
+            useSelfAxes[index] = true;
+            if (!delayRecalculate)
+                RecalculateLimits();
+        }
+
         public override bool RecalculateLimits()
         {
             float[] oldLimits = new float[] { XMin, XMax, YMin, YMax, ZMin, ZMax };
 
-            base.RecalculateLimits();
+            bool baseResult = base.RecalculateLimits();
+            bool setsNaN = float.IsNaN(setXmin) || float.IsNaN(setXmax) || float.IsNaN(setYmin) || float.IsNaN(setYmax) || float.IsNaN(setZmin) || float.IsNaN(setZmax);
+            if (((useSelfAxes[0] || useSelfAxes[1] || useSelfAxes[2]) && baseResult) || setsNaN)
+            {
+                horizontalAxis = new Axis(XMin, XMax, true);
+                verticalAxis = new Axis(YMin, YMax, false);
+                colorAxis = new Axis(ZMin, ZMax);
 
-            horizontalAxis = new Axis(XMin, XMax, true);
-            verticalAxis = new Axis(YMin, YMax, false);
-            colorAxis = new Axis(ZMin, ZMax);
-            XMin = horizontalAxis.Min;
-            XMax = horizontalAxis.Max;
-            YMin = verticalAxis.Min;
-            YMax = verticalAxis.Max;
-            ZMin = colorAxis.Min;
-            ZMax = colorAxis.Max;
+                XMin = selfXmin = horizontalAxis.Min;
+                XMax = selfXmax = horizontalAxis.Max;
+                YMin = selfYmin = verticalAxis.Min;
+                YMax = selfYmax = verticalAxis.Max;
+                ZMin = selfZmin = colorAxis.Min;
+                ZMax = selfZmax = colorAxis.Max;
 
+                if (setsNaN)
+                {
+                    setXmin = selfXmin; setXmax = selfXmax;
+                    setYmin = selfYmin; setYmax = selfYmax;
+                    setZmin = selfZmin; setZmax = selfZmax;
+                }
+            }
+            if (!useSelfAxes[0])
+            {
+                XMin = setXmin; XMax = setXmax;
+                horizontalAxis = new Axis(XMin, XMax, true, true);
+            }
+            if (!useSelfAxes[1])
+            {
+                YMin = setYmin; YMax = setYmax;
+                verticalAxis = new Axis(YMin, YMax, false, true);
+            }
+            if (!useSelfAxes[2])
+            {
+                ZMin = setZmin; ZMax = setZmax;
+                colorAxis = new Axis(ZMin, ZMax, forceBounds: true);
+            }
+            
             if (axesDirty || !(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax && oldLimits[4] == ZMin && oldLimits[5] == ZMax))
             {
                 graphDirty = true;
