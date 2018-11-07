@@ -94,6 +94,26 @@ namespace KerbalWindTunnel.Graphing
             if (!delayRecalculate)
                 RecalculateLimits();
         }
+        public void ResetStoredLimits(int index = -1)
+        {
+            switch (index)
+            {
+                case 0:
+                    setXmin = setXmax = float.NaN;
+                    break;
+                case 1:
+                    setYmin = setYmax = float.NaN;
+                    break;
+                case 2:
+                    setZmin = setZmax = float.NaN;
+                    break;
+                case -1:
+                    ResetStoredLimits(0);
+                    ResetStoredLimits(1);
+                    ResetStoredLimits(2);
+                    break;
+            }
+        }
 
         public override bool RecalculateLimits()
         {
@@ -281,6 +301,25 @@ namespace KerbalWindTunnel.Graphing
             UnityEngine.Object.Destroy(hAxisTex);
             UnityEngine.Object.Destroy(vAxisTex);
             UnityEngine.Object.Destroy(cAxisTex);
+        }
+
+        public override void Clear()
+        {
+            base.Clear();
+            ResetStoredLimits();
+        }
+        public override bool Remove(IGraphable graph)
+        {
+            bool result = base.Remove(graph);
+            if (result && this.Count == 0)
+                ResetStoredLimits();
+            return result;
+        }
+        public override void RemoveAt(int index)
+        {
+            base.RemoveAt(index);
+            if (this.Count == 0)
+                ResetStoredLimits();
         }
     }
 }
