@@ -39,8 +39,8 @@ namespace KerbalWindTunnel.Graphing
         public Axis verticalAxis = new Axis(0, 0, false);
         public Axis colorAxis = new Axis(0, 0);
 
-        private float selfXmin, selfXmax, selfYmin, selfYmax, selfZmin, selfZmax;
-        internal float setXmin, setXmax, setYmin, setYmax, setZmin, setZmax;
+        protected internal float selfXmin, selfXmax, selfYmin, selfYmax, selfZmin, selfZmax;
+        protected internal float setXmin, setXmax, setYmin, setYmax, setZmin, setZmax;
         protected internal bool[] useSelfAxes = new bool[] { true, true, true };
 
         protected bool axesDirty = true;
@@ -254,6 +254,7 @@ namespace KerbalWindTunnel.Graphing
         public void SetCollection(IEnumerable<IGraphable> newCollection)
         {
             this.Graphables = newCollection.ToList();
+            ResetStoredLimits();
         }
 
         public static explicit operator UnityEngine.Texture2D(Grapher graph)

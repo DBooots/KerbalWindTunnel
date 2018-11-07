@@ -80,6 +80,10 @@ namespace KerbalWindTunnel
                     // Close axes setting window:
                     if (axesWindow != null)
                         axesWindow.Dismiss();
+                    grapher.ReleaseAxesLimits(0, true);
+                    grapher.ReleaseAxesLimits(1, true);
+                    grapher.ReleaseAxesLimits(2, true);
+                    grapher.RecalculateLimits();
                 }
             }
         }
