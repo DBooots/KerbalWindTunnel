@@ -39,6 +39,9 @@ namespace KerbalWindTunnel.Graphing
         public Axis verticalAxis = new Axis(0, 0, false);
         public Axis colorAxis = new Axis(0, 0);
 
+        public delegate void AxesChangeEventHandler(Grapher sender, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax);
+        public event AxesChangeEventHandler AxesChanged;
+
         protected internal float selfXmin, selfXmax, selfYmin, selfYmax, selfZmin, selfZmax;
         protected internal float setXmin, setXmax, setYmin, setYmax, setZmin, setZmax;
         protected internal bool[] useSelfAxes = new bool[] { true, true, true };
@@ -94,7 +97,7 @@ namespace KerbalWindTunnel.Graphing
             if (!delayRecalculate)
                 RecalculateLimits();
         }
-        public void ResetStoredLimits(int index = -1)
+        public void ResetStoredLimits(int index = -1, bool deferRecalculate = false)
         {
             switch (index)
             {
@@ -108,13 +111,17 @@ namespace KerbalWindTunnel.Graphing
                     setZmin = setZmax = float.NaN;
                     break;
                 case -1:
-                    ResetStoredLimits(0);
-                    ResetStoredLimits(1);
-                    ResetStoredLimits(2);
+                    ResetStoredLimits(0, true);
+                    ResetStoredLimits(1, true);
+                    ResetStoredLimits(2, true);
                     break;
             }
+            if (index >= 0 && !deferRecalculate && !useSelfAxes[index])
+                RecalculateLimits();
         }
 
+        public void OnAxesChanged() => this.AxesChanged?.Invoke(this, XMin, XMax, YMin, YMax, ZMin, ZMax);
+        
         public override bool RecalculateLimits()
         {
             float[] oldLimits = new float[] { XMin, XMax, YMin, YMax, ZMin, ZMax, CMin, CMax };
@@ -182,8 +189,12 @@ namespace KerbalWindTunnel.Graphing
                 ZMin = CMin = setZmin; ZMax = CMax = setZmax;
                 colorAxis = new Axis(CMin, CMax, forceBounds: true);
             }
-            
-            if (axesDirty || !(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax && oldLimits[4] == ZMin && oldLimits[5] == ZMax && oldLimits[6] == CMin && oldLimits[7] == CMax))
+
+            bool boundAxesChanged = !(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax);
+            if (boundAxesChanged)
+                OnAxesChanged();
+
+            if (axesDirty || boundAxesChanged || !(oldLimits[4] == ZMin && oldLimits[5] == ZMax && oldLimits[6] == CMin && oldLimits[7] == CMax))
             {
                 graphDirty = true;
                 axesDirty = true;
