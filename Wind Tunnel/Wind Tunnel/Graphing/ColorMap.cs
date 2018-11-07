@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace KerbalWindTunnel.Graphing
 {
@@ -8,9 +9,8 @@ namespace KerbalWindTunnel.Graphing
         public static readonly ColorMap Jet_Dark = new ColorMap(ColorMapJetDark);
 
         public delegate Color ColorMapDelegate(float value);
-        public delegate bool FilterCriteria(float value);
         ColorMapDelegate colormapDelegate;
-        public FilterCriteria Filter { get; set; } = (v) => !float.IsNaN(v) && !float.IsInfinity(v);
+        public Predicate<float> Filter { get; set; } = (v) => !float.IsNaN(v) && !float.IsInfinity(v);
         Color FilterColor { get; set; } = Color.clear;
         bool useFunc = false;
         bool Stepped { get; set; } = false;
