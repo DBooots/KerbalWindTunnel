@@ -21,10 +21,10 @@ namespace KerbalWindTunnel.Graphing
         }
         private bool _visible = true;
         public bool DisplayValue { get; set; } = true;
-        public virtual float XMin { get; protected set; } = float.NaN;
-        public virtual float XMax { get; protected set; } = float.NaN;
-        public virtual float YMin { get; protected set; } = float.NaN;
-        public virtual float YMax { get; protected set; } = float.NaN;
+        public virtual float XMin { get; set; } = float.NaN;
+        public virtual float XMax { get; set; } = float.NaN;
+        public virtual float YMin { get; set; } = float.NaN;
+        public virtual float YMax { get; set; } = float.NaN;
         public Func<float, float> XAxisScale { get; set; } = (v) => v;
         public Func<float, float> YAxisScale { get; set; } = (v) => v;
 
@@ -175,7 +175,18 @@ namespace KerbalWindTunnel.Graphing
             if (!Visible) return;
             for (int i = 0; i < graphs.Count; i++)
             {
-                graphs[i].Draw(ref texture, XMin, XMax, YMin, YMax);
+                graphs[i].Draw(ref texture, xLeft, xRight, yBottom, yTop);
+            }
+        }
+        public virtual void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop, float cMin, float cMax)
+        {
+            if (!Visible) return;
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                if (graphs[i] is SurfGraph surfGraph)
+                    surfGraph.Draw(ref texture, xLeft, xRight, yBottom, yTop, cMin, cMax);
+                else
+                    graphs[i].Draw(ref texture, xLeft, xRight, yBottom, yTop);
             }
         }
 
@@ -605,10 +616,9 @@ namespace KerbalWindTunnel.Graphing
 
     public class GraphableCollection3 : GraphableCollection, IGraphable3
     {
-        public virtual float ZMin { get; protected set; } = float.NaN;
-        public virtual float ZMax { get; protected set; } = float.NaN;
+        public virtual float ZMin { get; set; } = float.NaN;
+        public virtual float ZMax { get; set; } = float.NaN;
         public float ZAxisScaler { get; set; } = 1;
-        public Func<float, float> ZAxisScale { get; set; } = (v) => v;
 
         public string ZUnit
         {
@@ -657,8 +667,8 @@ namespace KerbalWindTunnel.Graphing
                 if (!graphs[i].Visible) continue;
                 if (graphs[i] is Graphable3 surf)
                 {
-                    float zMin = surf.ZAxisScale(surf.ZMin);
-                    float zMax = surf.ZAxisScale(surf.ZMax);
+                    float zMin = surf.ZMin;
+                    float zMax = surf.ZMax;
                     if (zMin < this.ZMin || float.IsNaN(this.ZMin)) this.ZMin = zMin;
                     if (zMax > this.ZMax || float.IsNaN(this.ZMax)) this.ZMax = zMax;
                     if (dominantColorMap == null)

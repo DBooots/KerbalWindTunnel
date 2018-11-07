@@ -23,21 +23,21 @@ namespace KerbalWindTunnel.DataGenerators
             float bottom = 0, top = 0, left = 0, right = 0;
             float[,] blank = new float[0, 0];
 
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top)       { Name = "Excess Thrust", ZUnit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive, ZAxisScale = (v) => v >= 0 ? v : 0 });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top)       { Name = "Excess Acceleration", ZUnit = "g", StringFormat = "N2", Color = Jet_Dark_Positive, ZAxisScale = (v) => v >= 0 ? v : 0 });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Thrust Available", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Level AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Max Lift AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Max Lift", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Lift/Drag Ratio", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Drag", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Lift Slope", ZUnit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Pitch Input", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Fuel Burn Rate", ZUnit = "kg/s", StringFormat = "F3", Color = ColorMap.Jet_Dark });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top, true) { Name = "Fuel Economy", ZUnit = "kg/100 km", StringFormat = "F2", Color = ColorMap.Jet_Dark });
-            graphables.Add(new OutlineMask(blank, left, right, bottom, top)     { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
-            graphables.Add(new LineGraph(new Vector2[0]) { Name = "Fuel-Optimal Path", StringFormat = "N0", Color = Color.black, LineWidth = 3 });
-            graphables.Add(new LineGraph(new Vector2[0]) { Name = "Time-Optimal Path", StringFormat = "N0", Color = Color.white, LineWidth = 3 });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Excess Thrust", ZUnit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Excess Acceleration", ZUnit = "g", StringFormat = "N2", Color = Jet_Dark_Positive });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Thrust Available", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Level AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Max Lift AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Max Lift", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Lift/Drag Ratio", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Drag", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Lift Slope", ZUnit = "m^2/°", StringFormat = "F3", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Pitch Input", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Fuel Burn Rate", ZUnit = "kg/s", StringFormat = "F3", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Fuel Economy", ZUnit = "kg/100 km", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            graphables.Add(new OutlineMask(blank, left, right, bottom, top) { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
+            graphables.Add(new LineGraph(new Vector2[0])                  { Name = "Fuel-Optimal Path", StringFormat = "N0", Color = Color.black, LineWidth = 3 });
+            graphables.Add(new LineGraph(new Vector2[0])                        { Name = "Time-Optimal Path", StringFormat = "N0", Color = Color.white, LineWidth = 3 });
 
             var e = graphables.GetEnumerator();
             while (e.MoveNext())
@@ -95,35 +95,24 @@ namespace KerbalWindTunnel.DataGenerators
             if (WindTunnelSettings.UseCoefficients)
                 scale = (pt) => 1 / pt.dynamicPressure;
 
-            SurfGraph toModify = (SurfGraph)graphables["Excess Thrust"];
-            toModify.SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
-            float maxThrustExcess = toModify.ZMax;
-            toModify.ColorFunc = (x, y, z) => z / maxThrustExcess;
-            toModify.ZAxisScaler = maxThrustExcess / Axis.GetMax(0, maxThrustExcess);
+            ((SurfGraph)graphables["Excess Thrust"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
+            ((SurfGraph)graphables["Excess Acceleration"]).SetValues(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top);
+            ((SurfGraph)graphables["Thrust Available"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top);
+            ((SurfGraph)graphables["Level AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top);
+            ((SurfGraph)graphables["Max Lift AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top);
+            ((SurfGraph)graphables["Max Lift"]).SetValues(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top);
+            ((SurfGraph)graphables["Lift/Drag Ratio"]).SetValues(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top);
+            ((SurfGraph)graphables["Drag"]).SetValues(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top);
+            ((SurfGraph)graphables["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top);
+            ((SurfGraph)graphables["Pitch Input"]).SetValues(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top);
+            ((SurfGraph)graphables["Fuel Burn Rate"]).SetValues(envelopePoints.SelectToArray(pt => pt.fuelBurnRate), left, right, bottom, top);
 
-            toModify = (SurfGraph)graphables["Excess Acceleration"];
-            toModify.SetValues(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top);
-            float maxAccelExcess = toModify.ZMax;
-            toModify.ColorFunc = (x, y, z) => z / maxAccelExcess;
-            toModify.ZAxisScaler = maxAccelExcess / Axis.GetMax(0, maxAccelExcess);
-
-            ((SurfGraph)graphables["Thrust Available"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Level AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Max Lift AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Max Lift"]).SetValues(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Lift/Drag Ratio"]).SetValues(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Drag"]).SetValues(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Pitch Input"]).SetValues(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top, true);
-            ((SurfGraph)graphables["Fuel Burn Rate"]).SetValues(envelopePoints.SelectToArray(pt => pt.fuelBurnRate), left, right, bottom, top, true);
             float[,] economy = envelopePoints.SelectToArray(pt => pt.fuelBurnRate / pt.speed * 1000 * 100);
             int stallpt = CoordLocator.GenerateCoordLocators(envelopePoints.SelectToArray(pt=>pt.Thrust_excess)).First(0, 0, c => c.value>=0);
-            toModify = (SurfGraph)graphables["Fuel Economy"];
-            toModify.SetValues(economy, left, right, bottom, top, true);
+            SurfGraph toModify = (SurfGraph)graphables["Fuel Economy"];
+            toModify.SetValues(economy, left, right, bottom, top);
             float minEconomy = economy[stallpt, 0] / 3;
-            toModify.ColorFunc = (x, y, z) => z / minEconomy;
-            toModify.ZAxisScaler = minEconomy / Axis.GetMax(0, minEconomy);
-            toModify.ZAxisScale = (f) => f <= minEconomy ? f : minEconomy;
+            toModify.ZMax = minEconomy;
             ((OutlineMask)graphables["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
         }
 

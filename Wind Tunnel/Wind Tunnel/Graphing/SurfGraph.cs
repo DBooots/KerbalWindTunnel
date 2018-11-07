@@ -6,6 +6,9 @@ namespace KerbalWindTunnel.Graphing
     public class SurfGraph : Graphable3
     {
         public override ColorMap Color { get; set; } = ColorMap.Jet_Dark;
+
+        public float CMin { get; set; } = float.NaN;
+        public float CMax { get; set; } = float.NaN;
         
         protected float[,] _values;
         public float[,] Values
@@ -18,7 +21,8 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
-        public SurfGraph(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false)
+        public SurfGraph() { this.ColorFunc = (x, y, z) => z; }
+        public SurfGraph(float[,] values, float xLeft, float xRight, float yBottom, float yTop) : this()
         {
             this._values = values;
             this.XMin = xLeft;
@@ -32,17 +36,12 @@ namespace KerbalWindTunnel.Graphing
             }
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
-            this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
-            if (scaleZToAxis)
-            {
-                float axisMax = Axis.GetMax(ZMin, ZMax);
-                float axisMin = Axis.GetMin(ZMin, ZMax);
-                //this.ZAxisScaler = (ZMax - ZMin) / (Axis.GetMax(ZMin, ZMax) - Axis.GetMin(ZMin, ZMax));
-                this.ColorFunc = (x, y, z) => (z - axisMin) / (axisMax - axisMin);
-            }
         }
-        
+
         public override void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop)
+            => this.Draw(ref texture, xLeft, xRight, yBottom, yTop, ZMin, ZMax);
+
+        public void Draw(ref UnityEngine.Texture2D texture, float xLeft, float xRight, float yBottom, float yTop, float cMin, float cMax)
         {
             if (!Visible) return;
             int width = texture.width - 1;
@@ -50,6 +49,7 @@ namespace KerbalWindTunnel.Graphing
             
             float graphStepX = (xRight - xLeft) / width;
             float graphStepY = (yTop - yBottom) / height;
+            float cRange = cMax - cMin;
 
             for (int x = 0; x <= width; x++)
             {
@@ -59,7 +59,7 @@ namespace KerbalWindTunnel.Graphing
                     float yF = y * graphStepY + yBottom;
                     if (xF < XMin || xF > XMax || yF < YMin || yF > YMax)
                         continue;
-                    texture.SetPixel(x, y, this.Color[ColorFunc(xF, yF, ValueAt(xF, yF) * ZAxisScaler)]);
+                    texture.SetPixel(x, y, this.Color[(ColorFunc(xF, yF, ValueAt(xF, yF)) - cMin) / cMax]);
                 }
             }
 
@@ -198,7 +198,7 @@ namespace KerbalWindTunnel.Graphing
             texture.Apply();
         }
 
-        public void SetValues(float[,] values, float xLeft, float xRight, float yBottom, float yTop, bool scaleZToAxis = false)
+        public void SetValues(float[,] values, float xLeft, float xRight, float yBottom, float yTop)
         {
             this._values = values;
             this.XMin = xLeft;
@@ -212,14 +212,8 @@ namespace KerbalWindTunnel.Graphing
             }
             this.ZMin = values.Min(true);
             this.ZMax = values.Max(true);
-            this.ColorFunc = (x, y, z) => (z - ZMin) / (ZMax - ZMin);
-            if (scaleZToAxis)
-            {
-                float axisMax = Axis.GetMax(ZMin, ZMax);
-                float axisMin = Axis.GetMin(ZMin, ZMax);
-                //this.ZAxisScaler = (ZMax - ZMin) / (Axis.GetMax(ZMin, ZMax) - Axis.GetMin(ZMin, ZMax));
-                this.ColorFunc = (x, y, z) => (z - axisMin) / (axisMax - axisMin);
-            }
+            this.CMin = ZMin;
+            this.CMax = CMax;
             OnValuesChanged(null);
         }
         

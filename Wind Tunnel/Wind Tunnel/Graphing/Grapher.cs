@@ -29,6 +29,9 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
+        public float CMin { get; set; } = float.NaN;
+        public float CMax { get; set; } = float.NaN;
+
         public virtual float Width { get; set; }
         public virtual float Height { get; set; }
 
@@ -94,22 +97,48 @@ namespace KerbalWindTunnel.Graphing
 
         public override bool RecalculateLimits()
         {
-            float[] oldLimits = new float[] { XMin, XMax, YMin, YMax, ZMin, ZMax };
+            float[] oldLimits = new float[] { XMin, XMax, YMin, YMax, ZMin, ZMax, CMin, CMax };
 
             bool baseResult = base.RecalculateLimits();
+
+            CMin = CMax = float.NaN;
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                if (!graphs[i].Visible) continue;
+                if (graphs[i] is SurfGraph surfGraph)
+                {
+                    if (float.IsNaN(CMin) || CMin > surfGraph.CMin) CMin = surfGraph.CMin;
+                    if (float.IsNaN(CMax) || CMax < surfGraph.CMax) CMax = surfGraph.CMax;
+                }
+            }
+            // If color is somehow not set...
+            if (float.IsNaN(CMin)) CMin = ZMin;
+            if (float.IsNaN(CMax)) CMax = ZMax;
+            // Check that the ColorMap will accept our limits, otherwise attempt to find new ones.
+            if (!float.IsNaN(CMin) && !dominantColorMap.Filter(CMin))
+            {
+                if (float.IsNegativeInfinity(CMin) && dominantColorMap.Filter(float.MinValue)) CMin = float.MinValue;
+                else if (CMin < 0 && dominantColorMap.Filter(0)) CMin = 0;
+            }
+            if (!float.IsNaN(CMax) && !dominantColorMap.Filter(CMax))
+            {
+                if (float.IsPositiveInfinity(CMax) && dominantColorMap.Filter(float.MaxValue)) CMax = float.MaxValue;
+                else if (CMax > 0 && dominantColorMap.Filter(0)) CMax = 0;
+            }
+
             bool setsNaN = float.IsNaN(setXmin) || float.IsNaN(setXmax) || float.IsNaN(setYmin) || float.IsNaN(setYmax) || float.IsNaN(setZmin) || float.IsNaN(setZmax);
             if (((useSelfAxes[0] || useSelfAxes[1] || useSelfAxes[2]) && baseResult) || setsNaN)
             {
                 horizontalAxis = new Axis(XMin, XMax, true);
                 verticalAxis = new Axis(YMin, YMax, false);
-                colorAxis = new Axis(ZMin, ZMax);
+                colorAxis = new Axis(CMin, CMax);
 
                 XMin = selfXmin = horizontalAxis.Min;
                 XMax = selfXmax = horizontalAxis.Max;
                 YMin = selfYmin = verticalAxis.Min;
                 YMax = selfYmax = verticalAxis.Max;
-                ZMin = selfZmin = colorAxis.Min;
-                ZMax = selfZmax = colorAxis.Max;
+                ZMin = CMin = selfZmin = colorAxis.Min;
+                ZMax = CMax = selfZmax = colorAxis.Max;
 
                 if (setsNaN)
                 {
@@ -130,11 +159,11 @@ namespace KerbalWindTunnel.Graphing
             }
             if (!useSelfAxes[2])
             {
-                ZMin = setZmin; ZMax = setZmax;
-                colorAxis = new Axis(ZMin, ZMax, forceBounds: true);
+                ZMin = CMin = setZmin; ZMax = CMax = setZmax;
+                colorAxis = new Axis(CMin, CMax, forceBounds: true);
             }
             
-            if (axesDirty || !(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax && oldLimits[4] == ZMin && oldLimits[5] == ZMax))
+            if (axesDirty || !(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax && oldLimits[4] == ZMin && oldLimits[5] == ZMax && oldLimits[6] == CMin && oldLimits[7] == CMax))
             {
                 graphDirty = true;
                 axesDirty = true;
@@ -174,8 +203,8 @@ namespace KerbalWindTunnel.Graphing
                 axesDirty = false;
             }
             ClearTexture(ref graphTex);
-
-            this.Draw(ref this.graphTex, XMin, XMax, YMin, YMax);
+            
+            this.Draw(ref this.graphTex, XMin, XMax, YMin, YMax, CMin, CMax);
 
             graphDirty = false;
         }

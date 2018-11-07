@@ -7,10 +7,10 @@ namespace KerbalWindTunnel.Graphing
         string Name { get; }
         bool Visible { get; set; }
         bool DisplayValue { get; set; }
-        float XMin { get; }
-        float XMax { get; }
-        float YMin { get; }
-        float YMax { get; }
+        float XMin { get; set; }
+        float XMax { get; set; }
+        float YMin { get; set; }
+        float YMax { get; set; }
         string XUnit { get; set; }
         string YUnit { get; set; }
         string XName { get; set; }
@@ -26,11 +26,10 @@ namespace KerbalWindTunnel.Graphing
 
     public interface IGraphable3 : IGraphable
     {
-        float ZMin { get; }
-        float ZMax { get; }
+        float ZMin { get; set; }
+        float ZMax { get; set; }
         string ZUnit { get; set; }
         string ZName { get; set; }
-        Func<float, float> ZAxisScale { get; set; }
     }
 
     public interface IGraph
@@ -59,10 +58,10 @@ namespace KerbalWindTunnel.Graphing
         }
         private bool _visible = true;
         public bool DisplayValue { get; set; } = true;
-        public virtual float XMin { get; protected set; }
-        public virtual float XMax { get; protected set; }
-        public virtual float YMin { get; protected set; }
-        public virtual float YMax { get; protected set; }
+        public virtual float XMin { get; set; }
+        public virtual float XMax { get; set; }
+        public virtual float YMin { get; set; }
+        public virtual float YMax { get; set; }
         public bool Transpose { get; set; } = false;
         public string XName { get; set; } = "";
         protected internal string yName = null;
@@ -94,14 +93,13 @@ namespace KerbalWindTunnel.Graphing
 
     public abstract class Graphable3 : Graphable, IGraphable3
     {
-        public float ZMin { get; protected set; }
-        public float ZMax { get; protected set; }
+        public float ZMin { get; set; }
+        public float ZMax { get; set; }
         public string ZUnit { get; set; }
         public override string YName { get => yName ?? ""; set => yName = value; }
         protected string zName = null;
         public string ZName { get { return zName ?? Name; } set { zName = value; } }
         public float ZAxisScaler { get; set; } = 1;
-        public virtual Func<float, float> ZAxisScale { get; set; } = (v) => v;
 
         public override string GetFormattedValueAt(float x, float y, bool withName = false)
         {
