@@ -91,7 +91,7 @@ namespace KerbalWindTunnel.Graphing
             if (!delayRecalculate)
                 RecalculateLimits();
         }
-        public void ReleaseAxesLimits(int index, bool delayRecalculate = false)
+        public void ReleaseAxesLimits(int index = -1, bool delayRecalculate = false)
         {
             if (index >= 0)
                 useSelfAxes[index] = true;

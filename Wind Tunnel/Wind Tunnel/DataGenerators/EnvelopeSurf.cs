@@ -141,10 +141,9 @@ namespace KerbalWindTunnel.DataGenerators
             newEnvelopePoints = ((CalculationManager.State[,])rootData.storeState.Result)
                 .SelectToArray(pt => (EnvelopePoint)pt.Result);
 
+            AddToCache(conditions, newEnvelopePoints);
             if (!manager.Cancelled)
             {
-                //cache.Add(conditions, newEnvelopePoints);
-                AddToCache(conditions, newEnvelopePoints);
                 envelopePoints = newEnvelopePoints;
                 currentConditions = conditions;
                 UpdateGraphs();
@@ -152,48 +151,56 @@ namespace KerbalWindTunnel.DataGenerators
                 
                 valuesSet = true;
             }
+            yield return 0;
 
-            float stepSpeed = conditions.stepSpeed, stepAltitude = conditions.stepAltitude;
-            for(int i = 2; i <=2; i++)
+            if (!manager.Cancelled)
+                WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, conditions.Modify(stepSpeed: conditions.stepSpeed / 2, stepAltitude: conditions.stepAltitude / 2), vessel, newEnvelopePoints));
+        }
+
+        private IEnumerator RefinementProcessing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, EnvelopePoint[,] basisData, bool forcePushToGraph = false)
+        {
+            int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
+            int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
+            EnvelopePoint[,] newEnvelopePoints = new EnvelopePoint[numPtsX + 1, numPtsY + 1];
+            
+            CalculationManager backgroundManager = new CalculationManager();
+            manager.OnCancelCallback += backgroundManager.Cancel;
+            CalculationManager.State[,] results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
+            GenData rootData = new GenData(vessel, conditions, 0, 0, backgroundManager);
+            ThreadPool.QueueUserWorkItem(ContinueInBackground, new object[] { rootData, results, basisData });
+            while (!backgroundManager.Completed)
             {
+                if (manager.Status == CalculationManager.RunStatus.Cancelled)
+                {
+                    backgroundManager.Cancel();
+                    yield break;
+                }
                 yield return 0;
+            }
+            manager.OnCancelCallback -= backgroundManager.Cancel;
 
-                CalculationManager backgroundManager = new CalculationManager();
-                manager.OnCancelCallback += backgroundManager.Cancel;
-                conditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed,
-                    stepSpeed / i, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, stepAltitude / i);
-                CalculationManager.State[,] prevResults = ((CalculationManager.State[,])rootData.storeState.Result).SelectToArray(p => p);
-                rootData = new GenData(vessel, conditions, 0, 0, backgroundManager);
-                ThreadPool.QueueUserWorkItem(ContinueInBackground, new object[] { rootData, prevResults });
-                while (!backgroundManager.Completed)
-                {
-                    if (manager.Status == CalculationManager.RunStatus.Cancelled)
-                    {
-                        backgroundManager.Cancel();
-                        yield break;
-                    }
-                    yield return 0;
-                }
+            newEnvelopePoints = ((CalculationManager.State[,])rootData.storeState.Result)
+                .SelectToArray(pt => (EnvelopePoint)pt.Result);
 
-                newEnvelopePoints = ((CalculationManager.State[,])rootData.storeState.Result)
-                    .SelectToArray(pt => (EnvelopePoint)pt.Result);
-
-                if (!manager.Cancelled)
-                {
-                    //cache.Add(conditions, newEnvelopePoints);
-                    AddToCache(conditions, newEnvelopePoints);
-                    envelopePoints = newEnvelopePoints;
-                    currentConditions = conditions;
-                    UpdateGraphs();
-                    valuesSet = true;
-                }
+            AddToCache(conditions, newEnvelopePoints);
+            if (currentConditions.Equals(conditions) || (forcePushToGraph && !backgroundManager.Cancelled))
+            {
+                envelopePoints = newEnvelopePoints;
+                currentConditions = conditions;
+                UpdateGraphs();
+                valuesSet = true;
             }
         }
 
         private bool AddToCache(Conditions conditions, EnvelopePoint[,] data)
         {
-            if (cache.ContainsKey(conditions) && cache[conditions].Length > data.Length)
-                return false;
+            if (cache.ContainsKey(conditions))
+            {
+                if (cache[conditions].Length > data.Length)
+                    return false;
+                else
+                    cache.Remove(conditions);
+            }
             cache[conditions] = data;
             return true;
         }
@@ -223,17 +230,24 @@ namespace KerbalWindTunnel.DataGenerators
             object[] inObj = (object[])obj;
             GenData rootData = (GenData)inObj[0];
             CalculationManager.State[,] results = (CalculationManager.State[,])inObj[1];
+            EnvelopePoint[,] basisData = inObj.Length > 2 ? (EnvelopePoint[,])inObj[2] : null;
             CalculationManager manager = rootData.storeState.manager;
-            GenerateLevel(rootData.conditions, manager, ref results, rootData.vessel);
+            GenerateLevel(rootData.conditions, manager, ref results, rootData.vessel, basisData);
             if (rootData.storeState.manager.Cancelled)
                 return;
             rootData.storeState.StoreResult(results);
         }
 
-        private static void GenerateLevel(Conditions conditions, CalculationManager manager, ref CalculationManager.State[,] results, AeroPredictor vessel)
+        private static void GenerateLevel(Conditions conditions, CalculationManager manager, ref CalculationManager.State[,] results, AeroPredictor vessel, EnvelopePoint[,] resultPoints = null)
         {
             float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
-            if (results != null)
+            if (resultPoints != null)
+            {
+                AoAs_guess = resultPoints.SelectToArray(pt => pt.AoA_level);
+                maxAs_guess = resultPoints.SelectToArray(pt => pt.AoA_max);
+                pitchIs_guess = resultPoints.SelectToArray(pt => pt.pitchInput);
+            }
+            else if (results != null)
             {
                 AoAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_level);
                 maxAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_max);
@@ -403,6 +417,19 @@ namespace KerbalWindTunnel.DataGenerators
                 this.lowerBoundAltitude = lowerBoundAltitude;
                 this.upperBoundAltitude = upperBoundAltitude;
                 this.stepAltitude = stepAltitude;
+            }
+            public Conditions Modify(CelestialBody body = null, float lowerBoundSpeed = float.NaN, float upperBoundSpeed = float.NaN, float stepSpeed = float.NaN, float lowerBoundAltitude = float.NaN, float upperBoundAltitude = float.NaN, float stepAltitude = float.NaN)
+                => Conditions.Modify(this, body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
+            public static Conditions Modify(Conditions conditions, CelestialBody body = null, float lowerBoundSpeed = float.NaN, float upperBoundSpeed = float.NaN, float stepSpeed = float.NaN, float lowerBoundAltitude = float.NaN, float upperBoundAltitude = float.NaN, float stepAltitude = float.NaN)
+            {
+                if (body == null) body = conditions.body;
+                if (float.IsNaN(lowerBoundSpeed)) lowerBoundSpeed = conditions.lowerBoundSpeed;
+                if (float.IsNaN(upperBoundSpeed)) upperBoundSpeed = conditions.upperBoundSpeed;
+                if (float.IsNaN(stepSpeed)) stepSpeed = conditions.stepSpeed;
+                if (float.IsNaN(lowerBoundAltitude)) lowerBoundAltitude = conditions.lowerBoundAltitude;
+                if (float.IsNaN(upperBoundAltitude)) upperBoundAltitude = conditions.upperBoundAltitude;
+                if (float.IsNaN(stepAltitude)) stepAltitude = conditions.stepAltitude;
+                return new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
             }
             public Conditions(CelestialBody body, float lowerBoundSpeed, float upperBoundSpeed, int speedPts, float lowerBoundAltitude, float upperBoundAltitude, int altitudePts) :
                 this(body, lowerBoundSpeed, upperBoundSpeed, (upperBoundSpeed - lowerBoundSpeed) / (speedPts - 1), lowerBoundAltitude, upperBoundAltitude, (upperBoundAltitude - lowerBoundAltitude) / (altitudePts - 1))
