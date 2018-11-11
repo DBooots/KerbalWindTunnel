@@ -418,6 +418,10 @@ namespace KerbalWindTunnel.DataGenerators
                 this.upperBoundAltitude = upperBoundAltitude;
                 this.stepAltitude = stepAltitude;
             }
+            public Conditions(CelestialBody body, float lowerBoundSpeed, float upperBoundSpeed, int speedPts, float lowerBoundAltitude, float upperBoundAltitude, int altitudePts) :
+                this(body, lowerBoundSpeed, upperBoundSpeed, (upperBoundSpeed - lowerBoundSpeed) / (speedPts - 1), lowerBoundAltitude, upperBoundAltitude, (upperBoundAltitude - lowerBoundAltitude) / (altitudePts - 1))
+            { }
+
             public Conditions Modify(CelestialBody body = null, float lowerBoundSpeed = float.NaN, float upperBoundSpeed = float.NaN, float stepSpeed = float.NaN, float lowerBoundAltitude = float.NaN, float upperBoundAltitude = float.NaN, float stepAltitude = float.NaN)
                 => Conditions.Modify(this, body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
             public static Conditions Modify(Conditions conditions, CelestialBody body = null, float lowerBoundSpeed = float.NaN, float upperBoundSpeed = float.NaN, float stepSpeed = float.NaN, float lowerBoundAltitude = float.NaN, float upperBoundAltitude = float.NaN, float stepAltitude = float.NaN)
@@ -431,9 +435,14 @@ namespace KerbalWindTunnel.DataGenerators
                 if (float.IsNaN(stepAltitude)) stepAltitude = conditions.stepAltitude;
                 return new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
             }
-            public Conditions(CelestialBody body, float lowerBoundSpeed, float upperBoundSpeed, int speedPts, float lowerBoundAltitude, float upperBoundAltitude, int altitudePts) :
-                this(body, lowerBoundSpeed, upperBoundSpeed, (upperBoundSpeed - lowerBoundSpeed) / (speedPts - 1), lowerBoundAltitude, upperBoundAltitude, (upperBoundAltitude - lowerBoundAltitude) / (altitudePts - 1))
-            { }
+
+            public bool Contains(Conditions conditions)
+            {
+                return this.lowerBoundSpeed <= conditions.lowerBoundSpeed &&
+                    this.upperBoundSpeed >= conditions.upperBoundSpeed &&
+                    this.lowerBoundAltitude <= conditions.lowerBoundAltitude &&
+                    this.upperBoundAltitude >= conditions.upperBoundAltitude;
+            }
 
             public override bool Equals(object obj)
             {

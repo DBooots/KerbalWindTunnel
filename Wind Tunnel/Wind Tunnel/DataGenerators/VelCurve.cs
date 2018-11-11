@@ -227,6 +227,24 @@ namespace KerbalWindTunnel.DataGenerators
                 this.step = step;
             }
 
+            public Conditions Modify(CelestialBody body = null, float altitude = float.NaN, float lowerBound = float.NaN, float upperBound = float.NaN, float step = float.NaN)
+             => Conditions.Modify(this, body, altitude, lowerBound, upperBound, step);
+            public static Conditions Modify(Conditions conditions, CelestialBody body = null, float altitude = float.NaN, float lowerBound = float.NaN, float upperBound = float.NaN, float step = float.NaN)
+            {
+                if (body == null) body = conditions.body;
+                if (float.IsNaN(altitude)) altitude = conditions.altitude;
+                if (float.IsNaN(lowerBound)) lowerBound = conditions.lowerBound;
+                if (float.IsNaN(upperBound)) upperBound = conditions.upperBound;
+                if (float.IsNaN(step)) step = conditions.step;
+                return new Conditions(body, altitude, lowerBound, upperBound, step);
+            }
+
+            public bool Contains(Conditions conditions)
+            {
+                return this.lowerBound <= conditions.lowerBound &&
+                    this.upperBound >= conditions.upperBound;
+            }
+
             public override bool Equals(object obj)
             {
                 if (obj == null)
