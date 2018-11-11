@@ -15,6 +15,7 @@ namespace KerbalWindTunnel.DataGenerators
         public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
         public Conditions currentConditions = Conditions.Blank;
         private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
+        private Dictionary<Conditions, Conditions> cachedConditions = new Dictionary<Conditions, Conditions>();
         
         public EnvelopeSurf()
         {
@@ -55,6 +56,7 @@ namespace KerbalWindTunnel.DataGenerators
             base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
+            cachedConditions.Clear();
             envelopePoints = new EnvelopePoint[0, 0];
 
             ((LineGraph)graphables["Fuel-Optimal Path"]).SetValues(new Vector2[0]);
@@ -157,7 +159,7 @@ namespace KerbalWindTunnel.DataGenerators
                 WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, conditions.Modify(stepSpeed: conditions.stepSpeed / 2, stepAltitude: conditions.stepAltitude / 2), vessel, newEnvelopePoints));
         }
 
-        private IEnumerator RefinementProcessing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, EnvelopePoint[,] basisData, bool forcePushToGraph = false)
+        private IEnumerator RefinementProcessing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, EnvelopePoint[,] basisData, Queue<Conditions> followOnConditions = null, bool forcePushToGraph = false)
         {
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
@@ -190,6 +192,12 @@ namespace KerbalWindTunnel.DataGenerators
                 UpdateGraphs();
                 valuesSet = true;
             }
+            if (!manager.Cancelled && followOnConditions != null && followOnConditions.Count > 0)
+            {
+                yield return 0;
+                Conditions nextConditions = followOnConditions.Dequeue();
+                WindTunnel.Instance.StartCoroutine(RefinementProcessing(manager, nextConditions, vessel, newEnvelopePoints, followOnConditions, forcePushToGraph));
+            }
         }
 
         private bool AddToCache(Conditions conditions, EnvelopePoint[,] data)
@@ -202,6 +210,7 @@ namespace KerbalWindTunnel.DataGenerators
                     cache.Remove(conditions);
             }
             cache[conditions] = data;
+            cachedConditions[conditions] = conditions;
             return true;
         }
 

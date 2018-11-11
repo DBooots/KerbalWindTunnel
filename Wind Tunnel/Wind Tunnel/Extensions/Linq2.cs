@@ -7,6 +7,28 @@ namespace KerbalWindTunnel.Extensions
 {
     public static class Linq2
     {
+        public static T[,] Subset<T>(this T[,] vals, int lowerBound0, int upperBound0, int lowerBound1, int upperBound1)
+        {
+            T[,] result = new T[upperBound0 - lowerBound0 + 1, upperBound1 - lowerBound1 + 1];
+            for (int i = lowerBound0; i <= upperBound0; i++)
+            {
+                for (int j = lowerBound1; j <= upperBound1; j++)
+                {
+                    result[i - lowerBound0, j - lowerBound1] = vals[i, j];
+                }
+            }
+            return result;
+        }
+        public static T[] Subset<T>(this T[] vals, int lowerBound, int upperBound)
+        {
+            T[] result = new T[upperBound - lowerBound + 1];
+            for (int i = lowerBound; i <= upperBound; i++)
+            {
+                result[i - lowerBound] = vals[i];
+            }
+            return result;
+        }
+
         public static TResult[,] SelectToArray<TInput, TResult>(this TInput[,] vals, Func<TInput, TResult> selector)
         {
             int bound0 = vals.GetUpperBound(0);
