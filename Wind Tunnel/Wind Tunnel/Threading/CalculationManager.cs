@@ -117,7 +117,8 @@ namespace KerbalWindTunnel.Threading
         public void Cancel()
         {
             this._cancelled = true;
-            completionEvent.Set();
+            if (!Cancelled)
+                completionEvent.Set();
             lock (statusLock)
                 this._status = RunStatus.Cancelled;
             this.OnCancelCallback();
