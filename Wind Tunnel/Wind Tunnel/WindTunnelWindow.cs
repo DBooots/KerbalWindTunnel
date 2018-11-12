@@ -787,6 +787,25 @@ namespace KerbalWindTunnel
                 return;
             GraphGenerator.OnAxesChanged(vessel, xMin, xMax, yMin, yMax, zMin, zMax);
         }
+        public void OnAxesChangeRequested(Graphing.Grapher sender, int axis, ref float min, ref float max)
+        {
+            if (sender != grapher)
+                return;
+            switch (CurrentGraphMode)
+            {
+                case GraphMode.FlightEnvelope:
+                    if (axis == 1 && min < 0) min = 0;
+                    break;
+                case GraphMode.AoACurves:
+                    if (axis == 0)
+                    {
+                        if (min < -180) min = -180;
+                        if (max > 180) max = 180;
+                    }
+                    break;
+                case GraphMode.VelocityCurves: break;
+            }
+        }
         #endregion Triggered Methods
 
         #region MonoBehaviour Methods
@@ -884,6 +903,9 @@ namespace KerbalWindTunnel
             GameEvents.onEditorLoad.Add(OnVesselLoaded);
             GameEvents.onEditorNewShipDialogDismiss.Add(OnNewVessel);
             GameEvents.onEditorPodPicked.Add(OnRootChanged);
+
+            grapher.AxesChanged += OnAxesChanged;
+            grapher.AxesChangeRequested += OnAxesChangeRequested;
         }
 
         internal override void OnGUIOnceOnly()

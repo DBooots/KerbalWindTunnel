@@ -13,6 +13,13 @@ namespace KerbalWindTunnel.Graphing
         private float setXmin, setXmax, setYmin, setYmax, setZmin, setZmax;
         private bool[] useSelfAxesToggle = new bool[] { true, true, true };
 
+        DialogGUITextInput xMinInput;
+        DialogGUITextInput xMaxInput;
+        DialogGUITextInput yMinInput;
+        DialogGUITextInput yMaxInput;
+        DialogGUITextInput zMinInput;
+        DialogGUITextInput zMaxInput;
+
         public AxesSettingWindow(Grapher grapher)
         {
             this.grapher = grapher;
@@ -27,12 +34,14 @@ namespace KerbalWindTunnel.Graphing
             OnAutoToggle(1, useSelfAxesToggle[1]);
             OnAutoToggle(2, useSelfAxesToggle[2]);
 
-            DialogGUITextInput xMinInput = new DialogGUITextInput(xMinStr, false, 10, (str) => xMinStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[0] };
-            DialogGUITextInput xMaxInput = new DialogGUITextInput(xMaxStr, false, 10, (str) => xMaxStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[0] };
-            DialogGUITextInput yMinInput = new DialogGUITextInput(yMinStr, false, 10, (str) => yMinStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[1] };
-            DialogGUITextInput yMaxInput = new DialogGUITextInput(yMaxStr, false, 10, (str) => yMaxStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[1] };
-            DialogGUITextInput zMinInput = new DialogGUITextInput(zMinStr, false, 10, (str) => zMinStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[2] };
-            DialogGUITextInput zMaxInput = new DialogGUITextInput(zMaxStr, false, 10, (str) => zMaxStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[2] };
+            xMinInput = new DialogGUITextInput(xMinStr, false, 10, (str) => xMinStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[0] };
+            xMaxInput = new DialogGUITextInput(xMaxStr, false, 10, (str) => xMaxStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[0] };
+            yMinInput = new DialogGUITextInput(yMinStr, false, 10, (str) => yMinStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[1] };
+            yMaxInput = new DialogGUITextInput(yMaxStr, false, 10, (str) => yMaxStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[1] };
+            zMinInput = new DialogGUITextInput(zMinStr, false, 10, (str) => zMinStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[2] };
+            zMaxInput = new DialogGUITextInput(zMaxStr, false, 10, (str) => zMaxStr = str, 25) { OptionInteractableCondition = () => !useSelfAxesToggle[2] };
+
+            grapher.ValueChangedExternally += OnValueChanged;
 
             List<DialogGUIBase> dialog = new List<DialogGUIBase>
             {
@@ -77,11 +86,12 @@ namespace KerbalWindTunnel.Graphing
                     else
                         grapher.ReleaseAxesLimits(2, true);
 
-                    grapher.RecalculateLimits();
+                    if (grapher.RecalculateLimits())
+                        grapher.OnAxesChanged();
                 }, false),
-                new DialogGUIButton("Close", () => { }, true)
+                new DialogGUIButton("Close", () => { grapher.ValueChangedExternally -= OnValueChanged; }, true)
             };
-
+            
             if (grapher.Any(g => g is IGraphable3))
             {
                 dialog.InsertRange(10, new List<DialogGUIBase>
@@ -148,9 +158,23 @@ namespace KerbalWindTunnel.Graphing
                     break;
             }
         }
+
         private static void SetText(DialogGUITextInput field, string text)
         {
             field.uiItem.GetComponent<TMPro.TMP_InputField>().text = text;
+        }
+
+        void OnValueChanged(Grapher sender, int index, float min, float max)
+        {
+            if (sender != grapher)
+                return;
+
+            switch (index)
+            {
+                case 0: SetText(xMinInput, min.ToString()); SetText(xMaxInput, max.ToString()); break;
+                case 1: SetText(yMinInput, min.ToString()); SetText(yMaxInput, max.ToString()); break;
+                case 2: SetText(zMinInput, min.ToString()); SetText(zMaxInput, max.ToString()); break;
+            }
         }
     }
 }

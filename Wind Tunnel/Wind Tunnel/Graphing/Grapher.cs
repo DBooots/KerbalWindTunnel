@@ -40,6 +40,10 @@ namespace KerbalWindTunnel.Graphing
 
         public delegate void AxesChangeEventHandler(Grapher sender, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax);
         public event AxesChangeEventHandler AxesChanged;
+        public delegate void AxesChangeRequestedEventHandler(Grapher sender, int index, ref float min, ref float max);
+        public event AxesChangeRequestedEventHandler AxesChangeRequested;
+        internal delegate void ExternalValueChangeHandler(Grapher sender, int index, float min, float max);
+        internal event ExternalValueChangeHandler ValueChangedExternally;
 
         protected internal float selfXmin, selfXmax, selfYmin, selfYmax, selfZmin, selfZmax;
         protected internal float setXmin, setXmax, setYmin, setYmax, setZmin, setZmax;
@@ -71,22 +75,32 @@ namespace KerbalWindTunnel.Graphing
             if (index > 2 || float.IsNaN(min) || float.IsNaN(max))
                 return;
 
-            useSelfAxes[index] = false;
+            float tempMin = min, tempMax = max;
             switch (index)
             {
                 case 0:
+                    if (min != setXmin || max != setXmax)
+                        OnAxesChangeRequested(index, ref min, ref max);
                     setXmin = min;
                     setXmax = max;
                     break;
                 case 1:
+                    if (min != setYmin || max != setYmax)
+                        OnAxesChangeRequested(index, ref min, ref max);
                     setYmin = min;
                     setYmax = max;
                     break;
                 case 2:
+                    if (min != setZmin || max != setZmax)
+                        OnAxesChangeRequested(index, ref min, ref max);
                     setZmin = min;
                     setZmax = max;
                     break;
             }
+            if (tempMin != min || tempMax != max)
+                ValueChangedExternally?.Invoke(this, index, min, max);
+            useSelfAxes[index] = false;
+
             if (!delayRecalculate)
                 RecalculateLimits();
         }
@@ -129,6 +143,8 @@ namespace KerbalWindTunnel.Graphing
 
         public void OnAxesChanged()
             => this.AxesChanged?.Invoke(this, XMin, XMax, YMin, YMax, ZMin, ZMax);
+        public void OnAxesChangeRequested(int index, ref float min, ref float max)
+            => this.AxesChangeRequested?.Invoke(this, index, ref min, ref max);
         
         public override bool RecalculateLimits()
         {
