@@ -778,6 +778,15 @@ namespace KerbalWindTunnel
                 return;
             SetEnvGraphs(NewIndex, lineFlags[0]);
         }
+
+        public void OnAxesChanged(Graphing.Grapher sender, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
+        {
+            if (sender != grapher)
+                return;
+            if (!graphRequested || graphDirty)
+                return;
+            GraphGenerator.OnAxesChanged(vessel, xMin, xMax, yMin, yMax, zMin, zMax);
+        }
         #endregion Triggered Methods
 
         #region MonoBehaviour Methods

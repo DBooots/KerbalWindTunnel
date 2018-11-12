@@ -51,5 +51,7 @@ namespace KerbalWindTunnel.DataGenerators
         {
             calculationManager.Cancel();
         }
+
+        public abstract void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax);
     }
 }

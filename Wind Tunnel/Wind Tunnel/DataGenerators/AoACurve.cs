@@ -154,6 +154,23 @@ namespace KerbalWindTunnel.DataGenerators
             data.storeState.StoreResult(new AoAPoint(data.vessel, data.conditions.body, data.conditions.altitude, data.conditions.speed, data.AoA));
         }
 
+        public override void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
+        {
+            const float variance = 0.5f;
+            const int numPts = 80;
+            xMin = (xMin < -180 ? -180 : xMin) * Mathf.Deg2Rad;
+            xMax = (xMax > 180 ? 180 : xMax) * Mathf.Deg2Rad;
+            float step = Mathf.Min(2 * Mathf.Deg2Rad, (xMax - xMin) / numPts * Mathf.Deg2Rad);
+            if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)))
+            {
+                Calculate(vessel, currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
+            }
+            else if (currentConditions.step > step / variance)
+            {
+                Calculate(vessel, currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
+            }
+        }
+
         private struct GenData
         {
             public readonly Conditions conditions;

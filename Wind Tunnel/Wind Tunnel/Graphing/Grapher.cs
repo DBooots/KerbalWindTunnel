@@ -24,7 +24,6 @@ namespace KerbalWindTunnel.Graphing
                 {
                     base.AutoFitAxes = value;
                     graphDirty = true;
-                    axesDirty = true;
                 }
             }
         }
@@ -128,7 +127,8 @@ namespace KerbalWindTunnel.Graphing
                 RecalculateLimits();
         }
 
-        public void OnAxesChanged() => this.AxesChanged?.Invoke(this, XMin, XMax, YMin, YMax, ZMin, ZMax);
+        public void OnAxesChanged()
+            => this.AxesChanged?.Invoke(this, XMin, XMax, YMin, YMax, ZMin, ZMax);
         
         public override bool RecalculateLimits()
         {
@@ -177,9 +177,12 @@ namespace KerbalWindTunnel.Graphing
 
                 if (setsNaN)
                 {
-                    setXmin = selfXmin; setXmax = selfXmax;
-                    setYmin = selfYmin; setYmax = selfYmax;
-                    setZmin = selfZmin; setZmax = selfZmax;
+                    if (float.IsNaN(setXmin)) setXmin = selfXmin;
+                    if (float.IsNaN(setXmax)) setXmax = selfXmax;
+                    if (float.IsNaN(setYmin)) setYmin = selfYmin;
+                    if (float.IsNaN(setYmax)) setYmax = selfYmax;
+                    if (float.IsNaN(setZmin)) setZmin = selfZmin;
+                    if (float.IsNaN(setZmax)) setZmax = selfZmax;
                 }
             }
             if (!useSelfAxes[0])
@@ -199,8 +202,8 @@ namespace KerbalWindTunnel.Graphing
             }
 
             bool boundAxesChanged = !(oldLimits[0] == XMin && oldLimits[1] == XMax && oldLimits[2] == YMin && oldLimits[3] == YMax);
-            if (boundAxesChanged)
-                OnAxesChanged();
+            //if (boundAxesChanged)
+            //    OnAxesChanged();
 
             if (axesDirty || boundAxesChanged || !(oldLimits[4] == ZMin && oldLimits[5] == ZMax && oldLimits[6] == CMin && oldLimits[7] == CMax))
             {

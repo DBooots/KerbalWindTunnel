@@ -298,6 +298,29 @@ namespace KerbalWindTunnel.DataGenerators
             data.storeState.StoreResult(result);
         }
 
+        public override void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
+        {
+            const float variance = 0.6f;
+            const int numPtsX = 125, numPtsY = 125;
+            float stepX = (xMax - xMin) / numPtsX, stepY = (yMax - yMin) / numPtsY;
+            Conditions newConditions = currentConditions.Modify(lowerBoundSpeed: xMin, upperBoundSpeed: xMax, stepSpeed: stepX, lowerBoundAltitude: yMin, upperBoundAltitude: yMax, stepAltitude: stepY);
+            if (!currentConditions.Contains(newConditions))
+            {
+                Calculate(vessel, currentConditions.body, xMin, xMax, stepX, yMin, yMax, stepY);
+            }
+            else if (currentConditions.stepSpeed > stepX / 2 / variance || currentConditions.stepAltitude > stepY / 2 / variance)
+            {
+                int iL = Mathf.FloorToInt((newConditions.lowerBoundSpeed - currentConditions.lowerBoundSpeed) / currentConditions.stepSpeed);
+                int iR = Mathf.CeilToInt((newConditions.upperBoundSpeed - currentConditions.lowerBoundSpeed) / currentConditions.stepSpeed);
+                int iB = Mathf.FloorToInt((newConditions.lowerBoundAltitude - currentConditions.lowerBoundAltitude) / currentConditions.stepAltitude);
+                int iT = Mathf.CeilToInt((newConditions.upperBoundAltitude - currentConditions.lowerBoundAltitude) / currentConditions.stepAltitude);
+                calculationManager.Cancel();
+                calculationManager = new CalculationManager();
+                Queue<Conditions> followOn = new Queue<Conditions>(new Conditions[] { newConditions.Modify(stepSpeed: newConditions.stepSpeed / 2, stepAltitude: newConditions.stepAltitude / 2) });
+                WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, newConditions, vessel, envelopePoints.Subset(iL, iR, iB, iT), followOn));
+            }
+        }
+
         private struct GenData
         {
             public readonly Conditions conditions;

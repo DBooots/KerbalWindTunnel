@@ -133,6 +133,20 @@ namespace KerbalWindTunnel.DataGenerators
             data.storeState.StoreResult(new VelPoint(data.vessel, data.conditions.body, data.conditions.altitude, data.speed));
         }
 
+        public override void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
+        {
+            const float variance = 0.75f;
+            const int numPts = 125;
+            if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)))
+            {
+                Calculate(vessel, currentConditions.body, currentConditions.altitude, xMin, xMax, (xMax - xMin) / numPts);
+            }
+            else if (currentConditions.step > (xMax - xMin / numPts) / variance)
+            {
+                Calculate(vessel, currentConditions.body, currentConditions.altitude, xMin, xMax, (xMax - xMin) / numPts);
+            }
+        }
+
         private struct GenData
         {
             public readonly Conditions conditions;
