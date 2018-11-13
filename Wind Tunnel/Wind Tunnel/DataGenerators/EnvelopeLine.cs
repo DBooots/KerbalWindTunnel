@@ -13,24 +13,22 @@ namespace KerbalWindTunnel.DataGenerators
     {
         public void CalculateOptimalLines(AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
         {
-            float[,] excessP = envelopePoints.SelectToArray(pt => pt.Accel_excess * vessel.Mass * WindTunnelWindow.gAccel * pt.speed);
+            float[,] accel = envelopePoints.SelectToArray(pt => pt.Accel_excess * WindTunnelWindow.gAccel);
             float[,] burnRate = envelopePoints.SelectToArray(pt => pt.fuelBurnRate);
-            CostIncreaseFunction fuelToClimb = (current, last) =>
-            {
-                float dE = Mathf.Abs(WindTunnelWindow.gAccel * (last.y - current.y) / ((current.x + last.x) / 2) + (last.x - current.x));
-                float P = (excessP[current.xi, current.yi] + excessP[last.xi, last.yi]) / 2;
-                float dF = (burnRate[current.xi, current.yi] + burnRate[last.xi, last.yi]) / 2;
-                return (dE / P) * dF;
-            };
             CostIncreaseFunction timeToClimb = (current, last) =>
             {
                 float dE = Mathf.Abs(WindTunnelWindow.gAccel * (last.y - current.y) / ((current.x + last.x) / 2) + (last.x - current.x));
-                float P = (excessP[current.xi, current.yi] + excessP[last.xi, last.yi]) / 2;
+                float P = (accel[current.xi, current.yi] + accel[last.xi, last.yi]) / 2;
                 return (dE / P);
             };
+            CostIncreaseFunction fuelToClimb = (current, last) =>
+            {
+                float dF = (burnRate[current.xi, current.yi] + burnRate[last.xi, last.yi]) / 2;
+                return timeToClimb(current, last) * dF;
+            };
 
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, excessP, timeToClimb));
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, excessP, timeToClimb));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, accel, timeToClimb));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, accel, timeToClimb));
         }
 
         private IEnumerator ProcessOptimalLine(string graphName, AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc)
