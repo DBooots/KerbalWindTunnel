@@ -56,8 +56,8 @@ namespace KerbalWindTunnel.Graphing
                 OnValuesChanged(null);
             }
         }
-        private bool sorted = false;
-        private bool equalSteps = false;
+        protected bool sorted = false;
+        protected bool equalSteps = false;
 
         public LineGraph(float[] values, float xLeft, float xRight)
         {

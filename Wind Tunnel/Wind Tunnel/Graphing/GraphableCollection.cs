@@ -141,7 +141,7 @@ namespace KerbalWindTunnel.Graphing
             }
         }
 
-        public int Count { get { return graphs.Count; } }
+        public int Count { get => graphs.Count; }
 
         bool ICollection<IGraphable>.IsReadOnly => false;
 
@@ -589,6 +589,11 @@ namespace KerbalWindTunnel.Graphing
                     strCsv += string.Format(",{0} [{1}]", lineGraphs[i].Name, lineGraphs[i].YUnit != "" ? lineGraphs[i].YUnit : "-");
                 else
                     strCsv += string.Format(",{0}", lineGraphs[i].YUnit != "" ? lineGraphs[i].YUnit : "-");
+                if (lineGraphs[i] is MetaLineGraph metaLineGraph)
+                {
+                    for (int m = 0; m <= metaLineGraph.MetaFieldCount; m++)
+                        strCsv += "," + (m > metaLineGraph.MetaFields.Length || String.IsNullOrEmpty(metaLineGraph.MetaFields[m]) ? "" : metaLineGraph.MetaFields[m]);
+                }
             }
 
             try
@@ -604,7 +609,19 @@ namespace KerbalWindTunnel.Graphing
                 j++;
                 strCsv = string.Format("{0}", xEnumerator.Current);
                 for (int i = 0; i < count; i++)
+                {
                     strCsv += string.Format(",{0:" + lineGraphs[i].StringFormat.Replace("N", "F") + "}", lineGraphs[i].Values[j].y);
+                    if (lineGraphs[i] is MetaLineGraph metaLineGraph)
+                    {
+                        for (int m = 0; m <= metaLineGraph.MetaFieldCount; m++)
+                        {
+                            if (metaLineGraph.FormatProviders.Length >= m)
+                                strCsv += "," + metaLineGraph.MetaData[m][j].ToString(metaLineGraph.FormatProviders[m]);
+                            else
+                                strCsv += "," + metaLineGraph.MetaData[m][j].ToString();
+                        }
+                    }
+                }
                 try
                 {
                     System.IO.File.AppendAllText(fullFilePath, strCsv + "\r\n");
