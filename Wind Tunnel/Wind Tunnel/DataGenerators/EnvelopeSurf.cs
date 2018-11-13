@@ -37,8 +37,8 @@ namespace KerbalWindTunnel.DataGenerators
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Fuel Burn Rate", ZUnit = "kg/s", StringFormat = "F3", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Fuel Economy", ZUnit = "kg/100 km", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphables.Add(new OutlineMask(blank, left, right, bottom, top) { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
-            graphables.Add(new LineGraph(new Vector2[0])                  { Name = "Fuel-Optimal Path", StringFormat = "N0", Color = Color.black, LineWidth = 3 });
-            graphables.Add(new LineGraph(new Vector2[0])                        { Name = "Time-Optimal Path", StringFormat = "N0", Color = Color.white, LineWidth = 3 });
+            graphables.Add(new MetaLineGraph(new Vector2[0])              { Name = "Fuel-Optimal Path", StringFormat = "N0", Color = Color.black, LineWidth = 3, MetaFields = new string[] { "Climb Angle", "Climb Rate", "Fuel Used", "Time" } });
+            graphables.Add(new MetaLineGraph(new Vector2[0])              { Name = "Time-Optimal Path", StringFormat = "N0", Color = Color.white, LineWidth = 3, MetaFields = new string[] { "Climb Angle", "Climb Rate", "Time" } });
 
             var e = graphables.GetEnumerator();
             while (e.MoveNext())

@@ -40,10 +40,14 @@ namespace KerbalWindTunnel.DataGenerators
             ThreadPool.QueueUserWorkItem(OptimalLineTask, lineGenData);
             while (!singleUseManager.Completed)
                 yield return 0;
-            ((LineGraph)graphables[graphName]).SetValues(((List<AscentPathPoint>)lineGenData.state.Result).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
-                //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, fuelToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
+            List<AscentPathPoint> results = (List<AscentPathPoint>)lineGenData.state.Result;
+            if (timeDifferenceFunc != costIncreaseFunc)
+                ((MetaLineGraph)graphables[graphName]).SetValues(results.Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray(), new float[][] { results.Select(pt => pt.climbAngle).ToArray(), results.Select(pt => pt.climbRate).ToArray(), results.Select(pt => pt.cost).ToArray(), results.Select(pt => pt.time).ToArray() });
+            else
+                ((MetaLineGraph)graphables[graphName]).SetValues(results.Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray(), new float[][] { results.Select(pt => pt.climbAngle).ToArray(), results.Select(pt => pt.climbRate).ToArray(), results.Select(pt => pt.cost).ToArray() });
+            //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, fuelToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
             //((LineGraph)graphables["Time-Optimal Path"]).SetValues(
-                //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, timeToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
+            //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, timeToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
         }
 
         private void OptimalLineTask(object obj)
@@ -89,13 +93,15 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float cost;
             public readonly float climbAngle;
             public readonly float climbRate;
-            public AscentPathPoint(float speed, float altitude, float cost, float climbRate)
+            public readonly float time;
+            public AscentPathPoint(float speed, float altitude, float cost, float climbRate, float time)
             {
                 this.speed = speed;
                 this.altitude = altitude;
                 this.cost = cost;
                 this.climbRate = climbRate;
                 this.climbAngle = Mathf.Atan2(climbRate, speed);
+                this.time = time;
             }
         }
         private struct CoordLocator
@@ -205,13 +211,19 @@ namespace KerbalWindTunnel.DataGenerators
             coord = new Coords(initialSpeed, initialAlt, baseCoord);
             coord = new Coords(costMatrix.First(0, 0, f => f >= initialSpeed && f < float.MaxValue / 100) + 1, coord.yi, baseCoord);
             Coords lastCoord = coord;
+            float lastCost = 0, lastTime = 0;
             while (true)
             {
                 iter++;
                 if (iter % 10 == 0)
                 {
                     //result.Add(new EnvelopePoint(vessel, conditions.body, coord.y, coord.x));
-                    result.Add(new AscentPathPoint(coord.x, coord.y, costIncreaseFunc(coord, lastCoord), (coord.y - lastCoord.y) / timeFunc(coord, lastCoord)));
+                    if (result.Count > 0)
+                    {
+                        lastCost = result[result.Count - 1].cost;
+                        lastTime = result[result.Count - 1].time;
+                    }
+                    result.Add(new AscentPathPoint(coord.x, coord.y, costIncreaseFunc(coord, lastCoord) + lastCost, (coord.y - lastCoord.y) / timeFunc(coord, lastCoord), timeFunc(coord, lastCoord) + lastTime));
                     float dx = (coord.x - lastCoord.x) / rangeX;
                     float dy = (coord.y - lastCoord.y) / rangeY;
                     float r = Mathf.Sqrt(dx * dx + dy * dy);
@@ -241,7 +253,12 @@ namespace KerbalWindTunnel.DataGenerators
                 }
             }
             coord = new Coords(exitSpeed, exitAlt, lastCoord);
-            result.Add(new AscentPathPoint(coord.x, coord.y, costIncreaseFunc(coord, lastCoord), (coord.y - lastCoord.y) / timeFunc(coord, lastCoord)));
+            if (result.Count > 0)
+            {
+                lastCost = result[result.Count - 1].cost;
+                lastTime = result[result.Count - 1].time;
+            }
+            result.Add(new AscentPathPoint(coord.x, coord.y, costIncreaseFunc(coord, lastCoord) + lastCost, (coord.y - lastCoord.y) / timeFunc(coord, lastCoord), timeFunc(coord, lastCoord) + lastTime));
             profileWatch.Stop();
             stopwatch.Stop();
 
