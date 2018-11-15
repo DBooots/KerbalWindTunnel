@@ -8,13 +8,16 @@ namespace KerbalWindTunnel.Threading
         CalculationManager.RunStatus Status { get; }
         float PercentComplete { get; }
         void Cancel();
-
     }
 
     public class CalculationManager : ICalculationManager, IDisposable
     {
+        private volatile bool readyToDispose = false;
+        private bool disposed = false;
+        private volatile int waiting = 0;
         private volatile int linked = 0;
         private volatile int completed = 0;
+        private readonly object waitingLock = new object();
         private readonly object linkLock = new object();
         private readonly object completeLock = new object();
         private readonly object statusLock = new object();
@@ -94,9 +97,20 @@ namespace KerbalWindTunnel.Threading
             }
         }
 
-        public void WaitForCompletion()
+        public bool WaitForCompletion() => WaitForCompletion(-1);
+        public bool WaitForCompletion(TimeSpan timeout) => WaitForCompletion((int)Math.Round(timeout.TotalMilliseconds));
+        public bool WaitForCompletion(int millisecondsTimeout)
         {
-            completionEvent.WaitOne();
+            lock (waitingLock)
+                waiting += 1;
+            bool result = completionEvent.WaitOne(millisecondsTimeout);
+            lock (waitingLock)
+            {
+                waiting -= 1;
+                if (readyToDispose && waiting == 0)
+                    this.Dispose();
+            }
+            return result;
         }
 
         private CalculationManager LinkTo()
@@ -122,7 +136,6 @@ namespace KerbalWindTunnel.Threading
             lock (statusLock)
                 this._status = RunStatus.Cancelled;
             this.OnCancelCallback();
-            completionEvent.Close();
         }
 
         protected internal bool MarkCompleted()
@@ -140,10 +153,16 @@ namespace KerbalWindTunnel.Threading
         {
             return State.CreateToken(this);
         }
-
+        
         public void Dispose()
         {
-            completionEvent.Close();
+            if (disposed)
+                return;
+            readyToDispose = true;
+            lock (waitingLock)
+                if (waiting == 0)
+                    completionEvent.Close();
+            disposed = true;
         }
 
         public class State
