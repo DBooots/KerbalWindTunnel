@@ -192,6 +192,7 @@ namespace KerbalWindTunnel.DataGenerators
                 UpdateGraphs();
                 valuesSet = true;
             }
+            backgroundManager.Dispose();
             if (!manager.Cancelled && followOnConditions != null && followOnConditions.Count > 0)
             {
                 yield return 0;
@@ -226,6 +227,7 @@ namespace KerbalWindTunnel.DataGenerators
             GenerateLevel(seedConditions, seedManager, ref results, rootData.vessel);
             
             seedManager.WaitForCompletion();
+            seedManager.Dispose();
             
             GenerateLevel(conditions, manager, ref results, rootData.vessel);
 
@@ -315,6 +317,7 @@ namespace KerbalWindTunnel.DataGenerators
                 int iB = Mathf.FloorToInt((newConditions.lowerBoundAltitude - currentConditions.lowerBoundAltitude) / currentConditions.stepAltitude);
                 int iT = Mathf.CeilToInt((newConditions.upperBoundAltitude - currentConditions.lowerBoundAltitude) / currentConditions.stepAltitude);
                 calculationManager.Cancel();
+                calculationManager.Dispose();
                 calculationManager = new CalculationManager();
                 Queue<Conditions> followOn = new Queue<Conditions>(new Conditions[] { newConditions.Modify(stepSpeed: newConditions.stepSpeed / 2, stepAltitude: newConditions.stepAltitude / 2) });
                 WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, newConditions, vessel, envelopePoints.Subset(iL, iR, iB, iT), followOn));

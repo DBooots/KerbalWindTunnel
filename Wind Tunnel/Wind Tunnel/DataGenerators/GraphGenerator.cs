@@ -37,6 +37,7 @@ namespace KerbalWindTunnel.DataGenerators
         public virtual void Cancel()
         {
             calculationManager.Cancel();
+            calculationManager.Dispose();
             calculationManager = new CalculationManager();
             valuesSet = false;
         }
@@ -44,12 +45,14 @@ namespace KerbalWindTunnel.DataGenerators
         public virtual void Clear()
         {
             calculationManager.Cancel();
+            calculationManager.Dispose();
             calculationManager = new CalculationManager();
         }
 
         public virtual void Dispose()
         {
             calculationManager.Cancel();
+            calculationManager.Dispose();
         }
 
         public abstract void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax);

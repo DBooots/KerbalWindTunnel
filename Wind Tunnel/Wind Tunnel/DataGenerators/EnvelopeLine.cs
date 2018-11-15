@@ -46,6 +46,7 @@ namespace KerbalWindTunnel.DataGenerators
             //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, fuelToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
             //((LineGraph)graphables["Time-Optimal Path"]).SetValues(
             //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, timeToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
+            singleUseManager.Dispose();
         }
 
         private void OptimalLineTask(object obj)
