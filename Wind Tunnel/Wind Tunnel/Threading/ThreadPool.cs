@@ -7,7 +7,7 @@ namespace KerbalWindTunnel.Threading
 {
     public static class ThreadPool
     {
-        private static List<Thread> pool = new List<Thread>();
+        private static Dictionary<int, Thread> pool = new Dictionary<int, Thread>();
         private static ConcurrentQueue<object> queue = new ConcurrentQueue<object>();
         public static int ThreadCount
         {
@@ -29,7 +29,7 @@ namespace KerbalWindTunnel.Threading
                             for (int i = 0; i < n; i++)
                             {
                                 Thread newThread = new Thread(new ParameterizedThreadStart(ThreadTask)) { IsBackground = true };
-                                pool.Add(newThread);
+                                pool.Add(baseCount + i, newThread);
                                 newThread.Start(baseCount + i);
                             }
                         }
@@ -58,10 +58,10 @@ namespace KerbalWindTunnel.Threading
 
             lock (pool)
             {
-                pool.Capacity = threadCount;
+                //pool.Capacity = threadCount;
                 for (int i = 0; i < threadCount; i++)
                 {
-                    pool.Add(new Thread(new ParameterizedThreadStart(ThreadTask)) { IsBackground = true });
+                    pool.Add(i, new Thread(new ParameterizedThreadStart(ThreadTask)) { IsBackground = true });
                 }
                 for (int i = 0; i < threadCount; i++)
                 {
@@ -106,7 +106,7 @@ namespace KerbalWindTunnel.Threading
                 }
             }
             lock (pool)
-                pool.RemoveAt(id);
+                pool.Remove(id);
         }
 
         public static void Dispose(bool abort = false)
@@ -114,7 +114,7 @@ namespace KerbalWindTunnel.Threading
             dispose = true;
             queue.ForceRelease();
             if (abort)
-                foreach (Thread thread in pool)
+                foreach (Thread thread in pool.Values)
                     thread.Abort();
         }
 
