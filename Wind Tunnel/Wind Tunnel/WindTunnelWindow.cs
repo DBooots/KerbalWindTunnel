@@ -923,7 +923,7 @@ namespace KerbalWindTunnel
         internal override void OnDestroy()
         {
             Cancel();
-            ThreadPool.Dispose();
+            
             GameEvents.onEditorLoad.Remove(OnVesselLoaded);
             GameEvents.onEditorNewShipDialogDismiss.Remove(OnNewVessel);
             GameEvents.onEditorPodPicked.Remove(OnRootChanged);

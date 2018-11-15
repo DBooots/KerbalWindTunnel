@@ -300,6 +300,8 @@ namespace KerbalWindTunnel
                 ApplicationLauncher.Instance.RemoveModApplication(appButton);
             if (blizzyToolbarButton != null)
                 blizzyToolbarButton.Destroy();
+
+            //ThreadPool.Dispose();
         }
     }
 }
