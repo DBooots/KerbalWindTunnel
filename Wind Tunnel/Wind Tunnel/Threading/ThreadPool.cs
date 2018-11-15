@@ -37,6 +37,8 @@ namespace KerbalWindTunnel.Threading
             }
         }
 
+        public static int QueueLength { get => queue.Count; }
+
         private static int threadCount;
         private static object threadCountKey = new object();
         private static ManualResetEvent itemAdded = new ManualResetEvent(false);
