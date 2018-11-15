@@ -132,11 +132,15 @@ namespace KerbalWindTunnel.Threading
         }
     }
 
-    public class ConcurrentQueue<T> : IEnumerable<T>
+    public class ConcurrentQueue<T> : IEnumerable<T>, IDisposable
     {
         private readonly Queue<T> queue = new Queue<T>();
         private readonly object countKey = new object();
         private int count = 0;
+        private readonly object waitingKey = new object();
+        private int waitingThreads = 0;
+        private bool disposed = false;
+        private bool readyToDispose = false;
         internal ManualResetEvent waitForItem = new ManualResetEvent(false);
 
         public ConcurrentQueue() { }
@@ -194,6 +198,17 @@ namespace KerbalWindTunnel.Threading
                 return queue.ToArray();
         }
 
+        public void Dispose()
+        {
+            if (disposed)
+                return;
+            readyToDispose = true;
+            lock (waitingKey)
+                if (waitingThreads == 0)
+                    waitForItem.Close();
+            disposed = true;
+        }
+
         public bool TryDequeue(out T item)
         {
             lock (queue)
@@ -229,23 +244,26 @@ namespace KerbalWindTunnel.Threading
             }
         }
 
-        public bool WaitForItem()
-        {
-            return waitForItem.WaitOne();
-        }
+        public bool WaitForItem() => WaitForItem(-1);
         public bool WaitForItem(int millisecondsTimeout)
         {
-            return waitForItem.WaitOne(millisecondsTimeout);
+            lock (waitingKey)
+                waitingThreads += 1;
+            bool result = waitForItem.WaitOne(millisecondsTimeout);
+            lock (waitingKey)
+            {
+                waitingThreads -= 1;
+                if (readyToDispose && waitingThreads == 0)
+                    Dispose();
+            }
+            return result;
         }
-        public bool WaitForItem(TimeSpan timeout)
-        {
-            return waitForItem.WaitOne(timeout);
-        }
+        public bool WaitForItem(TimeSpan timeout) => WaitForItem((int)Math.Round(timeout.TotalMilliseconds));
 
         internal void ForceRelease()
         {
             lock (countKey)
-                waitForItem.Reset();
+                waitForItem.Set();
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -265,9 +283,7 @@ namespace KerbalWindTunnel.Threading
 
             object IEnumerator.Current => this.Current;
 
-            public void Dispose()
-            {
-            }
+            public void Dispose() => queuer.Dispose();
 
             public bool MoveNext()
             {
