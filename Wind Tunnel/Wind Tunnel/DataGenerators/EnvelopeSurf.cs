@@ -225,8 +225,12 @@ namespace KerbalWindTunnel.DataGenerators
             
             Conditions seedConditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed, 10, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, 10);
             GenerateLevel(seedConditions, seedManager, ref results, rootData.vessel);
-            
-            seedManager.WaitForCompletion();
+
+            if (!seedManager.WaitForCompletion(30000))
+            {
+                Debug.LogError("KerbalWindTunnel: Seed data timed out!");
+                return;
+            }
             seedManager.Dispose();
             
             GenerateLevel(conditions, manager, ref results, rootData.vessel);
