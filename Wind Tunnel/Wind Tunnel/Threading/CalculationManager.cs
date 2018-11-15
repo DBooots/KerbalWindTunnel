@@ -205,6 +205,11 @@ namespace KerbalWindTunnel.Threading
                 if (!this.markedComplete)
                     this.markedComplete = manager.MarkCompleted();
             }
+            public void MarkCancelled()
+            {
+                if (!this.markedComplete)
+                    this.markedComplete = manager.MarkCompleted();
+            }
         }
     }
 }
