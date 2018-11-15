@@ -112,13 +112,13 @@ namespace KerbalWindTunnel.Threading
         }
 
         /// <summary>
-        /// Public implementation of the <see cref="IDisposable.Dispose"/> method of the <see cref="IDisposable"/> interface.
+        /// Public implementation of the <see cref="IDisposable.ReadyToDispose"/> method of the <see cref="IDisposable"/> interface.
         /// </summary>
         public void Cancel()
         {
-            this._cancelled = true;
             if (!Cancelled)
                 completionEvent.Set();
+            this._cancelled = true;
             lock (statusLock)
                 this._status = RunStatus.Cancelled;
             this.OnCancelCallback();
