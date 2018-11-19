@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using KerbalWindTunnel.Threading;
 using KerbalWindTunnel.Graphing;
@@ -63,28 +64,85 @@ namespace KerbalWindTunnel.DataGenerators
             ((LineGraph)graphables["Time-Optimal Path"]).SetValues(new Vector2[0]);
         }
 
+        public override void Cancel()
+        {
+            if (calculationManager.PercentComplete < 0.75)
+            {
+                calculationManager.Cancel();
+                calculationManager.Dispose();
+            }
+            else
+                calculationManager.OnCompleteCallback += () => { calculationManager.Dispose(); };
+            calculationManager = new CalculationManager();
+            valuesSet = false;
+        }
+
+        private bool TryGetContaining(Conditions conditions, out Conditions containingConditions, out EnvelopePoint[,] points)
+        {
+            containingConditions = new Conditions();
+            points = new EnvelopePoint[0, 0];
+            Dictionary<Conditions, EnvelopePoint[,]>.Enumerator enumerator = cache.GetEnumerator();
+            int bestNumPoints = 0;
+            bool result = false;
+            while (enumerator.MoveNext())
+            {
+                Conditions enumConditions = cachedConditions[enumerator.Current.Key];
+                if (enumConditions.Contains(conditions))
+                {
+                    result = true;
+                    int numPoints = Mathf.FloorToInt((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / enumConditions.stepSpeed + 1) *
+                        Mathf.FloorToInt((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / enumConditions.stepAltitude + 1);
+                    if (numPoints > bestNumPoints)
+                    {
+                        bestNumPoints = numPoints;
+                        containingConditions = enumConditions;
+                        points = cache[enumConditions];
+                    }
+                }
+            }
+            return result;
+        }
         public void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
         {
             Conditions newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
-            if (newConditions.Equals(currentConditions))
-            {
-                valuesSet = true;
+            if (currentConditions.Equals(newConditions))
                 return;
-            }
 
             Cancel();
 
-            if (!cache.TryGetValue(newConditions, out envelopePoints))
+            bool loadedCache = false;
+            Conditions loadedConditions;
+            if (cache.TryGetValue(newConditions, out envelopePoints))
             {
-                WindTunnel.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
+                loadedCache = true;
+                loadedConditions = cachedConditions[newConditions];
+                currentConditions = loadedConditions;
             }
-            else
+            else if (TryGetContaining(newConditions, out loadedConditions, out envelopePoints))
             {
-                currentConditions = newConditions;
+                loadedCache = true;
+                currentConditions = loadedConditions;
+            }
+            if (loadedCache)
+            {
                 calculationManager.Status = CalculationManager.RunStatus.Completed;
                 UpdateGraphs();
                 valuesSet = true;
+
+                if (loadedConditions.stepSpeed > stepSpeed || loadedConditions.stepAltitude > stepAltitude)
+                {
+                    WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, newConditions, vessel, envelopePoints, loadedConditions,
+                        new Queue<Conditions>(new Conditions[] { newConditions.Modify(stepSpeed: stepSpeed / 2, stepAltitude: stepAltitude / 2) }), true));
+                }
+                else if (loadedConditions.stepSpeed > stepSpeed / 2 || loadedConditions.stepAltitude > stepAltitude / 2)
+                {
+                    WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, newConditions, vessel, envelopePoints, loadedConditions, forcePushToGraph: true));
+                }
+
+                return;
             }
+            
+            WindTunnel.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
         }
 
         private void UpdateGraphs()
@@ -156,10 +214,13 @@ namespace KerbalWindTunnel.DataGenerators
             yield return 0;
 
             if (!manager.Cancelled)
-                WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, conditions.Modify(stepSpeed: conditions.stepSpeed / 2, stepAltitude: conditions.stepAltitude / 2), vessel, newEnvelopePoints));
+            {
+                Conditions nextConditions = conditions.Modify(stepSpeed: conditions.stepSpeed / 2, stepAltitude: conditions.stepAltitude / 2);
+                WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, nextConditions, vessel, newEnvelopePoints, conditions));
+            }
         }
 
-        private IEnumerator RefinementProcessing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, EnvelopePoint[,] basisData, Queue<Conditions> followOnConditions = null, bool forcePushToGraph = false)
+        private IEnumerator RefinementProcessing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, EnvelopePoint[,] basisData, Conditions basisConditions = new Conditions(), Queue<Conditions> followOnConditions = null, bool forcePushToGraph = false)
         {
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
@@ -169,7 +230,7 @@ namespace KerbalWindTunnel.DataGenerators
             manager.OnCancelCallback += backgroundManager.Cancel;
             CalculationManager.State[,] results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
             GenData rootData = new GenData(vessel, conditions, 0, 0, backgroundManager);
-            ThreadPool.QueueUserWorkItem(ContinueInBackground, new object[] { rootData, results, basisData });
+            ThreadPool.QueueUserWorkItem(ContinueInBackground, new object[] { rootData, results, basisData, basisConditions });
             while (!backgroundManager.Completed)
             {
                 if (manager.Status == CalculationManager.RunStatus.Cancelled)
@@ -197,7 +258,7 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 yield return 0;
                 Conditions nextConditions = followOnConditions.Dequeue();
-                WindTunnel.Instance.StartCoroutine(RefinementProcessing(manager, nextConditions, vessel, newEnvelopePoints, followOnConditions, forcePushToGraph));
+                WindTunnel.Instance.StartCoroutine(RefinementProcessing(manager, nextConditions, vessel, newEnvelopePoints, conditions, followOnConditions, forcePushToGraph));
             }
         }
 
@@ -223,7 +284,7 @@ namespace KerbalWindTunnel.DataGenerators
             CalculationManager seedManager = new CalculationManager();
             CalculationManager.State[,] results = null;
             
-            Conditions seedConditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed, 10, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, 10);
+            Conditions seedConditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed, 11, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, 11);
             GenerateLevel(seedConditions, seedManager, ref results, rootData.vessel);
 
             if (!seedManager.WaitForCompletion(30000))
@@ -232,7 +293,7 @@ namespace KerbalWindTunnel.DataGenerators
                 return;
             }
             seedManager.Dispose();
-            
+
             GenerateLevel(conditions, manager, ref results, rootData.vessel);
 
             if (rootData.storeState.manager.Cancelled)
@@ -246,14 +307,15 @@ namespace KerbalWindTunnel.DataGenerators
             GenData rootData = (GenData)inObj[0];
             CalculationManager.State[,] results = (CalculationManager.State[,])inObj[1];
             EnvelopePoint[,] basisData = inObj.Length > 2 ? (EnvelopePoint[,])inObj[2] : null;
+            Conditions basisConditions = inObj.Length > 3 ? (Conditions)inObj[3] : new Conditions();
             CalculationManager manager = rootData.storeState.manager;
-            GenerateLevel(rootData.conditions, manager, ref results, rootData.vessel, basisData);
+            GenerateLevel(rootData.conditions, manager, ref results, rootData.vessel, basisConditions, basisData);
             if (rootData.storeState.manager.Cancelled)
                 return;
             rootData.storeState.StoreResult(results);
         }
 
-        private static void GenerateLevel(Conditions conditions, CalculationManager manager, ref CalculationManager.State[,] results, AeroPredictor vessel, EnvelopePoint[,] resultPoints = null)
+        private static void GenerateLevel(Conditions conditions, CalculationManager manager, ref CalculationManager.State[,] results, AeroPredictor vessel, Conditions basisConditions = new Conditions(), EnvelopePoint[,] resultPoints = null)
         {
             float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
             if (resultPoints != null)
@@ -267,13 +329,14 @@ namespace KerbalWindTunnel.DataGenerators
                 AoAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_level);
                 maxAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_max);
                 pitchIs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).pitchInput);
+                resultPoints = results.SelectToArray(pt => (EnvelopePoint)pt.Result);
             }
             int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
             int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
             float trueStepX = (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / numPtsX;
             float trueStepY = (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / numPtsY;
             results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
-
+            
             for (int j = 0; j <= numPtsY; j++)
             {
                 for (int i = 0; i <= numPtsX; i++)
@@ -285,9 +348,17 @@ namespace KerbalWindTunnel.DataGenerators
                     float aoa_guess = AoAs_guess != null ? AoAs_guess.Lerp2(x, y) : float.NaN;
                     float maxA_guess = maxAs_guess != null ? maxAs_guess.Lerp2(x, y) : float.NaN;
                     float pi_guess = pitchIs_guess != null ? pitchIs_guess.Lerp2(x, y) : float.NaN;
-                    GenData genData = new GenData(vessel, conditions, conditions.lowerBoundSpeed + trueStepX * i, conditions.lowerBoundAltitude + trueStepY * j, manager, aoa_guess, maxA_guess, pi_guess);
+                    float speed = conditions.lowerBoundSpeed + trueStepX * i;
+                    float altitude = conditions.lowerBoundAltitude + trueStepY * j;
+                    GenData genData = new GenData(vessel, conditions, speed, altitude, manager, aoa_guess, maxA_guess, pi_guess);
                     results[i, j] = genData.storeState;
-                    ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
+                    if (!basisConditions.Equals(Conditions.Blank) && !basisConditions.Equals(new Conditions()) &&
+                        basisConditions.Contains(speed, altitude, out int ii, out int jj))
+                    {
+                        results[i, j].StoreResult(resultPoints[ii, jj]);
+                    }
+                    else
+                        ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
                 }
             }
         }
@@ -306,26 +377,9 @@ namespace KerbalWindTunnel.DataGenerators
 
         public override void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
         {
-            const float variance = 0.6f;
             const int numPtsX = 125, numPtsY = 125;
             float stepX = (xMax - xMin) / numPtsX, stepY = (yMax - yMin) / numPtsY;
-            Conditions newConditions = currentConditions.Modify(lowerBoundSpeed: xMin, upperBoundSpeed: xMax, stepSpeed: stepX, lowerBoundAltitude: yMin, upperBoundAltitude: yMax, stepAltitude: stepY);
-            if (!currentConditions.Contains(newConditions))
-            {
-                Calculate(vessel, currentConditions.body, xMin, xMax, stepX, yMin, yMax, stepY);
-            }
-            else if (currentConditions.stepSpeed > stepX / 2 / variance || currentConditions.stepAltitude > stepY / 2 / variance)
-            {
-                int iL = Mathf.FloorToInt((newConditions.lowerBoundSpeed - currentConditions.lowerBoundSpeed) / currentConditions.stepSpeed);
-                int iR = Mathf.CeilToInt((newConditions.upperBoundSpeed - currentConditions.lowerBoundSpeed) / currentConditions.stepSpeed);
-                int iB = Mathf.FloorToInt((newConditions.lowerBoundAltitude - currentConditions.lowerBoundAltitude) / currentConditions.stepAltitude);
-                int iT = Mathf.CeilToInt((newConditions.upperBoundAltitude - currentConditions.lowerBoundAltitude) / currentConditions.stepAltitude);
-                calculationManager.Cancel();
-                calculationManager.Dispose();
-                calculationManager = new CalculationManager();
-                Queue<Conditions> followOn = new Queue<Conditions>(new Conditions[] { newConditions.Modify(stepSpeed: newConditions.stepSpeed / 2, stepAltitude: newConditions.stepAltitude / 2) });
-                WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, newConditions, vessel, envelopePoints.Subset(iL, iR, iB, iT), followOn));
-            }
+            Calculate(vessel, currentConditions.body, xMin, xMax, stepX, yMin, yMax, stepY);
         }
 
         private struct GenData
@@ -481,6 +535,26 @@ namespace KerbalWindTunnel.DataGenerators
                     this.upperBoundSpeed >= conditions.upperBoundSpeed &&
                     this.lowerBoundAltitude <= conditions.lowerBoundAltitude &&
                     this.upperBoundAltitude >= conditions.upperBoundAltitude;
+            }
+            public bool Contains(float speed, float altitude)
+            {
+                return lowerBoundSpeed <= speed && speed <= upperBoundSpeed &&
+                    lowerBoundAltitude <= altitude && altitude <= upperBoundAltitude &&
+                    (speed - lowerBoundSpeed) % stepSpeed == 0 && (altitude - lowerBoundAltitude) % stepAltitude == 0;
+            }
+            public bool Contains(float speed, float altitude, out int x, out int y)
+            {
+                bool result = Contains(speed, altitude);
+                if (result)
+                {
+                    x = (int)((speed - lowerBoundSpeed) / stepSpeed);
+                    y = (int)((altitude - lowerBoundAltitude) / stepAltitude);
+                }
+                else
+                {
+                    x = -1; y = -1;
+                }
+                return result;
             }
 
             public override bool Equals(object obj)
