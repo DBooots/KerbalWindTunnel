@@ -24,6 +24,7 @@ namespace KerbalWindTunnel.Threading
         private volatile bool _cancelled = false;
         private ManualResetEvent completionEvent = new ManualResetEvent(false);
         public Callback OnCancelCallback = delegate { };
+        public Callback OnCompleteCallback = delegate { };
         public bool Cancelled
         {
             get
@@ -81,17 +82,24 @@ namespace KerbalWindTunnel.Threading
         {
             get
             {
-                if (linked == 0)
-                    return false;
-                return completed == linked;
+                lock (linkLock)
+                {
+                    if (linked == 0)
+                        return false;
+                    lock (completeLock)
+                        return completed == linked;
+                }
             }
             set
             {
                 if(value)
                 {
-                    lock (completeLock)
+                    lock (linkLock)
                     {
-                        completed = linked;
+                        lock (completeLock)
+                        {
+                            completed = linked;
+                        }
                     }
                 }
             }
@@ -145,7 +153,10 @@ namespace KerbalWindTunnel.Threading
                 this.completed += 1;
             }
             if (Completed)
+            {
                 completionEvent.Set();
+                this.OnCompleteCallback();
+            }
             return true;
         }
 
