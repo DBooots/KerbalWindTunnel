@@ -123,9 +123,11 @@ namespace KerbalWindTunnel.Threading
 
         private CalculationManager LinkTo()
         {
-            if (_status == RunStatus.PreStart || _status == RunStatus.Completed)
-                lock (statusLock)
+            lock (statusLock)
+            {
+                if (_status == RunStatus.PreStart || _status == RunStatus.Completed)
                     this._status = RunStatus.Running;
+            }
             lock (linkLock)
             {
                 linked += 1;
