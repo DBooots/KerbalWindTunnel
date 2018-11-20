@@ -11,6 +11,7 @@ namespace KerbalWindTunnel.DataGenerators
 {
     public partial class EnvelopeSurf : DataSetGenerator
     {
+        #region EnvelopeSurf
         protected static readonly ColorMap Jet_Dark_Positive = new ColorMap(ColorMap.Jet_Dark) { Filter = (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v) };
 
         public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
@@ -37,6 +38,9 @@ namespace KerbalWindTunnel.DataGenerators
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Pitch Input", ZUnit = "", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Fuel Burn Rate", ZUnit = "kg/s", StringFormat = "F3", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Fuel Economy", ZUnit = "kg/100 km", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            //graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Stability Derivative", ZUnit = "kNm/deg", StringFormat = "F3", Color = ColorMap.Jet_Dark });
+            //graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Stability Range", ZUnit = "deg", StringFormat = "F2", Color = ColorMap.Jet_Dark });
+            //graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Stability Score", ZUnit = "kNm-deg", StringFormat = "F1", Color = ColorMap.Jet_Dark });
             graphables.Add(new OutlineMask(blank, left, right, bottom, top) { Name = "Envelope Mask", ZUnit = "kN", StringFormat = "N0", Color = Color.grey, LineWidth = 2, LineOnly = true, MaskCriteria = (v) => !float.IsNaN(v) && !float.IsInfinity(v) && v >= 0 });
             graphables.Add(new MetaLineGraph(new Vector2[0])              { Name = "Fuel-Optimal Path", StringFormat = "N0", Color = Color.black, LineWidth = 3, MetaFields = new string[] { "Climb Angle", "Climb Rate", "Fuel Used", "Time" } });
             graphables.Add(new MetaLineGraph(new Vector2[0])              { Name = "Time-Optimal Path", StringFormat = "N0", Color = Color.white, LineWidth = 3, MetaFields = new string[] { "Climb Angle", "Climb Rate", "Time" } });
@@ -166,6 +170,9 @@ namespace KerbalWindTunnel.DataGenerators
             ((SurfGraph)graphables["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top);
             ((SurfGraph)graphables["Pitch Input"]).SetValues(envelopePoints.SelectToArray(pt => pt.pitchInput), left, right, bottom, top);
             ((SurfGraph)graphables["Fuel Burn Rate"]).SetValues(envelopePoints.SelectToArray(pt => pt.fuelBurnRate), left, right, bottom, top);
+            //((SurfGraph)graphables["Stability Derivative"]).SetValues(envelopePoints.SelectToArray(pt => pt.stabilityDerivative), left, right, bottom, top);
+            //((SurfGraph)graphables["Stability Range"]).SetValues(envelopePoints.SelectToArray(pt => pt.stabilityRange), left, right, bottom, top);
+            //((SurfGraph)graphables["Stability Score"]).SetValues(envelopePoints.SelectToArray(pt => pt.stabilityScore), left, right, bottom, top);
 
             float[,] economy = envelopePoints.SelectToArray(pt => pt.fuelBurnRate / pt.speed * 1000 * 100);
             int stallpt = CoordLocator.GenerateCoordLocators(envelopePoints.SelectToArray(pt=>pt.Thrust_excess)).First(0, 0, c => c.value>=0);
@@ -382,6 +389,8 @@ namespace KerbalWindTunnel.DataGenerators
             Calculate(vessel, currentConditions.body, xMin, xMax, stepX, yMin, yMax, stepY);
         }
 
+        #endregion EnvelopeSurf
+
         private struct GenData
         {
             public readonly Conditions conditions;
@@ -417,13 +426,16 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float speed;
             public readonly float LDRatio;
             public readonly Vector3 force;
-            public readonly Vector3 liftforce;
+            public readonly Vector3 aeroforce;
             public readonly float mach;
             public readonly float dynamicPressure;
             public readonly float dLift;
             public readonly float drag;
             public readonly float pitchInput;
             public readonly float fuelBurnRate;
+            //public readonly float stabilityRange;
+            //public readonly float stabilityScore;
+            //public readonly float stabilityDerivative;
 
             public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
             {
@@ -457,10 +469,12 @@ namespace KerbalWindTunnel.DataGenerators
                     pitchInput = 1;
 
                 Thrust_available = thrustForce.magnitude;
+
+                //vessel.GetAeroCombined(conditions, AoA_level, pitchInput, out force, out Vector3 torque);
                 force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
-                liftforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
-                drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
-                float lift = AeroPredictor.GetLiftForceMagnitude(force, AoA_level);
+                aeroforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
+                drag = -aeroforce.z;
+                float lift = aeroforce.y;
                 Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
                 if (weight > Lift_max)// AoA_level >= AoA_max)
                 {
@@ -469,8 +483,70 @@ namespace KerbalWindTunnel.DataGenerators
                 }
                 Accel_excess = (Thrust_excess / vessel.Mass / WindTunnelWindow.gAccel);
                 LDRatio = Mathf.Abs(lift / drag);
-                dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) -
-                    vessel.GetLiftForceMagnitude(conditions, AoA_level, pitchInput)) / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
+                dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) - lift)
+                    / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
+                //stabilityDerivative = (vessel.GetAeroTorque(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput).x - torque.x)
+                //    / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
+                //GetStabilityValues(vessel, conditions, AoA_level, out stabilityRange, out stabilityScore);
+            }
+
+            private static void GetStabilityValues(AeroPredictor vessel, AeroPredictor.Conditions conditions, float AoA_centre, out float stabilityRange, out float stabilityScore)
+            {
+                const int step = 5;
+                const int range = 90;
+                const int alphaSteps = range / step;
+                float[] torques = new float[2 * alphaSteps + 1];
+                float[] aoas = new float[2 * alphaSteps + 1];
+                int start, end;
+                for (int i = 0; i <= 2 * alphaSteps; i++)
+                {
+                    aoas[i] = (i - alphaSteps) * step * Mathf.Deg2Rad;
+                    torques[i] = vessel.GetAeroTorque(conditions, aoas[i], 0).x;
+                }
+                int eq = 0 + alphaSteps;
+                int dir = (int)Mathf.Sign(torques[eq]);
+                if (dir == 0)
+                {
+                    start = eq - 1;
+                    end = eq + 1;
+                }
+                else
+                {
+                    while (eq > 0 && eq < 2 * alphaSteps)
+                    {
+                        eq += dir;
+                        if (Mathf.Sign(torques[eq]) != dir)
+                            break;
+                    }
+                    if (eq == 0 || eq == 2 * alphaSteps)
+                    {
+                        stabilityRange = 0;
+                        stabilityScore = 0;
+                        return;
+                    }
+                    if (dir < 0)
+                    {
+                        start = eq;
+                        end = eq + 1;
+                    }
+                    else
+                    {
+                        start = eq - 1;
+                        end = eq;
+                    }
+                }
+                while (torques[start] > 0 && start > 0)
+                    start -= 1;
+                while (torques[end] < 0 && end < 2 * alphaSteps - 1)
+                    end += 1;
+                float min = (Mathf.InverseLerp(torques[start], torques[start + 1], 0) + start) * step;
+                float max = (-Mathf.InverseLerp(torques[end], torques[end - 1], 0) + end) * step;
+                stabilityRange = max - min;
+                stabilityScore = 0;
+                for (int i = start; i < end; i++)
+                {
+                    stabilityScore += (torques[i] + torques[i + 1]) / 2 * step;
+                }
             }
 
             public override string ToString()

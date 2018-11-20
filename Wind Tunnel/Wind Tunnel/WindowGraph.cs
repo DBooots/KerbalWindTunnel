@@ -134,6 +134,12 @@ namespace KerbalWindTunnel
                     break;
                 case 11: EnvelopeSurfGenerator.Graphables["Excess Acceleration"].Visible = true;
                     break;
+                /*case 12: EnvelopeSurfGenerator.Graphables["Stability Derivative"].Visible = true;
+                    break;
+                case 13: EnvelopeSurfGenerator.Graphables["Stability Range"].Visible = true;
+                    break;
+                case 14: EnvelopeSurfGenerator.Graphables["Stability Score"].Visible = true;
+                    break;*/
             }
             EnvelopeSurfGenerator.Graphables["Fuel-Optimal Path"].Visible = lineFlags[0];
             EnvelopeSurfGenerator.Graphables["Time-Optimal Path"].Visible = lineFlags[1];
