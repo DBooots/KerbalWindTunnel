@@ -109,10 +109,11 @@ namespace KerbalWindTunnel.DataGenerators
             }
             return result;
         }
+
         public void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
         {
             Conditions newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
-            if (currentConditions.Equals(newConditions))
+            if (currentConditions.Equals(newConditions) && calculationManager.Status != CalculationManager.RunStatus.PreStart)
                 return;
 
             Cancel();
