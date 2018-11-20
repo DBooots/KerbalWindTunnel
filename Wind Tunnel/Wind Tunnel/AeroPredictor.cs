@@ -124,7 +124,7 @@ namespace KerbalWindTunnel
         }
         public static float GetLiftForceMagnitude(Vector3 force, float AoA)
         {
-            return (Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * force).y;
+            return ToFlightFrame(force, AoA).y;
         }
 
         public virtual float GetDragForceMagnitude(Conditions conditions, float AoA, float pitchInput = 0)
@@ -133,7 +133,7 @@ namespace KerbalWindTunnel
         }
         public static float GetDragForceMagnitude(Vector3 force, float AoA)
         {
-            return -(Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * force).z;
+            return -ToFlightFrame(force, AoA).z;
         }
 
         public virtual Vector3 GetThrustForce(Conditions conditions)
