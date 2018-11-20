@@ -36,9 +36,12 @@ namespace KerbalWindTunnel.DataGenerators
 
         public virtual void Cancel()
         {
-            calculationManager.Cancel();
-            calculationManager.Dispose();
-            calculationManager = new CalculationManager();
+            if (calculationManager.Status != CalculationManager.RunStatus.PreStart)
+            {
+                calculationManager.Cancel();
+                calculationManager.Dispose();
+                calculationManager = new CalculationManager();
+            }
             valuesSet = false;
         }
 

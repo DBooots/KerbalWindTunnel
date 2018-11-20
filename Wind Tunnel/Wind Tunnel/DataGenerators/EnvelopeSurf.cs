@@ -70,14 +70,17 @@ namespace KerbalWindTunnel.DataGenerators
 
         public override void Cancel()
         {
-            if (calculationManager.PercentComplete < 0.75)
+            if (calculationManager.Status != CalculationManager.RunStatus.PreStart)
             {
-                calculationManager.Cancel();
-                calculationManager.Dispose();
+                if (calculationManager.PercentComplete < 0.75)
+                {
+                    calculationManager.Cancel();
+                    calculationManager.Dispose();
+                }
+                else
+                    calculationManager.OnCompleteCallback += () => { calculationManager.Dispose(); };
+                calculationManager = new CalculationManager();
             }
-            else
-                calculationManager.OnCompleteCallback += () => { calculationManager.Dispose(); };
-            calculationManager = new CalculationManager();
             valuesSet = false;
         }
 
