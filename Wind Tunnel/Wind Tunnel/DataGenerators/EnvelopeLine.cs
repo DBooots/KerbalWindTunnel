@@ -99,6 +99,8 @@ namespace KerbalWindTunnel.DataGenerators
                 this.altitude = altitude;
                 this.cost = cost;
                 this.climbRate = climbRate;
+                if (float.IsNaN(this.climbRate))
+                    this.climbRate = 0;
                 this.climbAngle = Mathf.Atan2(climbRate, speed);
                 this.time = time;
             }
