@@ -198,7 +198,7 @@ namespace KerbalWindTunnel.Graphing
             else
                 strCsv += String.Format(",{0}", YUnit != "" ? YUnit : "-");
 
-            for (int i = 0; i <= MetaFields.Length && i <= metaCount; i++)
+            for (int i = 0; i < MetaFields.Length && i < metaCount; i++)
                 strCsv += String.IsNullOrEmpty(MetaFields[i]) ? "," : "," + MetaFields[i];
 
             try
@@ -210,7 +210,7 @@ namespace KerbalWindTunnel.Graphing
             for (int i = 0; i < _values.Length; i++)
             {
                 strCsv = String.Format("{0}, {1:" + StringFormat.Replace("N", "F") + "}", _values[i].x, _values[i].y);
-                for (int j = 0; j <= metaCount; j++)
+                for (int j = 0; j < metaCount; j++)
                 {
                     if (FormatProviders.Length >= j)
                         strCsv += "," + metaData[j][i].ToString(FormatProviders[j]);
