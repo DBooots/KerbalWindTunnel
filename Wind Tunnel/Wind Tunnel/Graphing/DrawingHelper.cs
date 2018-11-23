@@ -33,7 +33,15 @@ namespace KerbalWindTunnel.Graphing
          *
         */
         public static void DrawLine(ref Texture2D tex, int x1, int y1, int x2, int y2, Color col)
+            => DrawLine(ref tex, x1, y1, x2, y2, col, col);
+
+        public static void DrawLine(ref Texture2D tex, int x1, int y1, int x2, int y2, Color startCol, Color endCol)
         {
+            System.Func<float, Color> pixColor;
+            if (startCol == endCol)
+                pixColor = (f) => startCol;
+            else
+                pixColor = (f) => Color.Lerp(startCol, endCol, f);
             int width = tex.width, height = tex.height;
             int dy = (y2 - y1);
             int dx = (x2 - x1);
@@ -45,41 +53,45 @@ namespace KerbalWindTunnel.Graphing
             else { stepx = 1; }
             dy <<= 1;
             dx <<= 1;
+            int x = x1, y = y1;
 
             float fraction = 0;
+            int range;
 
-            if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height)
-                tex.SetPixel(x1, y1, col);
+            if (x >= 0 && x < width && y >= 0 && y < height)
+                tex.SetPixel(x, y, startCol);
             if (dx > dy)
             {
+                range = x2 - x1;
                 fraction = dy - (dx >> 1);
-                while (Mathf.Abs(x1 - x2) > 1)
+                while (Mathf.Abs(x - x2) > 1)
                 {
                     if (fraction >= 0)
                     {
-                        y1 += stepy;
+                        y += stepy;
                         fraction -= dx;
                     }
-                    x1 += stepx;
+                    x += stepx;
                     fraction += dy;
-                    if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height)
-                        tex.SetPixel(x1, y1, col);
+                    if (x >= 0 && x < width && y >= 0 && y < height)
+                        tex.SetPixel(x, y, pixColor((float)(x - x1) / range));
                 }
             }
             else
             {
+                range = y2 - y1;
                 fraction = dx - (dy >> 1);
-                while (Mathf.Abs(y1 - y2) > 1)
+                while (Mathf.Abs(y - y2) > 1)
                 {
                     if (fraction >= 0)
                     {
-                        x1 += stepx;
+                        x += stepx;
                         fraction -= dy;
                     }
-                    y1 += stepy;
+                    y += stepy;
                     fraction += dx;
-                    if (x1 >= 0 && x1 < width && y1 >= 0 && y1 < height)
-                        tex.SetPixel(x1, y1, col);
+                    if (x >= 0 && x < width && y >= 0 && y < height)
+                        tex.SetPixel(x, y, pixColor((float)(y - y1) / range));
                 }
             }
         }
