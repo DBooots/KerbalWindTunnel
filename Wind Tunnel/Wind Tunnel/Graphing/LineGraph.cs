@@ -198,9 +198,11 @@ namespace KerbalWindTunnel.Graphing
         }
 
         public override string GetFormattedValueAt(float x, float y, bool withName = false)
+            => GetFormattedValueAt(x, y, 1, 1, withName);
+        public virtual string GetFormattedValueAt(float x, float y, float width, float height, bool withName = false)
         {
             if (_values.Length <= 0) return "";
-            return base.GetFormattedValueAt(x, y, withName);
+            return String.Format("{2}{0:" + StringFormat + "}{1}", ValueAt(x, y, width, height), YUnit, withName && Name != "" ? Name + ": " : "");
         }
 
         public override void WriteToFile(string filename, string sheetName = "")

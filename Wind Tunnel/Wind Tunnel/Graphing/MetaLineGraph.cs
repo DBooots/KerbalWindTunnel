@@ -155,9 +155,11 @@ namespace KerbalWindTunnel.Graphing
         }
 
         public override string GetFormattedValueAt(float x, float y, bool withName = false)
+            => GetFormattedValueAt(x, y, 1, 1, withName);
+        public override string GetFormattedValueAt(float x, float y, float width, float height, bool withName = false)
         {
             if (!Visible || Values.Length <= 0) return "";
-            string value = base.GetFormattedValueAt(x, y, withName);
+            string value = base.GetFormattedValueAt(x, y, width, height, withName);
             for (int i = 0; i < metaCount; i++)
             {
                 if (FormatProviders.Length >= i)
