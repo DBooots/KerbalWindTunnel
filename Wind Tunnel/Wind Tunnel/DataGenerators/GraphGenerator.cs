@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using KerbalWindTunnel.Graphing;
+using Graphing;
 using KerbalWindTunnel.Threading;
 
 namespace KerbalWindTunnel.DataGenerators

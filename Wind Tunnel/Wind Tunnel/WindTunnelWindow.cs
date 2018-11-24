@@ -351,7 +351,7 @@ namespace KerbalWindTunnel
                 if (GUI.Button(new Rect(80 + graphWidth, 80 + 5 + graphHeight - 10, 25, 25), saveIconTex))
                 {
                     if (EditorLogic.fetch.ship != null)
-                        grapher.WriteToFile(EditorLogic.fetch.ship.shipName);
+                        grapher.WriteToFile(WindTunnel.graphPath, EditorLogic.fetch.ship.shipName);
                 }
             }
         }

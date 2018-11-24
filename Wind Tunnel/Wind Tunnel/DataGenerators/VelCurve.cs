@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using KerbalWindTunnel.Graphing;
+using Graphing;
 using KerbalWindTunnel.Threading;
 
 namespace KerbalWindTunnel.DataGenerators

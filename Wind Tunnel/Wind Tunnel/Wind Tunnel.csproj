@@ -60,14 +60,8 @@
   <ItemGroup>
     <Compile Include="DataGenerators\EnvelopeLine.cs" />
     <Compile Include="Extensions\GUILayoutHelper.cs" />
-    <Compile Include="Graphing\AxesSettingWindow.cs" />
-    <Compile Include="Graphing\Graphable.cs" />
-    <Compile Include="Graphing\Legend.cs" />
-    <Compile Include="Graphing\Line3Graph.cs" />
-    <Compile Include="Graphing\MetaLineGraph.cs" />
     <Compile Include="Threading\CalculationManager.cs" />
     <Compile Include="Extensions\KSPClassExtensions.cs" />
-    <Compile Include="Graphing\DrawingHelper.cs" />
     <Compile Include="Extensions\HashCodeHelper.cs" />
     <Compile Include="Extensions\Linq2.cs" />
     <Compile Include="Framework\ConfigNodeStorage.cs" />
@@ -82,15 +76,8 @@
     <Compile Include="Framework\MonoBehaviourWindow.cs" />
     <Compile Include="Framework\SkinsLibrary.cs" />
     <Compile Include="DataGenerators\AoACurve.cs" />
-    <Compile Include="Graphing\Axis.cs" />
-    <Compile Include="Graphing\ColorMap.cs" />
     <Compile Include="DataGenerators\EnvelopeSurf.cs" />
-    <Compile Include="Graphing\GraphableCollection.cs" />
-    <Compile Include="Graphing\Grapher.cs" />
     <Compile Include="DataGenerators\GraphGenerator.cs" />
-    <Compile Include="Graphing\LineGraph.cs" />
-    <Compile Include="Graphing\OutlineMask.cs" />
-    <Compile Include="Graphing\SurfGraph.cs" />
     <Compile Include="DataGenerators\VelCurve.cs" />
     <Compile Include="StockAero.cs" />
     <Compile Include="StockAeroUtil.cs" />
@@ -114,6 +101,12 @@
     <None Include="LICENSE.md" />
     <None Include="packages.config" />
     <None Include="VesselCache\LICENSE_VesselCache.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Unity Graphing\Graphing\Graphing.csproj">
+      <Project>{3c216395-20c9-4f59-813e-9326882d7092}</Project>
+      <Name>Graphing</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\Accord.3.8.0\build\Accord.targets" Condition="Exists('..\packages\Accord.3.8.0\build\Accord.targets')" />

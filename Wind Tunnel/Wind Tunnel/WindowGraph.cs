@@ -1,5 +1,5 @@
 ﻿using System;
-using KerbalWindTunnel.Graphing;
+using Graphing;
 using KerbalWindTunnel.DataGenerators;
 using KerbalWindTunnel.Threading;
 using UnityEngine;

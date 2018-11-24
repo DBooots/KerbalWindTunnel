@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEngine;
 using KerbalWindTunnel.Extensions;
 using KerbalWindTunnel.Threading;
-using KerbalWindTunnel.Graphing;
+using Graphing;
 
 namespace KerbalWindTunnel.DataGenerators
 {
