@@ -145,20 +145,38 @@ namespace KerbalWindTunnel.Graphing
                 }
                 else
                 {
-                    int minX = 0, maxX = _values.Length - 1, length = _values.Length;
-                    for (int i = 0; i < length - 1; i++)
+                    UnityEngine.Vector2 point = new UnityEngine.Vector2(x, y);
+                    UnityEngine.Vector2 closestPoint = _values[0];
+
+                    float currentDistance = float.PositiveInfinity;
+                    int length = _values.Length;
+                    for (int i = 0; i < length - 1 - 1; i++)
                     {
-                        if(x >= _values[i].x && x <= _values[i+1].x)
+
+                        UnityEngine.Vector2 lineDir = (_values[i + 1] - _values[i]).normalized;
+                        float distance = UnityEngine.Vector2.Dot(point - _values[i], lineDir);
+                        UnityEngine.Vector2 closestPt = _values[i] + distance * lineDir;
+                        if (distance <= 0)
                         {
-                            float f = (x - _values[i].x) / (_values[i + 1].x - _values[i].x);
-                            return _values[i].y * (1 - f) + _values[i + 1].y * f;
+                            closestPt = _values[i];
+
                         }
-                        if (_values[i].x == XMax) maxX = i;
-                        if (_values[i].x == XMin) minX = i;
+                        else if ((closestPt - _values[i]).sqrMagnitude > (_values[i + 1] - _values[i]).sqrMagnitude)//(distance * distance >= (_values[i + 1] - _values[i]).sqrMagnitude)
+                        {
+                            closestPt = _values[i + 1];
+
+                        }
+                        UnityEngine.Vector2 LocalTransform(UnityEngine.Vector2 vector) => new UnityEngine.Vector2(vector.x / width, vector.y / height);
+                        
+                        float ptDistance = LocalTransform(point - closestPt).sqrMagnitude;
+
+                        if ( ptDistance < currentDistance)
+                        {
+                            currentDistance = ptDistance;
+                            closestPoint = closestPt;
+                        }
                     }
-                    if (x <= XMin) return _values[minX].y;
-                    if (x >= XMax) return _values[maxX].y;
-                    return _values[0].y;
+                    return closestPoint.y;
                 }
             }
         }

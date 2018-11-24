@@ -100,21 +100,34 @@ namespace KerbalWindTunnel.Graphing
                 return 0;
 
             if (Transpose) x = y;
-
-            int minX = 0, maxX = _values.Length - 1, length = _values.Length;
-            for (int i = 0; i < length - 1; i++)
+            
+            UnityEngine.Vector2 point = new UnityEngine.Vector2(x, y);
+            UnityEngine.Vector2 closestPoint = new UnityEngine.Vector2(_values[0].x, _values[0].y);
+            float currentDistance = float.PositiveInfinity;
+            int length = _values.Length;
+            for (int i = 0; i < length - 1 - 1; i++)
             {
-                if (x >= _values[i].x && x <= _values[i + 1].x)
+                UnityEngine.Vector2 pt1 = new UnityEngine.Vector2(_values[i].x, _values[i].y);
+                UnityEngine.Vector2 pt2 = new UnityEngine.Vector2(_values[i + 1].x, _values[i + 1].y);
+                UnityEngine.Vector2 lineDir = (pt2 - pt1).normalized;
+                UnityEngine.Vector2 closestPt = pt1 + UnityEngine.Vector2.Dot(point - pt1, lineDir) * lineDir;
+                if (UnityEngine.Vector2.Dot(closestPt - pt1, lineDir) <= 0)
                 {
-                    float f = (x - _values[i].x) / (_values[i + 1].x - _values[i].x);
-                    return _values[i].z * (1 - f) + _values[i + 1].z * f;
+                        closestPt = pt1;
                 }
-                if (_values[i].x == XMax) maxX = i;
-                if (_values[i].x == XMin) minX = i;
+                else if ((closestPt - pt1).sqrMagnitude >= (pt2 - pt1).sqrMagnitude)
+                {
+                        closestPt = pt2;
+                }
+                UnityEngine.Vector2 LocalTransform(UnityEngine.Vector2 vector) => new UnityEngine.Vector2(vector.x / width, vector.y / height);
+                float distance = (LocalTransform(point) - LocalTransform(closestPoint)).sqrMagnitude;
+                if (distance < currentDistance)
+                {
+                    currentDistance = distance;
+                    closestPoint = closestPt;
+                }
             }
-            if (x <= XMin) return _values[minX].z;
-            if (x >= XMax) return _values[maxX].z;
-            return _values[0].z;
+            return closestPoint.y;
         }
 
         public void SetValues(UnityEngine.Vector3[] values)
