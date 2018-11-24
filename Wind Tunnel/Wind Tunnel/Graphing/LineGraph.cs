@@ -103,6 +103,8 @@ namespace KerbalWindTunnel.Graphing
         }
 
         public override float ValueAt(float x, float y)
+            => ValueAt(x, y, 1, 1);
+        public virtual float ValueAt(float x, float y, float width, float height)
         {
             if (_values.Length <= 0)
                 return 0;

@@ -92,6 +92,8 @@ namespace KerbalWindTunnel.Graphing
         }
 
         public float MetaValueAt(float x, float y, int metaIndex)
+            => MetaValueAt(x, y, 1, 1, metaIndex);
+        public float MetaValueAt(float x, float y, float width, float height, int metaIndex)
         {
             if (metaIndex > metaCount)
                 return 0;

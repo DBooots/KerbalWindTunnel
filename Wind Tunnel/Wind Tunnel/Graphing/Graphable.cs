@@ -32,7 +32,7 @@ namespace KerbalWindTunnel.Graphing
         string ZName { get; set; }
     }
 
-    public interface IGraph
+    public interface IGraph : IGraphable
     {
         ColorMap Color { get; set; }
         Grapher.CoordsToColorFunc ColorFunc { get; set; }
@@ -41,6 +41,8 @@ namespace KerbalWindTunnel.Graphing
     public interface ILineGraph : IGraph
     {
         int LineWidth { get; set; }
+        float ValueAt(float x, float y, float width, float height);
+        string GetFormattedValueAt(float x, float y, float width, float height, bool withName = false);
     }
 
     public abstract class Graphable : IGraphable, IGraph

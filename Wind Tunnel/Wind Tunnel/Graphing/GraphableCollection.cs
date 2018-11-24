@@ -346,7 +346,9 @@ namespace KerbalWindTunnel.Graphing
         {
             if (graphs.Count - 1 < index)
                 return float.NaN;
-            
+
+            if (graphs[index] is ILineGraph lineGraph)
+                return lineGraph.ValueAt(x, y, XMax - XMin, YMax - YMin);
             return graphs[index].ValueAt(x, y);
         }
 
@@ -357,7 +359,11 @@ namespace KerbalWindTunnel.Graphing
                 return "";
 
             if (index >= 0)
+            {
+                if (graphs[index] is ILineGraph lineGraph)
+                    return lineGraph.GetFormattedValueAt(x, y, XMax - XMin, YMax - YMin, withName);
                 return graphs[index].GetFormattedValueAt(x, y, withName);
+            }
 
             if (graphs.Count > 1)
                 withName = true;
@@ -367,7 +373,11 @@ namespace KerbalWindTunnel.Graphing
             {
                 if (!graphs[i].Visible || !graphs[i].DisplayValue)
                     continue;
-                string graphValue = graphs[i].GetFormattedValueAt(x, y, withName);
+                string graphValue;
+                if (graphs[i] is ILineGraph lineGraph)
+                    graphValue = lineGraph.GetFormattedValueAt(x, y, XMax - XMin, YMax - YMin, withName);
+                else
+                    graphValue = graphs[i].GetFormattedValueAt(x, y, withName);
                 if (graphValue != "" && returnValue != "")
                     returnValue += String.Format("\n{0}", graphValue);
                 else
