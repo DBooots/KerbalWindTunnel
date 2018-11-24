@@ -8,7 +8,8 @@ namespace KerbalWindTunnel.Graphing
         protected float[][] metaData;
         public float[][] MetaData { get => metaData; set => SetMetaData(value); }
         public string[] MetaFields { get; set; } = new string[0];
-        public IFormatProvider[] FormatProviders { get; set; } = new IFormatProvider[0];
+        public string[] MetaStringFormats { get; set; } = new string[0];
+        public string[] MetaUnits { get; set; } = new string[0];
         protected int metaCount = 0;
         public int MetaFieldCount { get => metaCount; }
 
@@ -38,19 +39,6 @@ namespace KerbalWindTunnel.Graphing
             this.metaData = metaData;
             this.MetaFields = new string[metaCount];
             metaFields.CopyTo(this.MetaFields, 0);
-        }
-
-        public MetaLineGraph(float[] values, float xLeft, float xRight, string[] metaFields, float[][] metaData, IFormatProvider[] formatProviders)
-            : this(values, xLeft, xRight)
-        {
-            this.FormatProviders = new IFormatProvider[metaCount];
-            formatProviders.CopyTo(this.FormatProviders, 0);
-        }
-        public MetaLineGraph(UnityEngine.Vector2[] values, string[] metaFields, float[][] metaData, IFormatProvider[] formatProviders)
-            : this(values, metaFields, metaData)
-        {
-            this.FormatProviders = new IFormatProvider[metaCount];
-            formatProviders.CopyTo(this.FormatProviders, 0);
         }
         
         public void SetMetaData(float[][] metaData) => SetMetaData(metaData, Values.Length);
@@ -83,9 +71,12 @@ namespace KerbalWindTunnel.Graphing
                 string[] fields = new string[metaCount];
                 MetaFields.CopyTo(fields, 0);
                 MetaFields = fields;
-                IFormatProvider[] formats = new IFormatProvider[metaCount];
-                FormatProviders.CopyTo(formats, 0);
-                FormatProviders = formats;
+                string[] formats = new string[metaCount];
+                MetaStringFormats.CopyTo(formats, 0);
+                MetaStringFormats = formats;
+                string[] units = new string[metaCount];
+                MetaUnits.CopyTo(units, 0);
+                MetaUnits = units;
             }
             else
                 metaCount = length;
@@ -181,10 +172,10 @@ namespace KerbalWindTunnel.Graphing
             string value = base.GetFormattedValueAt(x, y, width, height, withName);
             for (int i = 0; i < metaCount; i++)
             {
-                if (FormatProviders.Length >= i)
-                    value += String.Format("\n{1}{0}", MetaValueAt(x, y, i).ToString(FormatProviders[i]), String.IsNullOrEmpty(MetaFields[i]) ? "" : MetaFields[i] + ": ");
+                if (MetaStringFormats.Length > i)
+                    value += String.Format("\n{2}{0:" + (String.IsNullOrEmpty(MetaStringFormats[i]) ? "" : MetaStringFormats[i]) + "}{1}", MetaValueAt(x, y, width, height, i), MetaUnits.Length <= i || String.IsNullOrEmpty(MetaUnits[i]) ? "" : MetaUnits[i], String.IsNullOrEmpty(MetaFields[i]) ? "" : MetaFields[i] + ": ");
                 else
-                    value += String.Format("\n{1}{0}", MetaValueAt(x, y, i).ToString(), String.IsNullOrEmpty(MetaFields[i]) ? "" : MetaFields[i] + ": ");
+                    value += String.Format("\n{2}{0}{1}", MetaValueAt(x, y, width, height, i).ToString(), MetaUnits.Length <= i || String.IsNullOrEmpty(MetaUnits[i]) ? "" : MetaUnits[i], String.IsNullOrEmpty(MetaFields[i]) ? "" : MetaFields[i] + ": ");
             }
             return value;
         }
@@ -222,7 +213,11 @@ namespace KerbalWindTunnel.Graphing
                 strCsv += String.Format(",{0}", YUnit != "" ? YUnit : "-");
 
             for (int i = 0; i < MetaFields.Length && i < metaCount; i++)
-                strCsv += String.IsNullOrEmpty(MetaFields[i]) ? "," : "," + MetaFields[i];
+            {
+                string nameStr = String.IsNullOrEmpty(MetaFields[i]) ? "" : MetaFields[i];
+                string unitStr = MetaUnits.Length <= i || String.IsNullOrEmpty(MetaUnits[i]) ? "-" : MetaUnits[i];
+                strCsv += nameStr != "" ? String.Format(",{0} [{1}]", nameStr, unitStr) : String.Format(",{0}", unitStr);
+            }
 
             try
             {
@@ -235,8 +230,8 @@ namespace KerbalWindTunnel.Graphing
                 strCsv = String.Format("{0}, {1:" + StringFormat.Replace("N", "F") + "}", _values[i].x, _values[i].y);
                 for (int j = 0; j < metaCount; j++)
                 {
-                    if (FormatProviders.Length >= j)
-                        strCsv += "," + metaData[j][i].ToString(FormatProviders[j]);
+                    if (MetaStringFormats.Length >= j)
+                        strCsv += "," + metaData[j][i].ToString(MetaStringFormats[j].Replace("N", "F"));
                     else
                         strCsv += "," + metaData[j][i].ToString();
                 }

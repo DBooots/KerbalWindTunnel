@@ -625,8 +625,8 @@ namespace KerbalWindTunnel.Graphing
                     {
                         for (int m = 0; m <= metaLineGraph.MetaFieldCount; m++)
                         {
-                            if (metaLineGraph.FormatProviders.Length >= m)
-                                strCsv += "," + metaLineGraph.MetaData[m][j].ToString(metaLineGraph.FormatProviders[m]);
+                            if (metaLineGraph.MetaStringFormats.Length >= m)
+                                strCsv += "," + metaLineGraph.MetaData[m][j].ToString(metaLineGraph.MetaStringFormats[m].Replace("N", "F"));
                             else
                                 strCsv += "," + metaLineGraph.MetaData[m][j].ToString();
                         }
