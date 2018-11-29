@@ -3,8 +3,10 @@ using System.Reflection;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace KerbalWindTunnel.Extensions
+namespace KerbalWindTunnel.Extensions.Reflection
 {
+    public delegate void Action<T1, T2, T3, T4, T5>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
+
     /*
      * Preamble
      * 
@@ -169,6 +171,7 @@ namespace KerbalWindTunnel.Extensions
 
     public static class DelegateFactory
     {
+        #region Constructor
         public static Func<object> Constructor(this Type source)
         {
             var constructorInfo = source.GetConstructor(BindingFlags.Public, null, Type.EmptyTypes, null);
@@ -200,28 +203,205 @@ namespace KerbalWindTunnel.Extensions
                 returnExpression = Expression.Convert(returnExpression, typeof(object));
             return (Func<object[], object>)Expression.Lambda(returnExpression, argsArray).Compile();
         }
+        #endregion Constructor
 
-        private static Type[] GetFuncDelegateArguments<TDelegate>() where TDelegate : class
+        #region Property Get/Set
+        // Property Get
+        public static Func<object, TProperty> PropertyGet<TProperty>(this Type source, string propertyName)
+            => PropertyGet<TProperty>(source, source.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance));
+        public static Func<object, TProperty> PropertyGet<TProperty>(this Type source, PropertyInfo propertyInfo)
         {
-            if (!typeof(TDelegate).IsGenericType)
-                throw new ArgumentException();
-            return typeof(TDelegate).GetGenericArguments().Reverse().Skip(1).Reverse().ToArray();
+            if (propertyInfo == null)
+                return null;
+            var sourceObjectParam = Expression.Parameter(typeof(object), "sourceObject");
+            Expression returnExpression = Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetGetMethod());
+            if (!propertyInfo.PropertyType.IsClass)
+                returnExpression = Expression.Convert(returnExpression, typeof(object));
+            return (Func<object, TProperty>)Expression.Lambda(returnExpression, sourceObjectParam).Compile();
         }
-        private static Type GetFuncDelegateReturnType<TDelegate>() where TDelegate : class
+        public static Func<object, object> PropertyGet(this Type source, string propertyName)
+            => PropertyGet(source, source.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance));
+        public static Func<object, object> PropertyGet(this Type source, PropertyInfo propertyInfo)
+            => PropertyGet<object>(source, propertyInfo);
+
+        //Property Set
+        public static Action<object, TProperty> PropertySet<TProperty>(this Type source, string propertyName)
+            => PropertySet<TProperty>(source, source.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance));
+        public static Action<object, TProperty> PropertySet<TProperty>(this Type source, PropertyInfo propertyInfo)
         {
-            if (!typeof(TDelegate).IsGenericType)
-                throw new ArgumentException();
-            return typeof(TDelegate).GetGenericArguments().Last();
+            if (propertyInfo == null)
+                return null;
+            var sourceObjectParam = Expression.Parameter(typeof(object), "sourceObject");
+            ParameterExpression propertyValueParam;
+            Expression valueExpression;
+            if (propertyInfo.PropertyType == typeof(TProperty))
+            {
+                propertyValueParam = Expression.Parameter(propertyInfo.PropertyType, "value");
+                valueExpression = propertyValueParam;
+            }
+            else
+            {
+                propertyValueParam = Expression.Parameter(typeof(TProperty), "value");
+                valueExpression = Expression.Convert(propertyValueParam, propertyInfo.PropertyType);
+            }
+            return (Action<object, TProperty>)Expression.Lambda(Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetSetMethod(), valueExpression), sourceObjectParam, propertyValueParam).Compile();
+        }
+        public static Action<object, object> PropertySet(this Type source, string propertyName)
+            => PropertySet(source, source.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance));
+        public static Action<object, object> PropertySet(this Type source, PropertyInfo propertyInfo)
+            => PropertySet<object>(source, propertyInfo);
+        #endregion Property Get/Set
+
+        #region Indexer Get/Set
+        private const string Item = "Item";
+        // Indexer Get
+        private static Delegate DelegateIndexerGet(Type source, Type returnType, params Type[] indexTypes)
+        {
+            var propertyInfo = source.GetProperty(Item, returnType, indexTypes);
+            var sourceObjectParam = Expression.Parameter(typeof(object), "source");
+            var paramsExpression = new ParameterExpression[indexTypes.Length];
+            for (var i = 0; i < indexTypes.Length; i++)
+                paramsExpression[i] = Expression.Parameter(indexTypes[i], "index");
+            return Expression.Lambda(Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetGetMethod(), paramsExpression), new[] { sourceObjectParam }.Concat(paramsExpression).ToArray()).Compile();
+        }
+        public static Func<object, TIndex, TReturn> IndexerGet<TIndex, TReturn>(this Type source)
+            => (Func<object, TIndex, TReturn>)DelegateIndexerGet(source, typeof(TReturn), typeof(TIndex));
+        public static Func<object, TIndex1, TIndex2, TReturn> IndexerGet<TIndex1, TIndex2, TReturn>(this Type source)
+            => (Func<object, TIndex1, TIndex2, TReturn>)DelegateIndexerGet(source, typeof(TReturn), typeof(TIndex1), typeof(TIndex2));
+        public static Func<object, TIndex1, TIndex2, TIndex3, TReturn> IndexerGet<TIndex1, TIndex2, TIndex3, TReturn>(this Type source)
+            => (Func<object, TIndex1, TIndex2, TIndex3, TReturn>)DelegateIndexerGet(source, typeof(TReturn), typeof(TIndex1), typeof(TIndex2), typeof(TIndex3));
+
+        public static Func<object, object, object> IndexerGet(this Type source, Type returnType, Type indexType)
+        {
+            var propertyInfo = source.GetProperty(Item, returnType, new[] { indexType });
+            var sourceObjectParam = Expression.Parameter(typeof(object), "source");
+            var indexObjectParam = Expression.Parameter(typeof(object), "index");
+            Expression returnExpression = Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetGetMethod(), Expression.Convert(indexObjectParam, indexType));
+            if (!propertyInfo.PropertyType.IsClass)
+                returnExpression = Expression.Convert(returnExpression, typeof(object));
+            return (Func<object, object, object>)Expression.Lambda(returnExpression, sourceObjectParam, indexObjectParam).Compile();
+        }
+        public static Func<object, object[], object> IndexerGet(this Type source, Type returnType, params Type[] indexTypes)
+        {
+            var propertyInfo = source.GetProperty(Item, returnType, indexTypes);
+            var sourceObjectParam = Expression.Parameter(typeof(object), "source");
+            var indexesParam = Expression.Parameter(typeof(object[]), "index");
+            var paramsExpression = new Expression[indexTypes.Length];
+            for (var i = 0; i < indexTypes.Length; i++)
+                paramsExpression[i] = Expression.Convert(Expression.ArrayIndex(indexesParam, Expression.Constant(i)), indexTypes[i]);
+            Expression returnExpression = Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetGetMethod(), paramsExpression);
+            if (!propertyInfo.PropertyType.IsClass)
+                returnExpression = Expression.Convert(returnExpression, typeof(object));
+            return (Func<object, object[], object>)Expression.Lambda(returnExpression, sourceObjectParam, indexesParam).Compile();
         }
 
+        // Indexer Set
+        private static Delegate DelegateIndexerSet(Type source, Type valueType, params Type[] indexTypes)
+        {
+            var propertyInfo = source.GetProperty(Item, valueType, indexTypes);
+            if (propertyInfo == null)
+                return null;
+            var sourceObjectParam = Expression.Parameter(typeof(object), "source");
+            var valueParam = Expression.Parameter(valueType, "value");
+            var indexExpressions = new ParameterExpression[indexTypes.Length];
+            for (var i = 0; i < indexTypes.Length; i++)
+                indexExpressions[i] = Expression.Parameter(indexTypes[i], "index");
+            var callArgs = indexExpressions.Concat(new[] { valueParam }).ToArray();
+            var paramsExpressions = new[] { sourceObjectParam }.Concat(callArgs).ToArray();
+            return Expression.Lambda(Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetSetMethod(), callArgs), paramsExpressions).Compile();
+        }
+        public static Action<object, TIndex, TValue> IndexerSet<TIndex, TValue>(this Type source)
+            => (Action<object, TIndex, TValue>)DelegateIndexerSet(source, typeof(TValue), typeof(TIndex));
+        public static Action<object, TIndex1, TIndex2, TValue> IndexerSet<TIndex1, TIndex2, TValue>(this Type source)
+            => (Action<object, TIndex1, TIndex2, TValue>)DelegateIndexerSet(source, typeof(TValue), typeof(TIndex1), typeof(TIndex2));
+        public static Action<object, TIndex1, TIndex2, TIndex3, TValue> IndexerSet<TIndex1, TIndex2, TIndex3, TValue>(this Type source)
+            => (Action<object, TIndex1, TIndex2, TIndex3, TValue>)DelegateIndexerSet(source, typeof(TValue), typeof(TIndex1), typeof(TIndex2), typeof(TIndex3));
+
+        public static Action<object, object, object> IndexerSet(this Type source, Type valueType, Type indexType)
+        {
+            var propertyInfo = source.GetProperty(Item, valueType, new[] { indexType });
+            var sourceObjectParam = Expression.Parameter(typeof(object), "source");
+            var indexObjectParam = Expression.Parameter(typeof(object), "index");
+            var valueParam = Expression.Parameter(typeof(object), "value");
+            Expression returnExpression = Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetSetMethod(), Expression.Convert(indexObjectParam, indexType));
+            return (Action<object, object, object>)Expression.Lambda(returnExpression, sourceObjectParam, indexObjectParam, valueParam).Compile();
+        }
+        public static Action<object, object[], object> IndexerSet(this Type source, Type valueType, params Type[] indexTypes)
+        {
+            var propertyInfo = source.GetProperty(Item, valueType, indexTypes);
+            if (propertyInfo == null)
+                return null;
+            var sourceObjectParam = Expression.Parameter(typeof(object), "source");
+            var indexesParam = Expression.Parameter(typeof(object[]), "index");
+            var valueParam = Expression.Parameter(typeof(object), "value");
+            var paramsExpression = new Expression[indexTypes.Length + 1];
+            for (var i = 0; i < indexTypes.Length; i++)
+                paramsExpression[i] = Expression.Convert(Expression.ArrayIndex(indexesParam, Expression.Constant(i)), indexTypes[i]);
+            paramsExpression[indexTypes.Length] = Expression.Convert(valueParam, valueType);
+            Expression returnExpression = Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetSetMethod(), paramsExpression);
+            return (Action<object, object[], object>)Expression.Lambda(returnExpression, sourceObjectParam, indexesParam, valueParam).Compile();
+        }
+        #endregion Indexer Get/Set
+
+        #region Fields
+        // Static
+        // Get
+        public static Func<TField> StaticFieldGet<TField>(this Type source, string fieldName)
+            => StaticFieldGet<TField>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+        public static Func<TField> StaticFieldGet<TField>(this Type source, FieldInfo fieldInfo)
+        {
+            if (fieldInfo == null) return null;
+            return (Func<TField>)Expression.Lambda(Expression.Field(null, fieldInfo)).Compile();
+        }
+        public static Func<object> StaticFieldGet(this Type source, string fieldName)
+            => StaticFieldGet(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+        public static Func<object> StaticFieldGet(this Type source, FieldInfo fieldInfo)
+        {
+            if (fieldInfo == null) return null;
+            Expression returnExpression = Expression.Field(null, fieldInfo);
+            if (!fieldInfo.FieldType.IsClass)
+                returnExpression = Expression.Convert(returnExpression, typeof(object));
+            return (Func<object>)Expression.Lambda(returnExpression).Compile();
+        }
+
+        // Set
+        public static Action<TField> StaticFieldSet<TField>(this Type source, string fieldName)
+            => StaticFieldSet<TField>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+        public static Action<TField> StaticFieldSet<TField>(this Type source, FieldInfo fieldInfo)
+        {
+            System.Reflection.Emit.DynamicMethod m = new System.Reflection.Emit.DynamicMethod(
+                "setter_" + fieldInfo.Name, typeof(void), new Type[] { typeof(TField) }, source);
+            System.Reflection.Emit.ILGenerator cg = m.GetILGenerator();
+
+            // arg0.<field> = arg1
+            cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+            cg.Emit(System.Reflection.Emit.OpCodes.Stsfld, fieldInfo);
+            cg.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+            return (Action<TField>)m.CreateDelegate(typeof(Action<TField>));
+        }
+        public static Action<object> StaticFieldSet(this Type source, string fieldName)
+            => StaticFieldSet<object>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+        public static Action<object> StaticFieldSet(this Type source, FieldInfo fieldInfo)
+            => StaticFieldSet<object>(source, fieldInfo);
+
+        // Instance
+        // Get
+        public static Func<object, TField> FieldGet<TField>(this Type source, string fieldName)
+            => FieldGet<TField>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Instance));
+        public static Func<object, TField> FieldGet<TField>(this Type source, FieldInfo fieldInfo)
+        {
+            if (fieldInfo == null) return null;
+
+            var sourceParam = Expression.Parameter(typeof(object), "object");
+            Expression returnExpression = Expression.Field(Expression.Convert(sourceParam, source), fieldInfo);
+            return (Func<object, TField>)Expression.Lambda(returnExpression, sourceParam).Compile();
+        }
         public static Func<object, object> FieldGet(this Type source, string fieldName)
-        {
-            return FieldGet(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Instance));
-        }
+            => FieldGet(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Instance));
         public static Func<object, object> FieldGet(this Type source, FieldInfo fieldInfo)
         {
-            if (fieldInfo == null)
-                return null;
+            if (fieldInfo == null) return null;
 
             var sourceParam = Expression.Parameter(typeof(object), "object");
             Expression returnExpression = Expression.Field(Expression.Convert(sourceParam, source), fieldInfo);
@@ -231,6 +411,31 @@ namespace KerbalWindTunnel.Extensions
             return (Func<object, object>)lambda.Compile();
         }
 
+        // Set
+        public static Action<object, TField> FieldSet<TField>(this Type source, string fieldName)
+            => FieldSet<TField>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+        public static Action<object, TField> FieldSet<TField>(this Type source, FieldInfo fieldInfo)
+        {
+            System.Reflection.Emit.DynamicMethod m = new System.Reflection.Emit.DynamicMethod(
+                "setter_" + fieldInfo.Name, typeof(void), new Type[] { typeof(object), typeof(TField) }, source);
+            System.Reflection.Emit.ILGenerator cg = m.GetILGenerator();
+
+            // arg0.<field> = arg1
+            cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+            cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
+            cg.Emit(System.Reflection.Emit.OpCodes.Stfld, fieldInfo);
+            cg.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+            return (Action<object, TField>)m.CreateDelegate(typeof(Action<object, TField>));
+        }
+        public static Action<object, object> FieldSet(this Type source, string fieldName)
+            => FieldSet<object>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+        public static Action<object, object> FieldSet(this Type source, FieldInfo fieldInfo)
+            => FieldSet<object>(source, fieldInfo);
+        #endregion Fields
+
+        #region Methods
+        // Static
         public static TDelegate StaticMethod<TDelegate>(this Type source, string name) where TDelegate : class
             => StaticMethod<TDelegate>(source, source.GetMethod(name, BindingFlags.Static | BindingFlags.Public, null, GetFuncDelegateArguments<TDelegate>(), null));
         public static TDelegate StaticMethod<TDelegate>(this Type source, MethodInfo methodInfo) where TDelegate : class
@@ -259,7 +464,8 @@ namespace KerbalWindTunnel.Extensions
             => StaticMethod<Action<object[]>>(source, name, paramTypes);
         public static Action<object[]> StaticMethodVoid(this Type source, MethodInfo methodInfo, params Type[] paramTypes)
             => StaticMethod<Action<object[]>>(source, methodInfo, paramTypes);
-
+        
+        // Instance
         public static TDelegate InstanceMethod<TDelegate>(this Type source, string name, params Type[] paramTypes) where TDelegate : class
             => InstanceMethod<TDelegate>(source, source.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, paramTypes, null), paramTypes);
         public static TDelegate InstanceMethod<TDelegate>(this Type source, MethodInfo methodInfo, params Type[] paramTypes) where TDelegate : class
@@ -309,5 +515,20 @@ namespace KerbalWindTunnel.Extensions
             => InstanceMethod<Action<object[]>>(source, name, paramTypes);
         public static Action<object[]> InstanceMethodVoid(this Type source, MethodInfo methodInfo, params Type[] paramTypes)
             => InstanceMethod<Action<object[]>>(source, methodInfo, paramTypes);
+
+        #endregion Methods
+
+        private static Type[] GetFuncDelegateArguments<TDelegate>() where TDelegate : class
+        {
+            if (!typeof(TDelegate).IsGenericType)
+                throw new ArgumentException();
+            return typeof(TDelegate).GetGenericArguments().Reverse().Skip(1).Reverse().ToArray();
+        }
+        private static Type GetFuncDelegateReturnType<TDelegate>() where TDelegate : class
+        {
+            if (!typeof(TDelegate).IsGenericType)
+                throw new ArgumentException();
+            return typeof(TDelegate).GetGenericArguments().Last();
+        }
     }
 }
