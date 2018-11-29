@@ -8,6 +8,12 @@ namespace KerbalWindTunnel.Extensions.Reflection
     public delegate void Action<T1, T2, T3, T4, T5>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
 
     /*
+     * This class is derived from (style and argument name changes only) from code
+     * licensed under the CPOL by @n-podbielski (https://www.codeproject.com/Members/n-podbielski).
+     * 
+     * CODE PROJECT OPEN LICENSE (CPOL):
+     * https://www.codeproject.com/info/cpol10.aspx
+     * 
      * Preamble
      * 
      * This License governs Your use of the Work.This License is intended to allow developers to
