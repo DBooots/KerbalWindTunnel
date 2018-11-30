@@ -7,6 +7,8 @@ namespace KerbalWindTunnel.Extensions.Reflection
 {
     public delegate void Action<T1, T2, T3, T4, T5>(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
 
+    #region LICENSE
+
     /*
      * This class is derived from (style and argument name changes only) from code
      * licensed under the CPOL by @n-podbielski (https://www.codeproject.com/Members/n-podbielski).
@@ -175,24 +177,31 @@ namespace KerbalWindTunnel.Extensions.Reflection
      *   may appear in any communication from You. This License may not be modified without the mutual
      *   written agreement of the Author and You. */
 
+    #endregion LICENSE
+
     public static class DelegateFactory
     {
         #region Constructor
         public static Func<object> Constructor(this Type source)
         {
-            var constructorInfo = source.GetConstructor(BindingFlags.Public, null, Type.EmptyTypes, null);
+            var constructorInfo = source.GetConstructor(Type.EmptyTypes);// BindingFlags.Public, null, Type.EmptyTypes, null);
             if (constructorInfo == null)
                 return null;
-            return (Func<object>)Expression.Lambda(Expression.New(constructorInfo)).Compile();
+            Expression returnExpression = Expression.New(constructorInfo);
+            if (source != typeof(object))
+                returnExpression = Expression.Convert(returnExpression, typeof(object));
+            return (Func<object>)Expression.Lambda(returnExpression).Compile();
         }
         public static TDelegate Constructor<TDelegate>(this Type source) where TDelegate : class
         {
             var ctrArgs = GetFuncDelegateArguments<TDelegate>();
-            var constructorInfo = source.GetConstructor(BindingFlags.Public, null, ctrArgs, null);
+            var constructorInfo = source.GetConstructor(ctrArgs);
             var parameters = ctrArgs.Select(arg => Expression.Parameter(arg, arg.Name)).ToArray();
             Expression returnExpression = Expression.New(constructorInfo, parameters);
             if (!source.IsClass)
                 returnExpression = Expression.Convert(returnExpression, typeof(object));
+            else if (source != GetFuncDelegateReturnType<TDelegate>())
+                returnExpression = Expression.Convert(returnExpression, GetFuncDelegateReturnType<TDelegate>());
             return Expression.Lambda(returnExpression, parameters).Compile() as TDelegate;
         }
         public static Func<object[], object> Constructor(this Type source, Type[] ctrArgTypes)
@@ -419,7 +428,7 @@ namespace KerbalWindTunnel.Extensions.Reflection
 
         // Set
         public static Action<object, TField> FieldSet<TField>(this Type source, string fieldName)
-            => FieldSet<TField>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+            => FieldSet<TField>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Instance));
         public static Action<object, TField> FieldSet<TField>(this Type source, FieldInfo fieldInfo)
         {
             System.Reflection.Emit.DynamicMethod m = new System.Reflection.Emit.DynamicMethod(
@@ -435,7 +444,7 @@ namespace KerbalWindTunnel.Extensions.Reflection
             return (Action<object, TField>)m.CreateDelegate(typeof(Action<object, TField>));
         }
         public static Action<object, object> FieldSet(this Type source, string fieldName)
-            => FieldSet<object>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Static));
+            => FieldSet<object>(source, source.GetField(fieldName, BindingFlags.Public | BindingFlags.Instance));
         public static Action<object, object> FieldSet(this Type source, FieldInfo fieldInfo)
             => FieldSet<object>(source, fieldInfo);
         #endregion Fields
@@ -490,7 +499,7 @@ namespace KerbalWindTunnel.Extensions.Reflection
         }
 
         public static TDelegate InstanceMethod<TDelegate>(this Type source, string name) where TDelegate : class
-            => InstanceMethod<TDelegate>(source, source.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, GetFuncDelegateArguments<TDelegate>(), null));
+            => InstanceMethod<TDelegate>(source, source.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, GetFuncDelegateArguments<TDelegate>().Skip(1).ToArray(), null));
         public static TDelegate InstanceMethod<TDelegate>(this Type source, MethodInfo methodInfo) where TDelegate : class
         {
             var delegateParams = GetFuncDelegateArguments<TDelegate>();
@@ -501,6 +510,7 @@ namespace KerbalWindTunnel.Extensions.Reflection
                 deleg = Delegate.CreateDelegate(typeof(TDelegate), methodInfo);
             else
             {
+                delegateParams = delegateParams.Skip(1).ToArray();
                 var sourceParameter = Expression.Parameter(typeof(object), "source");
                 var expressions = delegateParams.Select(arg => Expression.Parameter(arg, arg.Name)).ToArray();
                 Expression returnExpression = Expression.Call(Expression.Convert(sourceParameter, source), methodInfo, expressions.Cast<Expression>());
@@ -524,10 +534,14 @@ namespace KerbalWindTunnel.Extensions.Reflection
 
         #endregion Methods
 
-        private static Type[] GetFuncDelegateArguments<TDelegate>() where TDelegate : class
+        internal static Type[] GetFuncDelegateArguments<TDelegate>() where TDelegate : class
         {
+            if (typeof(TDelegate) == typeof(Action))
+                return Type.EmptyTypes;
             if (!typeof(TDelegate).IsGenericType)
                 throw new ArgumentException();
+            if (typeof(TDelegate).GetMethod("Invoke").ReturnType == typeof(void))
+                return typeof(TDelegate).GetGenericArguments();
             return typeof(TDelegate).GetGenericArguments().Reverse().Skip(1).Reverse().ToArray();
         }
         private static Type GetFuncDelegateReturnType<TDelegate>() where TDelegate : class
