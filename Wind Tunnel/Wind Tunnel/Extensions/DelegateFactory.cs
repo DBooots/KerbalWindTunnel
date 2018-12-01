@@ -407,9 +407,18 @@ namespace KerbalWindTunnel.Extensions.Reflection
         public static Func<object, TField> FieldGet<TField>(this Type source, FieldInfo fieldInfo)
         {
             if (fieldInfo == null) return null;
+            if (!typeof(TField).IsAssignableFrom(fieldInfo.FieldType))
+                throw new ArgumentException();
 
             var sourceParam = Expression.Parameter(typeof(object), "object");
             Expression returnExpression = Expression.Field(Expression.Convert(sourceParam, source), fieldInfo);
+            if (fieldInfo.FieldType != typeof(TField))
+            {
+                if (fieldInfo.FieldType != typeof(void) && !fieldInfo.FieldType.IsClass && !fieldInfo.FieldType.IsPrimitive)
+                    returnExpression = Expression.Convert(returnExpression, typeof(object));
+                else
+                    returnExpression = Expression.Convert(returnExpression, typeof(TField));
+            }
             return (Func<object, TField>)Expression.Lambda(returnExpression, sourceParam).Compile();
         }
         public static Func<object, object> FieldGet(this Type source, string fieldName)
@@ -514,8 +523,13 @@ namespace KerbalWindTunnel.Extensions.Reflection
                 var sourceParameter = Expression.Parameter(typeof(object), "source");
                 var expressions = delegateParams.Select(arg => Expression.Parameter(arg, arg.Name)).ToArray();
                 Expression returnExpression = Expression.Call(Expression.Convert(sourceParameter, source), methodInfo, expressions.Cast<Expression>());
-                if (methodInfo.ReturnType != typeof(void) && !methodInfo.ReturnType.IsClass)
-                    returnExpression = Expression.Convert(returnExpression, typeof(object));
+                if (methodInfo.ReturnType != GetFuncDelegateReturnType<TDelegate>())
+                {
+                    if (methodInfo.ReturnType != typeof(void) && !methodInfo.ReturnType.IsClass && !methodInfo.ReturnType.IsPrimitive)
+                        returnExpression = Expression.Convert(returnExpression, typeof(object));
+                    else
+                        returnExpression = Expression.Convert(returnExpression, GetFuncDelegateReturnType<TDelegate>());
+                }
                 var lambdaParams = new[] { sourceParameter }.Concat(expressions).ToArray();
                 deleg = Expression.Lambda(returnExpression, lambdaParams).Compile();
             }
