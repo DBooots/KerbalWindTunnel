@@ -230,8 +230,13 @@ namespace KerbalWindTunnel.Extensions.Reflection
                 return null;
             var sourceObjectParam = Expression.Parameter(typeof(object), "sourceObject");
             Expression returnExpression = Expression.Call(Expression.Convert(sourceObjectParam, source), propertyInfo.GetGetMethod());
-            if (!propertyInfo.PropertyType.IsClass)
-                returnExpression = Expression.Convert(returnExpression, typeof(object));
+            if (propertyInfo.PropertyType != typeof(TProperty))
+            {
+                if (!propertyInfo.PropertyType.IsClass && !propertyInfo.PropertyType.IsPrimitive)
+                    returnExpression = Expression.Convert(returnExpression, typeof(object));
+                else
+                    returnExpression = Expression.Convert(returnExpression, typeof(TProperty));
+            }
             return (Func<object, TProperty>)Expression.Lambda(returnExpression, sourceObjectParam).Compile();
         }
         public static Func<object, object> PropertyGet(this Type source, string propertyName)
