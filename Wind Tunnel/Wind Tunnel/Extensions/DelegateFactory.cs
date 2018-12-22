@@ -496,16 +496,16 @@ namespace KerbalWindTunnel.Extensions.Reflection
         
         // Instance
         public static TDelegate InstanceMethod<TDelegate>(this Type source, string name, params Type[] paramTypes) where TDelegate : class
-            => InstanceMethod<TDelegate>(source, source.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, paramTypes, null), paramTypes);
+            => InstanceMethod<TDelegate>(source, source.GetMethod(name, BindingFlags.Instance | BindingFlags.Public, null, paramTypes.Skip(1).ToArray(), null), paramTypes);
         public static TDelegate InstanceMethod<TDelegate>(this Type source, MethodInfo methodInfo, params Type[] paramTypes) where TDelegate : class
         {
             if (methodInfo == null)
                 return null;
             var argsArray = Expression.Parameter(typeof(object[]), "objects");
             var sourceParameter = Expression.Parameter(typeof(object), "source");
-            var paramsExpression = new Expression[paramTypes.Length];
-            for (int i = 0; i < paramTypes.Length; i++)
-                paramsExpression[i] = Expression.Convert(Expression.ArrayIndex(argsArray, Expression.Constant(i)), paramTypes[i]);
+            var paramsExpression = new Expression[paramTypes.Length - 1];
+            for (int i = 0; i < paramTypes.Length - 1; i++)
+                paramsExpression[i] = Expression.Convert(Expression.ArrayIndex(argsArray, Expression.Constant(i + 1)), paramTypes[i + 1]);
             Expression returnExpression = Expression.Call(Expression.Convert(sourceParameter, source), methodInfo, paramsExpression);
             if (methodInfo.ReturnType != typeof(void) && !methodInfo.ReturnType.IsClass)
                 returnExpression = Expression.Convert(returnExpression, typeof(object));
@@ -517,8 +517,8 @@ namespace KerbalWindTunnel.Extensions.Reflection
         public static TDelegate InstanceMethod<TDelegate>(this Type source, MethodInfo methodInfo) where TDelegate : class
         {
             var delegateParams = GetFuncDelegateArguments<TDelegate>();
-            if (methodInfo == null)
-                return null;
+            if (delegateParams.Length > 4)
+                return MethodEmit<TDelegate>(methodInfo);
             Delegate deleg;
             if (delegateParams[0] == source)
                 deleg = Delegate.CreateDelegate(typeof(TDelegate), methodInfo);
@@ -541,6 +541,28 @@ namespace KerbalWindTunnel.Extensions.Reflection
             return deleg as TDelegate;
         }
         
+        public static TDelegate MethodEmit<TDelegate>(MethodInfo methodInfo) where TDelegate : class
+        {
+            Type[] parameterTypes;
+            parameterTypes = GetFuncDelegateArguments<TDelegate>();
+            System.Reflection.Emit.DynamicMethod m = new System.Reflection.Emit.DynamicMethod(
+                "call_" + methodInfo.Name, GetFuncDelegateReturnType<TDelegate>(), parameterTypes, methodInfo.DeclaringType, true);
+            System.Reflection.Emit.ILGenerator cg = m.GetILGenerator();
+
+            for (int i = 0; i < parameterTypes.Length; i++)
+            {
+                cg.Emit(System.Reflection.Emit.OpCodes.Ldarg, i);
+                if (i > 0 && parameterTypes[i] == typeof(object))
+                    cg.Emit(System.Reflection.Emit.OpCodes.Unbox_Any, methodInfo.GetParameters()[i - 1].ParameterType);
+            }
+            cg.Emit(System.Reflection.Emit.OpCodes.Callvirt, methodInfo);
+            if (methodInfo.ReturnType.IsValueType)
+                cg.Emit(System.Reflection.Emit.OpCodes.Box, methodInfo.ReturnType);
+            cg.Emit(System.Reflection.Emit.OpCodes.Ret);
+
+            return m.CreateDelegate(typeof(TDelegate)) as TDelegate;
+        }
+
         public static Func<object[], object> InstanceMethod(this Type source, string name, params Type[] paramTypes)
             => InstanceMethod<Func<object[], object>>(source, name, paramTypes);
         public static Func<object[], object> InstanceMethod(this Type source, MethodInfo methodInfo, params Type[] paramTypes)
@@ -567,6 +589,8 @@ namespace KerbalWindTunnel.Extensions.Reflection
         {
             if (!typeof(TDelegate).IsGenericType)
                 throw new ArgumentException();
+            if (typeof(TDelegate).GetMethod("Invoke").ReturnType == typeof(void))
+                return typeof(void);
             return typeof(TDelegate).GetGenericArguments().Last();
         }
     }
