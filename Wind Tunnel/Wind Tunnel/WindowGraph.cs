@@ -25,12 +25,17 @@ namespace KerbalWindTunnel
 
         private PopupDialog axesWindow = null;
 
+        private AeroPredictor GetAeroPredictor()
+        {
+                return VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+        }
+
         private void DrawGraph(GraphMode graphMode)
         {
             if (graphDirty)
             {
                 if (this.vessel == null)
-                    this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+                    this.vessel = GetAeroPredictor();
 
                 if (!graphRequested)
                 {

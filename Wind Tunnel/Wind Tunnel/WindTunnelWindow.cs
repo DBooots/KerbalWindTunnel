@@ -290,7 +290,7 @@ namespace KerbalWindTunnel
                 if (GUILayout.Button("Update Vessel", GUILayout.Height(25)))
                 {
                     OnVesselChanged();
-                    this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+                    this.vessel = GetAeroPredictor();
                 }
                 // Display selected point details.
                 GUILayout.Label(this.conditionDetails);
@@ -691,7 +691,7 @@ namespace KerbalWindTunnel
             VelCurveGenerator.Clear();
             this.conditionDetails = "";
 
-            if (vessel is VesselCache.SimulatedVessel releasable)
+            if (vessel is VesselCache.IReleasable releasable)
                 releasable.Release();
 
             selectedCrossHairVect = new Vector2(-1, -1);
@@ -715,7 +715,7 @@ namespace KerbalWindTunnel
         {
             OnVesselChanged();
             // TODO: Could do fancier stuff like compare angles and then adjust all AoAs appropriately.
-            this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+            this.vessel = GetAeroPredictor();
         }
 
         private void OnPlanetSelected(DropDownList sender, int OldIndex, int NewIndex)
@@ -730,9 +730,9 @@ namespace KerbalWindTunnel
             graphRequested = false;
             this.conditionDetails = "";
 
-            if (vessel is VesselCache.SimulatedVessel releasable)
+            if (vessel is VesselCache.IReleasable releasable)
                 releasable.Release();
-            this.vessel = VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+            this.vessel = GetAeroPredictor();
             //this.vessel = new StockAero();
             Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
             selectedCrossHairVect = new Vector2(-1, -1);

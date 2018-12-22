@@ -11,7 +11,7 @@ namespace KerbalWindTunnel.VesselCache
     {
         private static readonly Pool<SimulatedEngine> pool = new Pool<SimulatedEngine>(Create, Reset);
 
-        public SimulatedVessel vessel;
+        public AeroPredictor vessel;
 
         public float flameoutBar;
         public bool atmChangeFlow;
@@ -68,6 +68,14 @@ namespace KerbalWindTunnel.VesselCache
             SimulatedEngine engine = pool.Borrow();
             engine.vessel = part.vessel;
             engine.Init(module, part);
+            return engine;
+        }
+        public static SimulatedEngine Borrow(ModuleEngines module, AeroPredictor vessel)
+        {
+            SimulatedEngine engine = pool.Borrow();
+            engine.vessel = vessel;
+            // This is possibly dangerous and may lead to NullReferenceException
+            engine.Init(module, null);
             return engine;
         }
 

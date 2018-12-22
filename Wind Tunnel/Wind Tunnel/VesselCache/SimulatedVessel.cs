@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace KerbalWindTunnel.VesselCache
 {
-    public class SimulatedVessel : AeroPredictor
+    public class SimulatedVessel : AeroPredictor, IReleasable
     {
         public static bool accountForControls = false;
 
@@ -36,8 +36,6 @@ namespace KerbalWindTunnel.VesselCache
         private int count;
         public float totalMass = 0;
         public float dryMass = 0;
-        public Vector3 CoM;
-        public Vector3 CoM_dry;
 
         private SimCurves simCurves;
 

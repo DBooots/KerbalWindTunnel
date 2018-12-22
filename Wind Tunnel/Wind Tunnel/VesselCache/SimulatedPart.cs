@@ -9,7 +9,7 @@ namespace KerbalWindTunnel.VesselCache
     {
         protected internal DragCubeList cubes = new DragCubeList();
 
-        public SimulatedVessel vessel;
+        public AeroPredictor vessel;
 
         public string name = "";
         public float totalMass = 0;

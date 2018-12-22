@@ -9,7 +9,7 @@ namespace KerbalWindTunnel.VesselCache
     {
         private static readonly Pool<SimulatedLiftingSurface> pool = new Pool<SimulatedLiftingSurface>(Create, Reset);
 
-        public SimulatedVessel vessel;
+        public AeroPredictor vessel;
 
         public Vector3 liftVector;
         public bool omnidirectional;
