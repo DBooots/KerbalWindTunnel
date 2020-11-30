@@ -222,10 +222,9 @@ namespace KerbalWindTunnel
                     this.mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
                     this.oxygenAvailable = body.atmosphereContainsOxygen;
                 }
-                FloatCurve pseudoReynoldsCurve;
+                
                 lock (PhysicsGlobals.DragCurvePseudoReynolds)
-                    pseudoReynoldsCurve = new FloatCurve(PhysicsGlobals.DragCurvePseudoReynolds.Curve.keys);
-                this.pseudoReDragMult = pseudoReynoldsCurve.Evaluate(atmDensity * speed);
+                    this.pseudoReDragMult = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
             }
         }
     }

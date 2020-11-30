@@ -40,8 +40,11 @@ namespace KerbalWindTunnel.VesselCache
         private static SimulatedPart Create()
         {
             SimulatedPart part = new SimulatedPart();
-            part.cubes.BodyLiftCurve = new PhysicsGlobals.LiftingSurfaceCurve();
-            part.cubes.SurfaceCurves = new PhysicsGlobals.SurfaceCurvesList();
+            lock (part.cubes)
+            {
+                part.cubes.BodyLiftCurve = new PhysicsGlobals.LiftingSurfaceCurve();
+                part.cubes.SurfaceCurves = new PhysicsGlobals.SurfaceCurvesList();
+            }
             return part;
         }
 
@@ -122,17 +125,27 @@ namespace KerbalWindTunnel.VesselCache
             if(forcedRetract)
             {
                 gearPosition = wheelDeployment.Position;
-                p.DragCubes.SetCubeWeight("Retracted", 1);
-                p.DragCubes.SetCubeWeight("Deployed", 0);
+                lock (wheelDeployment)
+                {
+                    lock (p.DragCubes)
+                    {
+                        p.DragCubes.SetCubeWeight("Retracted", 1);
+                        p.DragCubes.SetCubeWeight("Deployed", 0);
+
+                        lock (this.cubes)
+                            CopyDragCubesList(p.DragCubes, cubes);
+
+                        p.DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
+                        p.DragCubes.SetCubeWeight("Deployed", gearPosition);
+                    }
+                }
             }
 
-            lock (this.cubes)
-                CopyDragCubesList(p.DragCubes, cubes);
-
-            if (forcedRetract)
+            else
             {
-                p.DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
-                p.DragCubes.SetCubeWeight("Deployed", gearPosition);
+                lock (this.cubes)
+                    lock (p.DragCubes)
+                        CopyDragCubesList(p.DragCubes, cubes);
             }
 
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
@@ -292,7 +305,9 @@ namespace KerbalWindTunnel.VesselCache
 
             for (int i = 0; i < source.Cubes.Count; i++)
             {
-                DragCube c = DragCubePool.Instance.Borrow();
+                DragCube c;
+                lock (DragCubePool.Instance)
+                    c = DragCubePool.Instance.Borrow();
                 CopyDragCube(source.Cubes[i], c);
                 dest.Cubes.Add(c);
             }
@@ -346,26 +361,29 @@ namespace KerbalWindTunnel.VesselCache
 
         protected void SetCubeWeight(string name, float newWeight)
         {
-            int count = cubes.Cubes.Count;
-            if (count == 0)
+            lock (cubes)
             {
-                return;
-            }
-
-            bool noChange = true;
-            for (int i = count - 1; i >= 0; i--)
-            {
-                if (cubes.Cubes[i].Name == name && cubes.Cubes[i].Weight != newWeight)
+                int count = cubes.Cubes.Count;
+                if (count == 0)
                 {
-                    cubes.Cubes[i].Weight = newWeight;
-                    noChange = false;
+                    return;
                 }
+
+                bool noChange = true;
+                for (int i = count - 1; i >= 0; i--)
+                {
+                    if (cubes.Cubes[i].Name == name && cubes.Cubes[i].Weight != newWeight)
+                    {
+                        cubes.Cubes[i].Weight = newWeight;
+                        noChange = false;
+                    }
+                }
+
+                if (noChange)
+                    return;
+
+                cubes.SetDragWeights();
             }
-
-            if (noChange)
-                return;
-
-            cubes.SetDragWeights();
         }
     }
 }
