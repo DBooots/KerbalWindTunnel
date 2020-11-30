@@ -2,10 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
-using KerbalWindTunnel.Threading;
 using Graphing;
 using KerbalWindTunnel.Extensions;
+using System.Collections.Concurrent;
 
 namespace KerbalWindTunnel.DataGenerators
 {
@@ -17,8 +19,10 @@ namespace KerbalWindTunnel.DataGenerators
         public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
         public Conditions currentConditions = Conditions.Blank;
         private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
-        private Dictionary<Conditions, Conditions> cachedConditions = new Dictionary<Conditions, Conditions>();
-        
+        private Dictionary<Conditions, KeyValuePair<Conditions, EnvelopePoint[]>> inProgressCache = new Dictionary<Conditions, KeyValuePair<Conditions, EnvelopePoint[]>>(Conditions.stepInsensitiveComparer);
+        private EnvelopePoint[] primaryProgress = null;
+        public int[,] resolution = { { 10, 10 }, { 40, 120 }, { 80, 180 }, { 160, 360 } };
+
         public EnvelopeSurf()
         {
             graphables.Clear();
@@ -56,44 +60,66 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
+        public override float PercentComplete
+        {
+            get
+            {
+                if (Status == TaskStatus.RanToCompletion)
+                    return 1;
+                if (primaryProgress == null)
+                    return -1;
+                return (float)(primaryProgress.Count((pt) => pt.completed)) / primaryProgress.Count();
+            }
+        }
+
         public override void Clear()
         {
             base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
-            cachedConditions.Clear();
+            inProgressCache.Clear();
+            primaryProgress = null;
             envelopePoints = new EnvelopePoint[0, 0];
 
             ((LineGraph)graphables["Fuel-Optimal Path"]).SetValues(new Vector2[0]);
             ((LineGraph)graphables["Time-Optimal Path"]).SetValues(new Vector2[0]);
         }
 
-        public override void Cancel()
+        private bool TryGetBestCache(Conditions conditions, out Conditions bestConditions, out EnvelopePoint[,] points)
         {
-            if (calculationManager.Status != CalculationManager.RunStatus.PreStart)
+            bestConditions = conditions;
+            points = new EnvelopePoint[0, 0];
+            Dictionary<Conditions, EnvelopePoint[,]>.Enumerator enumerator = cache.GetEnumerator();
+            long bestResolution = 0;
+            bool result = false;
+            while (enumerator.MoveNext())
             {
-                if (calculationManager.PercentComplete < 0.75)
+                Conditions enumConditions = enumerator.Current.Key;
+                if (Conditions.stepInsensitiveComparer.Equals(conditions, enumConditions))
                 {
-                    calculationManager.Cancel();
-                    calculationManager.Dispose();
+                    result = true;
+                    long resolution = enumConditions.Resolution;
+                    if (resolution > bestResolution)
+                    {
+                        bestResolution = resolution;
+                        bestConditions = enumConditions;
+                        points = enumerator.Current.Value;
+                    }
                 }
-                else
-                    calculationManager.OnCompleteCallback += () => { calculationManager.Dispose(); };
-                calculationManager = new CalculationManager();
             }
-            valuesSet = false;
+            return result;
         }
 
-        private bool TryGetContaining(Conditions conditions, out Conditions containingConditions, out EnvelopePoint[,] points)
+        private bool TryGetCacheContaining(Conditions conditions, out Conditions containingConditions, out EnvelopePoint[,] points)
         {
-            containingConditions = new Conditions();
+            containingConditions = conditions;
             points = new EnvelopePoint[0, 0];
             Dictionary<Conditions, EnvelopePoint[,]>.Enumerator enumerator = cache.GetEnumerator();
             int bestNumPoints = 0;
             bool result = false;
             while (enumerator.MoveNext())
             {
-                Conditions enumConditions = cachedConditions[enumerator.Current.Key];
+                Conditions enumConditions = enumerator.Current.Key;
                 if (enumConditions.Contains(conditions))
                 {
                     result = true;
@@ -103,54 +129,74 @@ namespace KerbalWindTunnel.DataGenerators
                     {
                         bestNumPoints = numPoints;
                         containingConditions = enumConditions;
-                        points = cache[enumConditions];
+                        points = enumerator.Current.Value;
                     }
                 }
             }
             return result;
         }
 
-        public void Calculate(AeroPredictor vessel, CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
+        public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
         {
+            // Set up calculation conditions and bounds
             Conditions newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
-            if (currentConditions.Equals(newConditions) && calculationManager.Status != CalculationManager.RunStatus.PreStart)
+
+            if (currentConditions.Equals(newConditions) && Status != TaskStatus.WaitingToRun)
                 return;
 
             Cancel();
 
             bool loadedCache = false;
-            Conditions loadedConditions;
-            if (cache.TryGetValue(newConditions, out envelopePoints))
+            if (TryGetCacheContaining(newConditions, out currentConditions, out EnvelopePoint[,] cachedData) && cachedData.Length > (resolution[0, 0] + 1) * (resolution[0, 1] + 1))
             {
                 loadedCache = true;
-                loadedConditions = cachedConditions[newConditions];
-                currentConditions = loadedConditions;
-            }
-            else if (TryGetContaining(newConditions, out loadedConditions, out envelopePoints))
-            {
-                loadedCache = true;
-                currentConditions = loadedConditions;
+                envelopePoints = cachedData;
+                UpdateGraphs();
             }
             if (loadedCache)
             {
-                calculationManager.Status = CalculationManager.RunStatus.Completed;
                 UpdateGraphs();
                 valuesSet = true;
 
-                if (loadedConditions.stepSpeed > stepSpeed || loadedConditions.stepAltitude > stepAltitude)
+                if (inProgressCache.TryGetValue(newConditions, out KeyValuePair<Conditions, EnvelopePoint[]> cachedProgress) &&
+                    cachedProgress.Key.Resolution < newConditions.Resolution)
+                    inProgressCache.Remove(newConditions);
+                else if (inProgressCache.TryGetValue(currentConditions, out cachedProgress) &&
+                    cachedProgress.Key.Resolution < newConditions.Resolution)
+                    inProgressCache.Remove(currentConditions);
+            }
+            else
+            {
+                // Generate 'coarse' cache
+                float firstStepSpeed = (newConditions.upperBoundSpeed - newConditions.lowerBoundSpeed) / resolution[0, 0];
+                float firstStepAltitude = (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) / resolution[0, 1];
+                EnvelopePoint[] preliminaryData = new EnvelopePoint[(resolution[0, 0] + 1) * (resolution[0, 1] + 1)];
+                // Probably won't run in parallel because it's very short.
+                // But the UI will hang waiting for this to complete, so a self-triggering CancellationToken is provided with a life span of 5 seconds.
+                try
                 {
-                    WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, newConditions, vessel, envelopePoints, loadedConditions,
-                        new Queue<Conditions>(new Conditions[] { newConditions.Modify(stepSpeed: stepSpeed / 2, stepAltitude: stepAltitude / 2) }), true));
+                    Parallel.For(0, preliminaryData.Length, new ParallelOptions() { CancellationToken = new CancellationTokenSource(5000).Token },
+                        WindTunnelWindow.Instance.GetAeroPredictor, (index, state, predictor) =>
+                             {
+                                 int x = index % (resolution[0, 0] + 1), y = index / (resolution[0, 0] + 1);
+                                 preliminaryData[index] = new EnvelopePoint(predictor, newConditions.body, y * firstStepAltitude + newConditions.lowerBoundAltitude, x * firstStepSpeed + newConditions.lowerBoundSpeed);
+                                 return predictor;
+                             }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
                 }
-                else if (loadedConditions.stepSpeed > stepSpeed / 2 || loadedConditions.stepAltitude > stepAltitude / 2)
+                catch (OperationCanceledException)
                 {
-                    WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, newConditions, vessel, envelopePoints, loadedConditions, forcePushToGraph: true));
+                    Debug.LogError("Wind Tunnel: Initial pass timed out.");
+                }
+                catch (AggregateException ex)
+                {
+                    Debug.LogError("Wind Tunnel: Initial pass threw an inner exception.");
+                    Debug.LogException(ex.InnerException);
                 }
 
-                return;
+                cache[newConditions] = preliminaryData.To2Dimension(resolution[0, 0] + 1);
             }
             
-            WindTunnel.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
+            WindTunnel.Instance.StartCoroutine(Processing(newConditions));
         }
 
         private void UpdateGraphs()
@@ -159,16 +205,29 @@ namespace KerbalWindTunnel.DataGenerators
             float top = currentConditions.upperBoundAltitude;
             float left = currentConditions.lowerBoundSpeed;
             float right = currentConditions.upperBoundSpeed;
-            Func<EnvelopePoint, float> scale = (pt) => 1;
+            Func<EnvelopePoint, float> scale = (pt) => 1f;
             if (WindTunnelSettings.UseCoefficients)
-                scale = (pt) => 1 / pt.dynamicPressure;
+            {
+                scale = (pt) => 1f / pt.dynamicPressure;
+                ((SurfGraph)graphables["Drag"]).ZUnit = "";
+                ((SurfGraph)graphables["Drag"]).StringFormat = "F3";
+                ((SurfGraph)graphables["Max Lift"]).ZUnit = "";
+                ((SurfGraph)graphables["Max Lift"]).StringFormat = "F3";
+            }
+            else
+            {
+                ((SurfGraph)graphables["Drag"]).ZUnit = "kN";
+                ((SurfGraph)graphables["Drag"]).StringFormat = "N0";
+                ((SurfGraph)graphables["Max Lift"]).ZUnit = "kN";
+                ((SurfGraph)graphables["Max Lift"]).StringFormat = "N0";
+            }
 
             ((SurfGraph)graphables["Excess Thrust"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
             ((SurfGraph)graphables["Excess Acceleration"]).SetValues(envelopePoints.SelectToArray(pt => pt.Accel_excess), left, right, bottom, top);
             ((SurfGraph)graphables["Thrust Available"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_available), left, right, bottom, top);
             ((SurfGraph)graphables["Level AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_level * Mathf.Rad2Deg), left, right, bottom, top);
             ((SurfGraph)graphables["Max Lift AoA"]).SetValues(envelopePoints.SelectToArray(pt => pt.AoA_max * Mathf.Rad2Deg), left, right, bottom, top);
-            ((SurfGraph)graphables["Max Lift"]).SetValues(envelopePoints.SelectToArray(pt => pt.Lift_max), left, right, bottom, top);
+            ((SurfGraph)graphables["Max Lift"]).SetValues(envelopePoints.SelectToArray(pt => pt.Lift_max * scale(pt)), left, right, bottom, top);
             ((SurfGraph)graphables["Lift/Drag Ratio"]).SetValues(envelopePoints.SelectToArray(pt => pt.LDRatio), left, right, bottom, top);
             ((SurfGraph)graphables["Drag"]).SetValues(envelopePoints.SelectToArray(pt => pt.drag * scale(pt)), left, right, bottom, top);
             ((SurfGraph)graphables["Lift Slope"]).SetValues(envelopePoints.SelectToArray(pt => pt.dLift / pt.dynamicPressure), left, right, bottom, top);
@@ -187,383 +246,137 @@ namespace KerbalWindTunnel.DataGenerators
             ((OutlineMask)graphables["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
         }
 
-        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
+        private IEnumerator Processing(Conditions conditions)
         {
-            int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
-            int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
-            EnvelopePoint[,] newEnvelopePoints = new EnvelopePoint[numPtsX + 1, numPtsY + 1];
-            
-            GenData rootData = new GenData(vessel, conditions, 0, 0, manager);
-            
-            //System.Diagnostics.Stopwatch timer = new System.Diagnostics.Stopwatch();
-            //timer.Start();
-            ThreadPool.QueueUserWorkItem(SetupInBackground, rootData, true);
+            Debug.Log("Wind Tunnel: Beginning CoRoutine");
+            // Is there something to resume?
+            bool resuming = false;
+            if (valuesSet)
+            {
+                if (inProgressCache.TryGetValue(conditions, out KeyValuePair<Conditions, EnvelopePoint[]> cachedData))
+                {
+                    if (cachedData.Key.stepAltitude <= conditions.stepAltitude && cachedData.Key.stepSpeed <= conditions.stepSpeed)
+                    {
+                        resuming = true;
+                        primaryProgress = cachedData.Value;
+                        conditions = cachedData.Key;
+                    }
+                    else
+                        inProgressCache.Remove(conditions);
+                }
+                /*else if (inProgressCache.TryGetValue(currentConditions, out cachedData))
+                {
+                    if (cachedData.Key.stepAltitude <= currentConditions.stepAltitude && cachedData.Key.stepSpeed <= currentConditions.stepSpeed)
+                    {
+                        resuming = true;
+                        primaryProgress = cachedData.Value;
+                    }
+                    else
+                        inProgressCache.Remove(currentConditions);
+                }*/
+            }
 
-            while (!manager.Completed)
+            int resolutionStep = 1;
+            if (resuming)
+            {
+                for (resolutionStep = 1; resolutionStep <= resolution.GetUpperBound(0); resolutionStep++)
+                {
+                    if (resolution[resolutionStep, 0] < (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed ||
+                        resolution[resolutionStep, 1] < (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude)
+                        break;
+                }
+            }
+            else
+            {
+                primaryProgress = new EnvelopePoint[conditions.Resolution];
+                inProgressCache.Add(conditions, new KeyValuePair<Conditions, EnvelopePoint[]>(conditions, primaryProgress));
+            }
+
+            cancellationTokenSource = new CancellationTokenSource();
+            stopwatch.Reset();
+            stopwatch.Start();
+
+            task = Task.Factory.StartNew<EnvelopePoint[,]>(
+                () =>
+                {
+                    if (!TryGetCacheContaining(conditions, out Conditions cachedConditions, out EnvelopePoint[,] cachedData))
+                        Debug.LogAssertion("Cache didn't have initialization data...");
+
+                    float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
+                    AoAs_guess = cachedData.SelectToArray(pt => pt.AoA_level);
+                    maxAs_guess = cachedData.SelectToArray(pt => pt.AoA_max);
+                    pitchIs_guess = cachedData.SelectToArray(pt => pt.pitchInput);
+
+                    try
+                    {
+                        //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
+                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = cancellationTokenSource.Token },
+                            WindTunnelWindow.Instance.GetAeroPredictor,
+                            (index, state, predictor) =>
+                        {
+                            int x = index % conditions.XResolution, y = index / conditions.XResolution;
+                            primaryProgress[index] = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
+                            return predictor;
+                        }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
+
+                        cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        return cache[conditions] = primaryProgress.To2Dimension(conditions.XResolution);
+                    }
+                    catch (AggregateException aggregateException)
+                    {
+                        foreach (var ex in aggregateException.Flatten().InnerExceptions)
+                        {
+                            Debug.LogException(ex);
+                        }
+                        throw aggregateException;
+                    }
+                },
+            cancellationTokenSource.Token);
+
+            while (task.Status < TaskStatus.RanToCompletion)
             {
                 //Debug.Log(manager.PercentComplete + "% done calculating...");
-                if (manager.Status == CalculationManager.RunStatus.Cancelled)
-                    yield break;
                 yield return 0;
             }
             //timer.Stop();
             //Debug.Log("Time taken: " + timer.ElapsedMilliseconds / 1000f);
-            
-            newEnvelopePoints = ((CalculationManager.State[,])rootData.storeState.Result)
-                .SelectToArray(pt => (EnvelopePoint)pt.Result);
 
-            AddToCache(conditions, newEnvelopePoints);
-            if (!manager.Cancelled)
+            if (task.Status > TaskStatus.RanToCompletion)
             {
-                envelopePoints = newEnvelopePoints;
+                if (task.Status == TaskStatus.Faulted)
+                {
+                    Debug.LogError("Wind tunnel task faulted");
+                    Debug.LogException(task.Exception);
+                }
+                else if (task.Status == TaskStatus.Canceled)
+                    Debug.Log("Wind tunnel task was canceled.");
+                yield break;
+            }
+
+            if (!cancellationTokenSource.IsCancellationRequested)
+            {
+                envelopePoints = ((Task<EnvelopePoint[,]>)task).Result;
                 currentConditions = conditions;
                 UpdateGraphs();
-                CalculateOptimalLines(vessel, conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0);
-                
+                CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0);
                 valuesSet = true;
             }
             yield return 0;
 
-            if (!manager.Cancelled)
+            if (!cancellationTokenSource.IsCancellationRequested)
             {
-                Conditions nextConditions = conditions.Modify(stepSpeed: conditions.stepSpeed / 2, stepAltitude: conditions.stepAltitude / 2);
-                WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, nextConditions, vessel, newEnvelopePoints, conditions));
+                //Conditions nextConditions = conditions.Modify(stepSpeed: conditions.stepSpeed / 2, stepAltitude: conditions.stepAltitude / 2);
+                //WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, nextConditions, vessel, newEnvelopePoints, conditions));
             }
         }
 
-        private IEnumerator RefinementProcessing(CalculationManager manager, Conditions conditions, AeroPredictor vessel, EnvelopePoint[,] basisData, Conditions basisConditions = new Conditions(), Queue<Conditions> followOnConditions = null, bool forcePushToGraph = false)
+        public override void OnAxesChanged(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
         {
-            int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
-            int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
-            EnvelopePoint[,] newEnvelopePoints = new EnvelopePoint[numPtsX + 1, numPtsY + 1];
-            
-            CalculationManager backgroundManager = new CalculationManager();
-            manager.OnCancelCallback += backgroundManager.Cancel;
-            CalculationManager.State[,] results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
-            GenData rootData = new GenData(vessel, conditions, 0, 0, backgroundManager);
-            ThreadPool.QueueUserWorkItem(ContinueInBackground, new object[] { rootData, results, basisData, basisConditions });
-            while (!backgroundManager.Completed)
-            {
-                if (manager.Status == CalculationManager.RunStatus.Cancelled)
-                {
-                    backgroundManager.Cancel();
-                    yield break;
-                }
-                yield return 0;
-            }
-            manager.OnCancelCallback -= backgroundManager.Cancel;
-
-            newEnvelopePoints = ((CalculationManager.State[,])rootData.storeState.Result)
-                .SelectToArray(pt => (EnvelopePoint)pt.Result);
-
-            AddToCache(conditions, newEnvelopePoints);
-            if (currentConditions.Equals(conditions) || (forcePushToGraph && !backgroundManager.Cancelled))
-            {
-                envelopePoints = newEnvelopePoints;
-                currentConditions = conditions;
-                UpdateGraphs();
-                valuesSet = true;
-            }
-            backgroundManager.Dispose();
-            if (!manager.Cancelled && followOnConditions != null && followOnConditions.Count > 0)
-            {
-                yield return 0;
-                Conditions nextConditions = followOnConditions.Dequeue();
-                WindTunnel.Instance.StartCoroutine(RefinementProcessing(manager, nextConditions, vessel, newEnvelopePoints, conditions, followOnConditions, forcePushToGraph));
-            }
-        }
-
-        private bool AddToCache(Conditions conditions, EnvelopePoint[,] data)
-        {
-            if (cache.ContainsKey(conditions))
-            {
-                if (cache[conditions].Length > data.Length)
-                    return false;
-                else
-                    cache.Remove(conditions);
-            }
-            cache[conditions] = data;
-            cachedConditions[conditions] = conditions;
-            return true;
-        }
-
-        private static void SetupInBackground(object obj)
-        {
-            GenData rootData = (GenData)obj;
-            Conditions conditions = rootData.conditions;
-            CalculationManager manager = rootData.storeState.manager;
-            CalculationManager seedManager = new CalculationManager();
-            CalculationManager.State[,] results = null;
-            
-            Conditions seedConditions = new Conditions(conditions.body, conditions.lowerBoundSpeed, conditions.upperBoundSpeed, 11, conditions.lowerBoundAltitude, conditions.upperBoundAltitude, 11);
-            GenerateLevel(seedConditions, seedManager, ref results, rootData.vessel);
-
-            if (!seedManager.WaitForCompletion(30000))
-            {
-                Debug.LogError("KerbalWindTunnel: Seed data timed out!");
-                return;
-            }
-            seedManager.Dispose();
-
-            GenerateLevel(conditions, manager, ref results, rootData.vessel);
-
-            if (rootData.storeState.manager.Cancelled)
-                return;
-            rootData.storeState.StoreResult(results);
-        }
-
-        private static void ContinueInBackground(object obj)
-        {
-            object[] inObj = (object[])obj;
-            GenData rootData = (GenData)inObj[0];
-            CalculationManager.State[,] results = (CalculationManager.State[,])inObj[1];
-            EnvelopePoint[,] basisData = inObj.Length > 2 ? (EnvelopePoint[,])inObj[2] : null;
-            Conditions basisConditions = inObj.Length > 3 ? (Conditions)inObj[3] : new Conditions();
-            CalculationManager manager = rootData.storeState.manager;
-            GenerateLevel(rootData.conditions, manager, ref results, rootData.vessel, basisConditions, basisData);
-            if (rootData.storeState.manager.Cancelled)
-                return;
-            rootData.storeState.StoreResult(results);
-        }
-
-        private static void GenerateLevel(Conditions conditions, CalculationManager manager, ref CalculationManager.State[,] results, AeroPredictor vessel, Conditions basisConditions = new Conditions(), EnvelopePoint[,] resultPoints = null)
-        {
-            float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
-            if (resultPoints != null)
-            {
-                AoAs_guess = resultPoints.SelectToArray(pt => pt.AoA_level);
-                maxAs_guess = resultPoints.SelectToArray(pt => pt.AoA_max);
-                pitchIs_guess = resultPoints.SelectToArray(pt => pt.pitchInput);
-            }
-            else if (results != null)
-            {
-                AoAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_level);
-                maxAs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).AoA_max);
-                pitchIs_guess = results.SelectToArray(pt => ((EnvelopePoint)pt.Result).pitchInput);
-                resultPoints = results.SelectToArray(pt => (EnvelopePoint)pt.Result);
-            }
-            int numPtsX = (int)Math.Ceiling((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed);
-            int numPtsY = (int)Math.Ceiling((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude);
-            float trueStepX = (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / numPtsX;
-            float trueStepY = (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / numPtsY;
-            results = new CalculationManager.State[numPtsX + 1, numPtsY + 1];
-            
-            for (int j = 0; j <= numPtsY; j++)
-            {
-                for (int i = 0; i <= numPtsX; i++)
-                {
-                    if (manager.Cancelled)
-                        return;
-                    float x = (float)i / numPtsX;
-                    float y = (float)j / numPtsY;
-                    float aoa_guess = AoAs_guess != null ? AoAs_guess.Lerp2(x, y) : float.NaN;
-                    float maxA_guess = maxAs_guess != null ? maxAs_guess.Lerp2(x, y) : float.NaN;
-                    float pi_guess = pitchIs_guess != null ? pitchIs_guess.Lerp2(x, y) : float.NaN;
-                    float speed = conditions.lowerBoundSpeed + trueStepX * i;
-                    float altitude = conditions.lowerBoundAltitude + trueStepY * j;
-                    GenData genData = new GenData(vessel, conditions, speed, altitude, manager, aoa_guess, maxA_guess, pi_guess);
-                    results[i, j] = genData.storeState;
-                    if (!basisConditions.Equals(Conditions.Blank) && !basisConditions.Equals(new Conditions()) &&
-                        basisConditions.Contains(speed, altitude, out int ii, out int jj))
-                    {
-                        results[i, j].StoreResult(resultPoints[ii, jj]);
-                    }
-                    else
-                        ThreadPool.QueueUserWorkItem(GenerateSurfPoint, genData);
-                }
-            }
-        }
-
-        private static void GenerateSurfPoint(object obj)
-        {
-            GenData data = (GenData)obj;
-            if (data.storeState.manager.Cancelled)
-                return;
-            //Debug.Log("Starting point: " + data.altitude + "/" + data.speed);
-            EnvelopePoint result = new EnvelopePoint(data.vessel, data.conditions.body, data.altitude, data.speed, data.AoA_guess, data.maxA_guess, data.pitchI_guess);
-            //Debug.Log("Point solved: " + data.altitude + "/" + data.speed);
-
-            data.storeState.StoreResult(result);
-        }
-
-        public override void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
-        {
-            const int numPtsX = 125, numPtsY = 125;
-            float stepX = (xMax - xMin) / numPtsX, stepY = (yMax - yMin) / numPtsY;
-            Calculate(vessel, currentConditions.body, xMin, xMax, stepX, yMin, yMax, stepY);
+            float stepX = (xMax - xMin) / resolution[1, 0], stepY = (yMax - yMin) / resolution[1, 1];
+            Calculate(currentConditions.body, xMin, xMax, stepX, yMin, yMax, stepY);
         }
 
         #endregion EnvelopeSurf
-
-        private struct GenData
-        {
-            public readonly Conditions conditions;
-            public readonly AeroPredictor vessel;
-            public readonly CalculationManager.State storeState;
-            public readonly float speed;
-            public readonly float altitude;
-            public readonly float AoA_guess;
-            public readonly float maxA_guess;
-            public readonly float pitchI_guess;
-
-            public GenData(AeroPredictor vessel, Conditions conditions, float speed, float altitude, CalculationManager manager, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
-            {
-                this.vessel = vessel;
-                this.conditions = conditions;
-                this.speed = speed;
-                this.altitude = altitude;
-                this.storeState = manager.GetStateToken();
-                this.AoA_guess = AoA_guess;
-                this.maxA_guess = maxA_guess;
-                this.pitchI_guess = pitchI_guess;
-            }
-        }
-        public struct EnvelopePoint
-        {
-            public readonly float AoA_level;
-            public readonly float Thrust_excess;
-            public readonly float Accel_excess;
-            public readonly float Lift_max;
-            public readonly float AoA_max;
-            public readonly float Thrust_available;
-            public readonly float altitude;
-            public readonly float speed;
-            public readonly float LDRatio;
-            public readonly Vector3 force;
-            public readonly Vector3 aeroforce;
-            public readonly float mach;
-            public readonly float dynamicPressure;
-            public readonly float dLift;
-            public readonly float drag;
-            public readonly float pitchInput;
-            public readonly float fuelBurnRate;
-            //public readonly float stabilityRange;
-            //public readonly float stabilityScore;
-            //public readonly float stabilityDerivative;
-
-            public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
-            {
-                this.altitude = altitude;
-                this.speed = speed;
-                AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, speed, altitude);
-                float gravParameter, radius;
-                lock (body)
-                {
-                    gravParameter = (float)body.gravParameter;
-                    radius = (float)body.Radius;
-                }
-                this.mach = conditions.mach;
-                this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
-                float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))) - (vessel.Mass * speed * speed / (radius + altitude));
-                Vector3 thrustForce = vessel.GetThrustForce(conditions);
-                fuelBurnRate = vessel.GetFuelBurnRate(conditions);
-                //AoA_max = vessel.GetMaxAoA(conditions, out Lift_max, maxA_guess);
-                if (float.IsNaN(maxA_guess))
-                    AoA_max = vessel.GetMaxAoA(conditions, out Lift_max, maxA_guess);
-                else
-                {
-                    AoA_max = maxA_guess;
-                    Lift_max = AeroPredictor.GetLiftForceMagnitude(vessel.GetAeroForce(conditions, AoA_max, 1) + thrustForce, AoA_max);
-                }
-
-                AoA_level = vessel.GetAoA(conditions, weight, guess: AoA_guess, pitchInputGuess: 0, lockPitchInput: true);
-                if (AoA_level < AoA_max)
-                    pitchInput = vessel.GetPitchInput(conditions, AoA_level, guess: pitchI_guess);
-                else
-                    pitchInput = 1;
-
-                Thrust_available = thrustForce.magnitude;
-
-                //vessel.GetAeroCombined(conditions, AoA_level, pitchInput, out force, out Vector3 torque);
-                force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
-                aeroforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
-                drag = -aeroforce.z;
-                float lift = aeroforce.y;
-                Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
-                if (weight > Lift_max)// AoA_level >= AoA_max)
-                {
-                    Thrust_excess = Lift_max - weight;
-                    AoA_level = AoA_max;
-                }
-                Accel_excess = (Thrust_excess / vessel.Mass / WindTunnelWindow.gAccel);
-                LDRatio = Mathf.Abs(lift / drag);
-                dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) - lift)
-                    / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
-                //stabilityDerivative = (vessel.GetAeroTorque(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput).x - torque.x)
-                //    / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
-                //GetStabilityValues(vessel, conditions, AoA_level, out stabilityRange, out stabilityScore);
-            }
-
-            private static void GetStabilityValues(AeroPredictor vessel, AeroPredictor.Conditions conditions, float AoA_centre, out float stabilityRange, out float stabilityScore)
-            {
-                const int step = 5;
-                const int range = 90;
-                const int alphaSteps = range / step;
-                float[] torques = new float[2 * alphaSteps + 1];
-                float[] aoas = new float[2 * alphaSteps + 1];
-                int start, end;
-                for (int i = 0; i <= 2 * alphaSteps; i++)
-                {
-                    aoas[i] = (i - alphaSteps) * step * Mathf.Deg2Rad;
-                    torques[i] = vessel.GetAeroTorque(conditions, aoas[i], 0).x;
-                }
-                int eq = 0 + alphaSteps;
-                int dir = (int)Mathf.Sign(torques[eq]);
-                if (dir == 0)
-                {
-                    start = eq - 1;
-                    end = eq + 1;
-                }
-                else
-                {
-                    while (eq > 0 && eq < 2 * alphaSteps)
-                    {
-                        eq += dir;
-                        if (Mathf.Sign(torques[eq]) != dir)
-                            break;
-                    }
-                    if (eq == 0 || eq == 2 * alphaSteps)
-                    {
-                        stabilityRange = 0;
-                        stabilityScore = 0;
-                        return;
-                    }
-                    if (dir < 0)
-                    {
-                        start = eq;
-                        end = eq + 1;
-                    }
-                    else
-                    {
-                        start = eq - 1;
-                        end = eq;
-                    }
-                }
-                while (torques[start] > 0 && start > 0)
-                    start -= 1;
-                while (torques[end] < 0 && end < 2 * alphaSteps - 1)
-                    end += 1;
-                float min = (Mathf.InverseLerp(torques[start], torques[start + 1], 0) + start) * step;
-                float max = (-Mathf.InverseLerp(torques[end], torques[end - 1], 0) + end) * step;
-                stabilityRange = max - min;
-                stabilityScore = 0;
-                for (int i = start; i < end; i++)
-                {
-                    stabilityScore += (torques[i] + torques[i + 1]) / 2 * step;
-                }
-            }
-
-            public override string ToString()
-            {
-                return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{9:N2}\n" + "Level Flight AoA:\t{2:N2}°\n" +
-                        "Excess Thrust:\t{3:N0}kN\n" + "Excess Acceleration:\t{4:N2}g\n" + "Max Lift Force:\t{5:N0}kN\n" +
-                        "Max Lift AoA:\t{6:N2}°\n" + "Lift/Drag Ratio:\t{8:N2}\n" + "Available Thrust:\t{7:N0}kN",
-                        altitude, speed, AoA_level * Mathf.Rad2Deg,
-                        Thrust_excess, Accel_excess, Lift_max,
-                        AoA_max * Mathf.Rad2Deg, Thrust_available, LDRatio,
-                        mach);
-            }
-        }
 
         public struct Conditions : IEquatable<Conditions>
         {
@@ -574,8 +387,20 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float lowerBoundAltitude;
             public readonly float upperBoundAltitude;
             public readonly float stepAltitude;
+            public static IEqualityComparer<Conditions> stepInsensitiveComparer = new StepInsensitiveComparer();
 
             public static readonly Conditions Blank = new Conditions(null, 0, 0, 0f, 0, 0, 0f);
+
+            public long Resolution
+            {
+                get
+                {
+                    return Mathf.RoundToInt((upperBoundAltitude - lowerBoundAltitude) / stepAltitude + 1) * Mathf.RoundToInt((upperBoundSpeed - lowerBoundSpeed) / stepSpeed + 1);
+                }
+            }
+
+            public int XResolution { get => Mathf.RoundToInt((upperBoundSpeed - lowerBoundSpeed) / stepSpeed + 1); }
+            public int YResolution { get => Mathf.RoundToInt((upperBoundAltitude - lowerBoundAltitude) / stepAltitude + 1); }
 
             public Conditions(CelestialBody body, float lowerBoundSpeed, float upperBoundSpeed, float stepSpeed, float lowerBoundAltitude, float upperBoundAltitude, float stepAltitude)
             {
@@ -652,13 +477,32 @@ namespace KerbalWindTunnel.DataGenerators
                 return this.body == conditions.body &&
                     this.lowerBoundSpeed == conditions.lowerBoundSpeed &&
                     this.upperBoundSpeed == conditions.upperBoundSpeed &&
+                    this.stepSpeed == conditions.stepSpeed &&
                     this.lowerBoundAltitude == conditions.lowerBoundAltitude &&
-                    this.upperBoundAltitude == conditions.upperBoundAltitude;
+                    this.upperBoundAltitude == conditions.upperBoundAltitude &&
+                    this.stepAltitude == conditions.stepAltitude;
             }
 
             public override int GetHashCode()
             {
-                return Extensions.HashCode.Of(this.body).And(this.lowerBoundSpeed).And(this.upperBoundSpeed).And(this.lowerBoundAltitude).And(this.upperBoundAltitude);
+                return Extensions.HashCode.Of(this.body).And(this.lowerBoundSpeed).And(this.upperBoundSpeed).And(this.stepSpeed).And(this.lowerBoundAltitude).And(this.upperBoundAltitude).And(this.stepAltitude);
+            }
+
+            private class StepInsensitiveComparer : IEqualityComparer<Conditions>
+            {
+                public bool Equals(Conditions x, Conditions y)
+                {
+                    return x.body == y.body &&
+                        x.lowerBoundSpeed == y.lowerBoundSpeed &&
+                        x.upperBoundSpeed == y.upperBoundSpeed &&
+                        x.lowerBoundAltitude == y.lowerBoundAltitude &&
+                        x.upperBoundAltitude == y.upperBoundAltitude;
+                }
+
+                public int GetHashCode(Conditions obj)
+                {
+                    return Extensions.HashCode.Of(obj.body).And(obj.lowerBoundSpeed).And(obj.upperBoundSpeed).And(obj.lowerBoundAltitude).And(obj.upperBoundAltitude);
+                }
             }
         }
     }

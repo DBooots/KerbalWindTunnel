@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Graphing;
-using KerbalWindTunnel.Threading;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace KerbalWindTunnel.DataGenerators
 {
@@ -14,6 +15,7 @@ namespace KerbalWindTunnel.DataGenerators
         public Conditions currentConditions = Conditions.Blank;
         public float AverageLiftSlope { get; private set; } = -1;
         private Dictionary<Conditions, AoAPoint[]> cache = new Dictionary<Conditions, AoAPoint[]>();
+        private AoAPoint[] primaryProgress = null;
 
         public AoACurve()
         {
@@ -47,6 +49,18 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
+        public override float PercentComplete
+        {
+            get
+            {
+                if (Status == TaskStatus.RanToCompletion)
+                    return 1;
+                if (primaryProgress == null)
+                    return -1;
+                return (float)(primaryProgress.Count((pt) => pt.completed)) / primaryProgress.Count();
+            }
+        }
+
         public override void Clear()
         {
             base.Clear();
@@ -56,7 +70,7 @@ namespace KerbalWindTunnel.DataGenerators
             AverageLiftSlope = -1;
         }
 
-        public void Calculate(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float lowerBound = -20f, float upperBound = 20f, float step = 0.5f)
+        public void Calculate(CelestialBody body, float altitude, float speed, float lowerBound = -20f, float upperBound = 20f, float step = 0.5f)
         {
             Conditions newConditions = new Conditions(body, altitude, speed, lowerBound, upperBound, step);
             if (newConditions.Equals(currentConditions))
@@ -69,13 +83,12 @@ namespace KerbalWindTunnel.DataGenerators
 
             if (!cache.TryGetValue(newConditions, out AoAPoints))
             {
-                WindTunnelWindow.Instance.StartCoroutine(Processing(calculationManager, newConditions, vessel));
+                WindTunnelWindow.Instance.StartCoroutine(Processing(newConditions));
             }
             else
             {
                 AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
                 currentConditions = newConditions;
-                calculationManager.Status = CalculationManager.RunStatus.Completed;
                 UpdateGraphs();
                 valuesSet = true;
             }
@@ -109,52 +122,72 @@ namespace KerbalWindTunnel.DataGenerators
             ((LineGraph)((GraphableCollection)graphables["Torque"])["Torque (Dry)"]).SetValues(AoAPoints.Select(pt => pt.torque_dry).ToArray(), left, right);
         }
 
-        private IEnumerator Processing(CalculationManager manager, Conditions conditions, AeroPredictor vessel)
+        private IEnumerator Processing(Conditions conditions)
         {
             int numPts = (int)Math.Ceiling((conditions.upperBound - conditions.lowerBound) / conditions.step);
-            AoAPoint[] newAoAPoints = new AoAPoint[numPts + 1];
+            primaryProgress = new AoAPoint[numPts + 1];
             float trueStep = (conditions.upperBound - conditions.lowerBound) / numPts;
-            CalculationManager.State[] results = new CalculationManager.State[numPts + 1];
 
-            for (int i = 0; i <= numPts; i++)
-            {
-                //newAoAPoints[i] = new AoAPoint(vessel, conditions.body, conditions.altitude, conditions.speed, conditions.lowerBound + trueStep * i);
-                GenData genData = new GenData(vessel, conditions, conditions.lowerBound + trueStep * i, manager);
-                results[i] = genData.storeState;
-                ThreadPool.QueueUserWorkItem(GenerateAoAPoint, genData);
-            }
+            cancellationTokenSource = new CancellationTokenSource();
+            stopwatch.Reset();
+            stopwatch.Start();
 
-            while (!manager.Completed)
+            task = Task.Factory.StartNew<AoAPoint[]>(
+                () =>
+                {
+                    try
+                    {
+                        //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
+                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = cancellationTokenSource.Token },
+                            WindTunnelWindow.Instance.GetAeroPredictor,
+                            (index, state, predictor) =>
+                        {
+                            primaryProgress[index] = new AoAPoint(predictor, conditions.body, conditions.altitude, conditions.speed, conditions.lowerBound + trueStep * index);
+                            return predictor;
+                        }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
+
+                        cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        return cache[conditions] = primaryProgress;
+                    }
+                    catch (AggregateException aggregateException)
+                    {
+                        foreach (var ex in aggregateException.Flatten().InnerExceptions)
+                        {
+                            Debug.LogException(ex);
+                        }
+                        throw aggregateException;
+                    }
+                },
+            cancellationTokenSource.Token);
+
+            while (task.Status < TaskStatus.RanToCompletion)
             {
-                if (manager.Status == CalculationManager.RunStatus.Cancelled)
-                    yield break;
+                //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
             }
 
-            for(int i = 0; i <= numPts; i++)
+            if (task.Status > TaskStatus.RanToCompletion)
             {
-                newAoAPoints[i] = (AoAPoint)results[i].Result;
+                if (task.Status == TaskStatus.Faulted)
+                {
+                    Debug.LogError("Wind tunnel task faulted");
+                    Debug.LogException(task.Exception);
+                }
+                else if (task.Status == TaskStatus.Canceled)
+                    Debug.Log("Wind tunnel task was canceled.");
+                yield break;
             }
-            if (!manager.Cancelled)
+
+            if (!cancellationTokenSource.IsCancellationRequested)
             {
-                cache.Add(conditions, newAoAPoints);
-                AoAPoints = newAoAPoints;
-                AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
+                AoAPoints = primaryProgress;
                 currentConditions = conditions;
                 UpdateGraphs();
                 valuesSet = true;
             }
         }
 
-        private static void GenerateAoAPoint(object obj)
-        {
-            GenData data = (GenData)obj;
-            if (data.storeState.manager.Cancelled)
-                return;
-            data.storeState.StoreResult(new AoAPoint(data.vessel, data.conditions.body, data.conditions.altitude, data.conditions.speed, data.AoA));
-        }
-
-        public override void OnAxesChanged(AeroPredictor vessel, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
+        public override void OnAxesChanged(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
         {
             const float variance = 0.5f;
             const int numPts = 80;
@@ -163,29 +196,14 @@ namespace KerbalWindTunnel.DataGenerators
             float step = Mathf.Min(2 * Mathf.Deg2Rad, (xMax - xMin) / numPts * Mathf.Deg2Rad);
             if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)))
             {
-                Calculate(vessel, currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
+                Calculate(currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
             }
             else if (currentConditions.step > step / variance)
             {
-                Calculate(vessel, currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
+                Calculate(currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
             }
         }
 
-        private struct GenData
-        {
-            public readonly Conditions conditions;
-            public readonly AeroPredictor vessel;
-            public readonly CalculationManager.State storeState;
-            public readonly float AoA;
-
-            public GenData(AeroPredictor vessel, Conditions conditions, float AoA, CalculationManager manager)
-            {
-                this.vessel = vessel;
-                this.conditions = conditions;
-                this.AoA = AoA;
-                this.storeState = manager.GetStateToken();
-            }
-        }
         public struct AoAPoint
         {
             public readonly float Lift;
@@ -201,6 +219,7 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float pitchInput_dry;
             public readonly float torque;
             public readonly float torque_dry;
+            public readonly bool completed;
 
             public AoAPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA)
             {
@@ -220,6 +239,7 @@ namespace KerbalWindTunnel.DataGenerators
                 LDRatio = Mathf.Abs(Lift / Drag);
                 dLift = (vessel.GetLiftForceMagnitude(conditions, AoA + WindTunnelWindow.AoAdelta, pitchInput) - Lift) /
                     (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
+                completed = true;
             }
 
             public override string ToString()

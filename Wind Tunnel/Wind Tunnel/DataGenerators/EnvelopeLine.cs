@@ -2,43 +2,63 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using KerbalWindTunnel.Extensions;
-using KerbalWindTunnel.Threading;
 using Graphing;
 
 namespace KerbalWindTunnel.DataGenerators
 {
     public partial class EnvelopeSurf
     {
-        public void CalculateOptimalLines(AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
+        public void CalculateOptimalLines(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
         {
             float[,] accel = envelopePoints.SelectToArray(pt => pt.Accel_excess * WindTunnelWindow.gAccel);
             float[,] burnRate = envelopePoints.SelectToArray(pt => pt.fuelBurnRate);
-            CostIncreaseFunction timeToClimb = (current, last) =>
+            float timeToClimb(Coords current, Coords last)
             {
                 float dE = Mathf.Abs(WindTunnelWindow.gAccel * (last.y - current.y) / ((current.x + last.x) / 2) + (last.x - current.x));
                 float P = (accel[current.xi, current.yi] + accel[last.xi, last.yi]) / 2;
                 return (dE / P);
-            };
-            CostIncreaseFunction fuelToClimb = (current, last) =>
+            }
+            float fuelToClimb(Coords current, Coords last)
             {
                 float dF = (burnRate[current.xi, current.yi] + burnRate[last.xi, last.yi]) / 2;
                 return timeToClimb(current, last) * dF;
-            };
+            }
 
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, accel, timeToClimb));
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, accel, timeToClimb));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, accel, timeToClimb));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, accel, timeToClimb));
         }
 
-        private IEnumerator ProcessOptimalLine(string graphName, AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc)
+        private IEnumerator ProcessOptimalLine(string graphName, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc)
         {
-            CalculationManager singleUseManager = new CalculationManager();
-            LineGenData lineGenData = new LineGenData(singleUseManager, vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, costIncreaseFunc, neighborPredicate, predicateData, timeDifferenceFunc);
-            ThreadPool.QueueUserWorkItem(OptimalLineTask, lineGenData);
-            while (!singleUseManager.Completed)
+            Task<List<AscentPathPoint>> task = Task.Factory.StartNew<List<AscentPathPoint>>(
+                () =>
+                {
+                    return GetOptimalPath(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, costIncreaseFunc, neighborPredicate, predicateData, timeDifferenceFunc);
+                }, cancellationTokenSource.Token
+                );
+
+            while (task.Status < TaskStatus.RanToCompletion)
+            {
+                //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
-            List<AscentPathPoint> results = (List<AscentPathPoint>)lineGenData.state.Result;
+            }
+
+            if (task.Status > TaskStatus.RanToCompletion)
+            {
+                if (task.Status == TaskStatus.Faulted)
+                {
+                    Debug.LogError("Wind tunnel task faulted");
+                    Debug.LogException(task.Exception);
+                }
+                else if (task.Status == TaskStatus.Canceled)
+                    Debug.Log("Wind tunnel task was canceled.");
+                yield break;
+            }
+
+            List<AscentPathPoint> results = task.Result;
             if (timeDifferenceFunc != costIncreaseFunc)
                 ((MetaLineGraph)graphables[graphName]).SetValues(results.Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray(), new float[][] { results.Select(pt => pt.climbAngle * Mathf.Rad2Deg).ToArray(), results.Select(pt => pt.climbRate).ToArray(), results.Select(pt => pt.cost).ToArray(), results.Select(pt => pt.time).ToArray() });
             else
@@ -46,41 +66,6 @@ namespace KerbalWindTunnel.DataGenerators
             //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, fuelToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
             //((LineGraph)graphables["Time-Optimal Path"]).SetValues(
             //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, timeToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
-            singleUseManager.Dispose();
-        }
-
-        private void OptimalLineTask(object obj)
-        {
-            LineGenData genData = (LineGenData)obj;
-            genData.state.StoreResult(
-                GetOptimalPath(genData.vessel, genData.conditions, genData.exitSpeed, genData.exitAlt, genData.initialSpeed, genData.initialAlt, genData.costIncreaseFunc, genData.neighborPredicate, genData.predicateData, genData.timeDifferenceFunc));
-        }
-
-        private struct LineGenData
-        {
-            public readonly AeroPredictor vessel;
-            public readonly Conditions conditions;
-            public readonly float exitSpeed, exitAlt, initialSpeed, initialAlt;
-            public readonly CostIncreaseFunction costIncreaseFunc;
-            public readonly CostIncreaseFunction timeDifferenceFunc;
-            public readonly Predicate<float> neighborPredicate;
-            public readonly float[,] predicateData;
-            public readonly CalculationManager.State state;
-
-            public LineGenData(CalculationManager manager, AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc)
-            {
-                this.state = manager.GetStateToken();
-                this.vessel = vessel;
-                this.conditions = conditions;
-                this.exitSpeed = exitSpeed;
-                this.exitAlt = exitAlt;
-                this.initialSpeed = initialSpeed;
-                this.initialAlt = initialAlt;
-                this.costIncreaseFunc = costIncreaseFunc;
-                this.timeDifferenceFunc = timeDifferenceFunc;
-                this.neighborPredicate = neighborPredicate;
-                this.predicateData = predicateData;
-            }
         }
 
         private delegate float CostIncreaseFunction(Coords current, Coords last);
@@ -126,7 +111,7 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
-        private List<AscentPathPoint> GetOptimalPath(AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeFunc)
+        private List<AscentPathPoint> GetOptimalPath(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeFunc)
         {
             System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
             System.Diagnostics.Stopwatch profileWatch = new System.Diagnostics.Stopwatch();
@@ -381,7 +366,7 @@ namespace KerbalWindTunnel.DataGenerators
 
     public static class EnvelopePointExtensions
     {
-        public static Vector2[] ToLine(this List<EnvelopeSurf.EnvelopePoint> points)
+        public static Vector2[] ToLine(this List<EnvelopePoint> points)
         {
             Vector2[] line = new Vector2[points.Count];
             for (int i = 0; i < points.Count; i++)

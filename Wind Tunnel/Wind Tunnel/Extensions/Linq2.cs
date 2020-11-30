@@ -103,6 +103,36 @@ namespace KerbalWindTunnel.Extensions
                 throw new ArgumentOutOfRangeException("dimension");
             return -1;
         }
+
+        public static T[] To1Dmension<T>(this T[,] vals)
+        {
+            int length = vals.Length;
+            int columns = vals.GetUpperBound(1) + 1;
+            T[] result = new T[length];
+
+            for (int i = length - 1; i >= 0; i--)
+            {
+                result[i] = vals[i % columns, i / columns];
+            }
+
+            return result;
+        }
+
+        public static T[,] To2Dimension<T>(this T[] vals, int columns)
+        {
+            int length = vals.Length;
+            if (length % columns != 0)
+                throw new ArgumentException(String.Format("The input data {0} cannot be fit to the supplied number of columns {1}", length, columns));
+            T[,] result = new T[columns, length / columns];
+
+            for (int i = length - 1; i >= 0; i--)
+            {
+                result[i % columns, i / columns] = vals[i];
+            }
+
+            return result;
+        }
+
         public static float Lerp2(this float[,] vals, float x, float y)
         {
             int xI1, xI2;

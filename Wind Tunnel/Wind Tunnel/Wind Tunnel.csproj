@@ -75,13 +75,13 @@
     <Compile Include="Accord.Net Framework\ConvergenceException.cs" />
     <Compile Include="Accord.Net Framework\IOptimizationMethod.cs" />
     <Compile Include="DataGenerators\EnvelopeLine.cs" />
+    <Compile Include="DataGenerators\EnvelopePoint.cs" />
     <Compile Include="Extensions\GUILayoutHelper.cs" />
     <Compile Include="Extensions\DelegateFactory.cs" />
     <Compile Include="FARVesselCache\FARHook.cs" />
     <Compile Include="FARVesselCache\FARVesselCache.cs" />
     <Compile Include="FARVesselCache\InstantConditionSimOutputWrapper.cs" />
     <Compile Include="FARVesselCache\InstantConditionSimulationWrapper.cs" />
-    <Compile Include="Threading\CalculationManager.cs" />
     <Compile Include="Extensions\KSPClassExtensions.cs" />
     <Compile Include="Extensions\HashCodeHelper.cs" />
     <Compile Include="Extensions\Linq2.cs" />
@@ -100,9 +100,7 @@
     <Compile Include="DataGenerators\EnvelopeSurf.cs" />
     <Compile Include="DataGenerators\GraphGenerator.cs" />
     <Compile Include="DataGenerators\VelCurve.cs" />
-    <Compile Include="StockAero.cs" />
-    <Compile Include="StockAeroUtil.cs" />
-    <Compile Include="Threading\ThreadPool.cs" />
+    <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="VesselCache\IReleasable.cs" />
     <Compile Include="VesselCache\SimulatedControlSurface.cs" />
     <Compile Include="WindowGraph.cs" />

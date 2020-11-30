@@ -204,14 +204,16 @@ namespace KerbalWindTunnel.VesselCache
             obj.engines.Clear();
         }
 
-        public static SimulatedVessel Borrow(IShipconstruct v, SimCurves simCurves)
+        public static SimulatedVessel Borrow(IShipconstruct v)
         {
-            SimulatedVessel vessel = pool.Borrow();
-            vessel.Init(v, simCurves);
+            SimulatedVessel vessel;
+            lock (pool)
+                vessel = pool.Borrow();
+            vessel.Init(v);
             return vessel;
         }
 
-        private void Init(IShipconstruct v, SimCurves _simCurves)
+        private void Init(IShipconstruct v)
         {
             totalMass = 0;
             dryMass = 0;
@@ -230,28 +232,29 @@ namespace KerbalWindTunnel.VesselCache
                     if (p.dragModel == Part.DragModel.CUBE && !p.DragCubes.None)
                     {
                         DragCubeList cubes = p.DragCubes;
-                        DragCubeList.CubeData p_drag_data = new DragCubeList.CubeData();
+                        lock (cubes)
+                        {
+                            DragCubeList.CubeData p_drag_data = new DragCubeList.CubeData();
 
-                        try
-                        {
-                            cubes.SetDragWeights();
-                            cubes.SetPartOcclusion();
-                            cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
-                        }
-                        catch (Exception)
-                        {
-                            cubes.SetDrag(Vector3.forward, 0);
-                            cubes.ForceUpdate(true, true);
-                            cubes.SetDragWeights();
-                            cubes.SetPartOcclusion();
-                            cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
-                            //Debug.Log(String.Format("Trajectories: Caught NRE on Drag Initialization.  Should be fixed now.  {0}", e));
+                            try
+                            {
+                                cubes.SetDragWeights();
+                                cubes.SetPartOcclusion();
+                                cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
+                            }
+                            catch (Exception)
+                            {
+                                cubes.SetDrag(Vector3.forward, 0);
+                                cubes.ForceUpdate(true, true);
+                                cubes.SetDragWeights();
+                                cubes.SetPartOcclusion();
+                                cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
+                                //Debug.Log(String.Format("Trajectories: Caught NRE on Drag Initialization.  Should be fixed now.  {0}", e));
+                            }
                         }
                     }
                 }
             }
-
-            simCurves = _simCurves;
 
             if (parts.Capacity < count)
                 parts.Capacity = count;
