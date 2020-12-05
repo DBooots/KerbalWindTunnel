@@ -26,12 +26,9 @@ namespace KerbalWindTunnel.DataGenerators
         //public readonly float stabilityScore;
         //public readonly float stabilityDerivative;
         public readonly bool completed;
-        public readonly int threadID;
-        public readonly float debug;
 
         public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
         {
-            this.threadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
             this.altitude = altitude;
             this.speed = speed;
             AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, speed, altitude);
@@ -71,7 +68,6 @@ namespace KerbalWindTunnel.DataGenerators
             aeroforce = AeroPredictor.ToFlightFrame(force, AoA_level); //vessel.GetLiftForce(body, speed, altitude, AoA_level, mach, atmDensity);
             drag = -aeroforce.z;
             float lift = aeroforce.y;
-            debug = lift;
             Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
             if (weight > Lift_max)// AoA_level >= AoA_max)
             {
