@@ -11,15 +11,16 @@ using System.Collections.Concurrent;
 
 namespace KerbalWindTunnel.DataGenerators
 {
-    public partial class EnvelopeSurf : DataSetGenerator
+    public class EnvelopeSurf : DataSetGenerator
     {
         #region EnvelopeSurf
         protected static readonly ColorMap Jet_Dark_Positive = new ColorMap(ColorMap.Jet_Dark) { Filter = (v) => v >= 0 && !float.IsNaN(v) && !float.IsInfinity(v) };
 
         public EnvelopePoint[,] envelopePoints = new EnvelopePoint[0, 0];
         public Conditions currentConditions = Conditions.Blank;
-        private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
-        private Dictionary<Conditions, KeyValuePair<Conditions, EnvelopePoint[]>> inProgressCache = new Dictionary<Conditions, KeyValuePair<Conditions, EnvelopePoint[]>>(Conditions.stepInsensitiveComparer);
+        //private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
+        private ConcurrentDictionary<SurfCoords, EnvelopePoint> cache = new ConcurrentDictionary<SurfCoords, EnvelopePoint>();
+        
         private EnvelopePoint[] primaryProgress = null;
         public int[,] resolution = { { 10, 10 }, { 40, 120 }, { 80, 180 }, { 160, 360 } };
 
@@ -77,7 +78,6 @@ namespace KerbalWindTunnel.DataGenerators
             base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
-            inProgressCache.Clear();
             primaryProgress = null;
             envelopePoints = new EnvelopePoint[0, 0];
 
@@ -85,118 +85,48 @@ namespace KerbalWindTunnel.DataGenerators
             ((LineGraph)graphables["Time-Optimal Path"]).SetValues(new Vector2[0]);
         }
 
-        private bool TryGetBestCache(Conditions conditions, out Conditions bestConditions, out EnvelopePoint[,] points)
-        {
-            bestConditions = conditions;
-            points = new EnvelopePoint[0, 0];
-            Dictionary<Conditions, EnvelopePoint[,]>.Enumerator enumerator = cache.GetEnumerator();
-            long bestResolution = 0;
-            bool result = false;
-            while (enumerator.MoveNext())
-            {
-                Conditions enumConditions = enumerator.Current.Key;
-                if (Conditions.stepInsensitiveComparer.Equals(conditions, enumConditions))
-                {
-                    result = true;
-                    long resolution = enumConditions.Resolution;
-                    if (resolution > bestResolution)
-                    {
-                        bestResolution = resolution;
-                        bestConditions = enumConditions;
-                        points = enumerator.Current.Value;
-                    }
-                }
-            }
-            return result;
-        }
-
-        private bool TryGetCacheContaining(Conditions conditions, out Conditions containingConditions, out EnvelopePoint[,] points)
-        {
-            containingConditions = conditions;
-            points = new EnvelopePoint[0, 0];
-            Dictionary<Conditions, EnvelopePoint[,]>.Enumerator enumerator = cache.GetEnumerator();
-            int bestNumPoints = 0;
-            bool result = false;
-            while (enumerator.MoveNext())
-            {
-                Conditions enumConditions = enumerator.Current.Key;
-                if (enumConditions.Contains(conditions))
-                {
-                    result = true;
-                    int numPoints = Mathf.FloorToInt((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / enumConditions.stepSpeed + 1) *
-                        Mathf.FloorToInt((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / enumConditions.stepAltitude + 1);
-                    if (numPoints > bestNumPoints)
-                    {
-                        bestNumPoints = numPoints;
-                        containingConditions = enumConditions;
-                        points = enumerator.Current.Value;
-                    }
-                }
-            }
-            return result;
-        }
-
-        public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float stepSpeed = 50f, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepAltitude = 500)
+        public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepSpeed = 50f, float stepAltitude = 500)
         {
             // Set up calculation conditions and bounds
-            Conditions newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
+            Conditions newConditions;
+            newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
 
             if (currentConditions.Equals(newConditions) && Status != TaskStatus.WaitingToRun)
                 return;
 
             Cancel();
 
-            bool loadedCache = false;
-            if (TryGetCacheContaining(newConditions, out currentConditions, out EnvelopePoint[,] cachedData) && cachedData.Length > (resolution[0, 0] + 1) * (resolution[0, 1] + 1))
+            // Generate 'coarse' cache
+            float firstStepSpeed = (newConditions.upperBoundSpeed - newConditions.lowerBoundSpeed) / resolution[0, 0];
+            float firstStepAltitude = (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) / resolution[0, 1];
+            EnvelopePoint[] preliminaryData = new EnvelopePoint[(resolution[0, 0] + 1) * (resolution[0, 1] + 1)];
+            // Probably won't run in parallel because it's very short.
+            // But the UI will hang waiting for this to complete, so a self-triggering CancellationToken is provided with a life span of 5 seconds.
+            try
             {
-                loadedCache = true;
-                envelopePoints = cachedData;
-                UpdateGraphs();
+                Parallel.For(0, preliminaryData.Length, new ParallelOptions() { CancellationToken = new CancellationTokenSource(5000).Token },
+                    WindTunnelWindow.Instance.GetAeroPredictor, (index, state, predictor) =>
+                         {
+                             int x = index % (resolution[0, 0] + 1), y = index / (resolution[0, 0] + 1);
+                             EnvelopePoint result = new EnvelopePoint(predictor, newConditions.body, y * firstStepAltitude + newConditions.lowerBoundAltitude, x * firstStepSpeed + newConditions.lowerBoundSpeed);
+                             preliminaryData[index] = result;
+                             cache[new SurfCoords(result.speed, result.altitude)] = result;
+                             return predictor;
+                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
             }
-            if (loadedCache)
+            catch (OperationCanceledException)
             {
-                UpdateGraphs();
-                valuesSet = true;
+                Debug.LogError("Wind Tunnel: Initial pass timed out.");
+            }
+            catch (AggregateException ex)
+            {
+                Debug.LogError("Wind Tunnel: Initial pass threw an inner exception.");
+                Debug.LogException(ex.InnerException);
+            }
 
-                if (inProgressCache.TryGetValue(newConditions, out KeyValuePair<Conditions, EnvelopePoint[]> cachedProgress) &&
-                    cachedProgress.Key.Resolution < newConditions.Resolution)
-                    inProgressCache.Remove(newConditions);
-                else if (inProgressCache.TryGetValue(currentConditions, out cachedProgress) &&
-                    cachedProgress.Key.Resolution < newConditions.Resolution)
-                    inProgressCache.Remove(currentConditions);
-            }
-            else
-            {
-                // Generate 'coarse' cache
-                float firstStepSpeed = (newConditions.upperBoundSpeed - newConditions.lowerBoundSpeed) / resolution[0, 0];
-                float firstStepAltitude = (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) / resolution[0, 1];
-                EnvelopePoint[] preliminaryData = new EnvelopePoint[(resolution[0, 0] + 1) * (resolution[0, 1] + 1)];
-                // Probably won't run in parallel because it's very short.
-                // But the UI will hang waiting for this to complete, so a self-triggering CancellationToken is provided with a life span of 5 seconds.
-                try
-                {
-                    Parallel.For(0, preliminaryData.Length, new ParallelOptions() { CancellationToken = new CancellationTokenSource(5000).Token },
-                        WindTunnelWindow.Instance.GetAeroPredictor, (index, state, predictor) =>
-                             {
-                                 int x = index % (resolution[0, 0] + 1), y = index / (resolution[0, 0] + 1);
-                                 preliminaryData[index] = new EnvelopePoint(predictor, newConditions.body, y * firstStepAltitude + newConditions.lowerBoundAltitude, x * firstStepSpeed + newConditions.lowerBoundSpeed);
-                                 return predictor;
-                             }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
-                }
-                catch (OperationCanceledException)
-                {
-                    Debug.LogError("Wind Tunnel: Initial pass timed out.");
-                }
-                catch (AggregateException ex)
-                {
-                    Debug.LogError("Wind Tunnel: Initial pass threw an inner exception.");
-                    Debug.LogException(ex.InnerException);
-                }
+            cancellationTokenSource = new CancellationTokenSource();
 
-                cache[newConditions] = preliminaryData.To2Dimension(resolution[0, 0] + 1);
-            }
-            
-            WindTunnel.Instance.StartCoroutine(Processing(newConditions));
+            WindTunnel.Instance.StartCoroutine(Processing(newConditions, preliminaryData.To2Dimension(resolution[0, 0] + 1)));
         }
 
         private void UpdateGraphs()
@@ -238,7 +168,7 @@ namespace KerbalWindTunnel.DataGenerators
             //((SurfGraph)graphables["Stability Score"]).SetValues(envelopePoints.SelectToArray(pt => pt.stabilityScore), left, right, bottom, top);
 
             float[,] economy = envelopePoints.SelectToArray(pt => pt.fuelBurnRate / pt.speed * 1000 * 100);
-            int stallpt = CoordLocator.GenerateCoordLocators(envelopePoints.SelectToArray(pt=>pt.Thrust_excess)).First(0, 0, c => c.value>=0);
+            int stallpt = EnvelopeLine.CoordLocator.GenerateCoordLocators(envelopePoints.SelectToArray(pt=>pt.Thrust_excess)).First(0, 0, c => c.value>=0);
             SurfGraph toModify = (SurfGraph)graphables["Fuel Economy"];
             toModify.SetValues(economy, left, right, bottom, top);
             float minEconomy = economy[stallpt, 0] / 3;
@@ -246,81 +176,51 @@ namespace KerbalWindTunnel.DataGenerators
             ((OutlineMask)graphables["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
         }
 
-        private IEnumerator Processing(Conditions conditions)
+        private IEnumerator Processing(Conditions conditions, EnvelopePoint[,] prelimData)
         {
-            Debug.Log("Wind Tunnel: Beginning CoRoutine");
-            // Is there something to resume?
-            bool resuming = false;
-            if (valuesSet)
-            {
-                if (inProgressCache.TryGetValue(conditions, out KeyValuePair<Conditions, EnvelopePoint[]> cachedData))
-                {
-                    if (cachedData.Key.stepAltitude <= conditions.stepAltitude && cachedData.Key.stepSpeed <= conditions.stepSpeed)
-                    {
-                        resuming = true;
-                        primaryProgress = cachedData.Value;
-                        conditions = cachedData.Key;
-                    }
-                    else
-                        inProgressCache.Remove(conditions);
-                }
-                /*else if (inProgressCache.TryGetValue(currentConditions, out cachedData))
-                {
-                    if (cachedData.Key.stepAltitude <= currentConditions.stepAltitude && cachedData.Key.stepSpeed <= currentConditions.stepSpeed)
-                    {
-                        resuming = true;
-                        primaryProgress = cachedData.Value;
-                    }
-                    else
-                        inProgressCache.Remove(currentConditions);
-                }*/
-            }
+            CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
 
-            int resolutionStep = 1;
-            if (resuming)
-            {
-                for (resolutionStep = 1; resolutionStep <= resolution.GetUpperBound(0); resolutionStep++)
-                {
-                    if (resolution[resolutionStep, 0] < (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed ||
-                        resolution[resolutionStep, 1] < (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude)
-                        break;
-                }
-            }
-            else
-            {
-                primaryProgress = new EnvelopePoint[conditions.Resolution];
-                inProgressCache.Add(conditions, new KeyValuePair<Conditions, EnvelopePoint[]>(conditions, primaryProgress));
-            }
+            primaryProgress = new EnvelopePoint[conditions.Resolution];
+            int cachedCount = 0;
 
-            cancellationTokenSource = new CancellationTokenSource();
             stopwatch.Reset();
             stopwatch.Start();
 
             task = Task.Factory.StartNew<EnvelopePoint[,]>(
                 () =>
                 {
-                    if (!TryGetCacheContaining(conditions, out Conditions cachedConditions, out EnvelopePoint[,] cachedData))
-                        Debug.LogAssertion("Cache didn't have initialization data...");
-
                     float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
-                    AoAs_guess = cachedData.SelectToArray(pt => pt.AoA_level);
-                    maxAs_guess = cachedData.SelectToArray(pt => pt.AoA_max);
-                    pitchIs_guess = cachedData.SelectToArray(pt => pt.pitchInput);
+                    AoAs_guess = prelimData.SelectToArray(pt => pt.AoA_level);
+                    maxAs_guess = prelimData.SelectToArray(pt => pt.AoA_max);
+                    pitchIs_guess = prelimData.SelectToArray(pt => pt.pitchInput);
 
                     try
                     {
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
-                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = cancellationTokenSource.Token },
+                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
                             WindTunnelWindow.Instance.GetAeroPredictor,
                             (index, state, predictor) =>
                         {
                             int x = index % conditions.XResolution, y = index / conditions.XResolution;
-                            primaryProgress[index] = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
+                            SurfCoords coords = new SurfCoords(x * conditions.stepSpeed + conditions.lowerBoundSpeed,
+                                y * conditions.stepAltitude + conditions.lowerBoundAltitude);
+
+                            EnvelopePoint result;
+                            if (!cache.TryGetValue(coords, out result))
+                            {
+                                result = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
+                                cache[coords] = result;
+                            }
+                            else
+                                Interlocked.Increment(ref cachedCount);
+                            primaryProgress[index] = result;
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
-                        cancellationTokenSource.Token.ThrowIfCancellationRequested();
-                        return cache[conditions] = primaryProgress.To2Dimension(conditions.XResolution);
+                        closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        Debug.Log("KWT Data run finished. " + cachedCount + " of " + primaryProgress.Length + " retreived from cache. (" + (float)cachedCount / primaryProgress.Length * 100 + "%)");
+
+                        return primaryProgress.To2Dimension(conditions.XResolution);
                     }
                     catch (AggregateException aggregateException)
                     {
@@ -331,7 +231,10 @@ namespace KerbalWindTunnel.DataGenerators
                         throw aggregateException;
                     }
                 },
-            cancellationTokenSource.Token);
+            closureCancellationTokenSource.Token);
+
+            //if (task.Wait(25))
+                //Debug.Log("KWT: Waiting actually did something!");
 
             while (task.Status < TaskStatus.RanToCompletion)
             {
@@ -353,30 +256,88 @@ namespace KerbalWindTunnel.DataGenerators
                 yield break;
             }
 
-            if (!cancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationTokenSource.IsCancellationRequested)
             {
                 envelopePoints = ((Task<EnvelopePoint[,]>)task).Result;
                 currentConditions = conditions;
                 UpdateGraphs();
-                CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0);
+                EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, closureCancellationTokenSource, graphables);
                 valuesSet = true;
             }
-            yield return 0;
 
-            if (!cancellationTokenSource.IsCancellationRequested)
+            if (cachedCount < primaryProgress.Length)
+                yield return 0;
+
+            if (!closureCancellationTokenSource.IsCancellationRequested)
             {
-                //Conditions nextConditions = conditions.Modify(stepSpeed: conditions.stepSpeed / 2, stepAltitude: conditions.stepAltitude / 2);
-                //WindTunnel.Instance.StartCoroutine(RefinementProcessing(calculationManager, nextConditions, vessel, newEnvelopePoints, conditions));
+                Conditions newConditions;
+                for (int i = 1; i <= resolution.GetUpperBound(0); i++)
+                {
+                    if (resolution[i,0] + 1 > conditions.XResolution || resolution[i,1] + 1 > conditions.YResolution)
+                    {
+                        newConditions = conditions.Modify(
+                            stepSpeed: Math.Min((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / resolution[i, 0], conditions.stepSpeed),
+                            stepAltitude: Math.Min((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / resolution[i, 1], conditions.stepAltitude));
+                        Debug.Log("Wind Tunnel graphing higher res at:" + newConditions.XResolution + " by " + newConditions.YResolution);
+                        WindTunnel.Instance.StartCoroutine(Processing(newConditions, envelopePoints));
+                        yield break;
+                    }
+                }
+
+                Debug.Log("Wind Tunnel Graph reached maximum resolution");
             }
         }
+
+        public void CalculateOptimalLines(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
+            => EnvelopeLine.CalculateOptimalLines(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, envelopePoints, cancellationTokenSource, graphables);
 
         public override void OnAxesChanged(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
         {
             float stepX = (xMax - xMin) / resolution[1, 0], stepY = (yMax - yMin) / resolution[1, 1];
-            Calculate(currentConditions.body, xMin, xMax, stepX, yMin, yMax, stepY);
+            Calculate(currentConditions.body, xMin, xMax, yMin, yMax, Math.Min(stepX, currentConditions.stepSpeed), Math.Min(stepY, currentConditions.stepAltitude));
         }
 
         #endregion EnvelopeSurf
+
+        private struct SurfCoords : IEquatable<SurfCoords>
+        {
+            public readonly int speed, altitude;
+
+            public SurfCoords(float speed, float altitude)
+            {
+                this.speed = Mathf.RoundToInt(speed);
+                this.altitude = Mathf.RoundToInt(altitude);
+            }
+            public SurfCoords(int speed, int altitude)
+            {
+                this.speed = speed;
+                this.altitude = altitude;
+            }
+            public SurfCoords(EnvelopePoint point) : this(point.speed, point.altitude) { }
+
+            public override bool Equals(object obj)
+            {
+                if (obj is SurfCoords c)
+                    return Equals(c);
+                return false;
+            }
+
+            public bool Equals(SurfCoords obj)
+            {
+                return this.speed == obj.speed && this.altitude == obj.altitude;
+            }
+
+            public override int GetHashCode()
+            {
+                // I'm not expecting altitudes over 131 km or speeds over 8 km/s
+                // (or negative values for either) so bit-shifting the values in this way
+                // should equally weight the two inputs while returning a hash with the
+                // same quality as the default uint/int hash
+                // (which may or may not be just that number).
+                // This means that there will be zero collisions within the expected range.
+                return ((((uint)speed) << 17) & (uint)altitude).GetHashCode();
+            }
+        }
 
         public struct Conditions : IEquatable<Conditions>
         {
@@ -387,15 +348,14 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float lowerBoundAltitude;
             public readonly float upperBoundAltitude;
             public readonly float stepAltitude;
-            public static IEqualityComparer<Conditions> stepInsensitiveComparer = new StepInsensitiveComparer();
 
             public static readonly Conditions Blank = new Conditions(null, 0, 0, 0f, 0, 0, 0f);
 
-            public long Resolution
+            public int Resolution
             {
                 get
                 {
-                    return Mathf.RoundToInt((upperBoundAltitude - lowerBoundAltitude) / stepAltitude + 1) * Mathf.RoundToInt((upperBoundSpeed - lowerBoundSpeed) / stepSpeed + 1);
+                    return XResolution * YResolution;
                 }
             }
 
@@ -488,9 +448,9 @@ namespace KerbalWindTunnel.DataGenerators
                 return Extensions.HashCode.Of(this.body).And(this.lowerBoundSpeed).And(this.upperBoundSpeed).And(this.stepSpeed).And(this.lowerBoundAltitude).And(this.upperBoundAltitude).And(this.stepAltitude);
             }
 
-            private class StepInsensitiveComparer : IEqualityComparer<Conditions>
+            private class StepInsensitiveComparer : EqualityComparer<Conditions>
             {
-                public bool Equals(Conditions x, Conditions y)
+                public override bool Equals(Conditions x, Conditions y)
                 {
                     return x.body == y.body &&
                         x.lowerBoundSpeed == y.lowerBoundSpeed &&
@@ -499,7 +459,7 @@ namespace KerbalWindTunnel.DataGenerators
                         x.upperBoundAltitude == y.upperBoundAltitude;
                 }
 
-                public int GetHashCode(Conditions obj)
+                public override int GetHashCode(Conditions obj)
                 {
                     return Extensions.HashCode.Of(obj.body).And(obj.lowerBoundSpeed).And(obj.upperBoundSpeed).And(obj.lowerBoundAltitude).And(obj.upperBoundAltitude);
                 }

@@ -784,6 +784,8 @@ namespace KerbalWindTunnel
                 return;
             if (!graphRequested || graphDirty)
                 return;
+            if (xMin >= xMax || yMin >= yMax || zMin > zMax)
+                return;
             GraphGenerator.OnAxesChanged(xMin, xMax, yMin, yMax, zMin, zMax);
         }
         public void OnAxesChangeRequested(Graphing.Grapher sender, int axis, ref float min, ref float max)

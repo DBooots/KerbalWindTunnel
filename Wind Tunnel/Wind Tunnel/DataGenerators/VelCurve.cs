@@ -73,6 +73,7 @@ namespace KerbalWindTunnel.DataGenerators
 
             if (!cache.TryGetValue(newConditions, out VelPoints))
             {
+                this.cancellationTokenSource = new CancellationTokenSource();
                 WindTunnel.Instance.StartCoroutine(Processing(newConditions));
             }
             else
@@ -108,7 +109,7 @@ namespace KerbalWindTunnel.DataGenerators
             primaryProgress = new VelPoint[numPts + 1];
             float trueStep = (conditions.upperBound - conditions.lowerBound) / numPts;
 
-            cancellationTokenSource = new CancellationTokenSource();
+            CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
             stopwatch.Reset();
             stopwatch.Start();
 
@@ -118,7 +119,7 @@ namespace KerbalWindTunnel.DataGenerators
                     try
                     {
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
-                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = cancellationTokenSource.Token },
+                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
                             WindTunnelWindow.Instance.GetAeroPredictor,
                             (index, state, predictor) =>
                         {
@@ -126,7 +127,7 @@ namespace KerbalWindTunnel.DataGenerators
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
-                        cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         return cache[conditions] = primaryProgress;
                     }
                     catch (AggregateException aggregateException)
@@ -138,7 +139,7 @@ namespace KerbalWindTunnel.DataGenerators
                         throw aggregateException;
                     }
                 },
-            cancellationTokenSource.Token);
+            closureCancellationTokenSource.Token);
 
             while (task.Status < TaskStatus.RanToCompletion)
             {
@@ -158,7 +159,7 @@ namespace KerbalWindTunnel.DataGenerators
                 yield break;
             }
 
-            if (!cancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationTokenSource.IsCancellationRequested)
             {
                 VelPoints = primaryProgress;
                 currentConditions = conditions;

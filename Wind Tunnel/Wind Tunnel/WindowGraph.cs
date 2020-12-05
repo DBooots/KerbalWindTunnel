@@ -51,7 +51,7 @@ namespace KerbalWindTunnel
                     switch (graphMode)
                     {
                         case GraphMode.FlightEnvelope:
-                            EnvelopeSurfGenerator.Calculate(body, 0, maxSpeed, speedStep, 0, maxAltitude, altitudeStep);
+                            EnvelopeSurfGenerator.Calculate(body, 0, maxSpeed, 0, maxAltitude, speedStep, altitudeStep);
                             break;
                         case GraphMode.AoACurves:
                             AoACurveGenerator.Calculate(body, Altitude, Speed, -20f * Mathf.Deg2Rad, 20f * Mathf.Deg2Rad, 0.5f * Mathf.Deg2Rad);
@@ -72,9 +72,9 @@ namespace KerbalWindTunnel
                         DrawProgressBar(GraphGenerator.PercentComplete);
                         break;
                     case System.Threading.Tasks.TaskStatus.RanToCompletion:
+                        graphDirty = false;
                         grapher.SetCollection(GraphGenerator.Graphables);
                         DrawGraph();
-                        graphDirty = false;
                         break;
                     case System.Threading.Tasks.TaskStatus.Canceled:
                         ScreenMessages.PostScreenMessage("Background calculation canceled.", 2, ScreenMessageStyle.UPPER_CENTER);
