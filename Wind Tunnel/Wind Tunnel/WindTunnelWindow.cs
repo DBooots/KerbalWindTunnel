@@ -927,18 +927,24 @@ namespace KerbalWindTunnel
         internal override void OnDestroy()
         {
             Cancel();
-            
+
             GameEvents.onEditorLoad.Remove(OnVesselLoaded);
             GameEvents.onEditorNewShipDialogDismiss.Remove(OnNewVessel);
             GameEvents.onEditorPodPicked.Remove(OnRootChanged);
+
             base.OnDestroy();
+
             grapher.Dispose();
+            EnvelopeSurfGenerator.Dispose();
+            AoACurveGenerator.Dispose();
+            VelCurveGenerator.Dispose();
             Destroy(crossHair);
             Destroy(selectedCrossHair);
             Destroy(clearTex);
             Destroy(settingsTex);
+
             if (inputLocked)
-                EditorLogic.fetch.Unlock(lockID);
+                EditorLogic.fetch?.Unlock(lockID);
         }
         #endregion MonoBehaviour Methods
 
