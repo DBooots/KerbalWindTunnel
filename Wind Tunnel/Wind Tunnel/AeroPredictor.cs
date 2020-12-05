@@ -76,10 +76,10 @@ namespace KerbalWindTunnel
             Accord.Math.Optimization.BrentSearch solver;
             if (lockPitchInput)
                 solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, pitchInputGuess) + thrustForce, (float)aoa) - offsettingForce,
-                    -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, 0.0001);
+                    -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
             else
                 solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, GetPitchInput(conditions, (float)aoa, dryTorque, pitchInputGuess)) + thrustForce, (float)aoa)
-                - offsettingForce, -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, 0.0001);
+                - offsettingForce, -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
 
             if (float.IsNaN(guess) || float.IsInfinity(guess))
                 solver.FindRoot();
