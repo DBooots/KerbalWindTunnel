@@ -281,11 +281,8 @@ namespace KerbalWindTunnel.VesselCache
 
         public static class DragCubePool
         {
-            private static readonly Pool<DragCube> _Instance = new Pool<DragCube>(
+            public static Pool<DragCube> Instance { get; } = new Pool<DragCube>(
                 () => new DragCube(), cube => { });
-
-
-            public static Pool<DragCube> Instance { get { return _Instance; } }
         }
 
         protected void CopyDragCubesList(DragCubeList source, DragCubeList dest)
