@@ -327,8 +327,8 @@ namespace KerbalWindTunnel.VesselCache
             CoM /= totalMass;
             CoM_dry /= dryMass;
 
-            if (lgWarning)
-                ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);
+            //if (lgWarning)
+                //ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);
 
             /*for (int i = 0; i < count; i++)
             {
