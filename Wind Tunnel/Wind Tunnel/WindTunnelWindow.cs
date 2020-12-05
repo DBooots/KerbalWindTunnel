@@ -11,6 +11,9 @@ namespace KerbalWindTunnel
         DragEnabled = true,
         TooltipsEnabled = true,
         WindowMoveEventsEnabled = true)]
+
+    // Unity instead uses OnDestroy to accomplish this functionality.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     public partial class WindTunnelWindow : MonoBehaviourWindowPlus
     {
         #region Fields and Properties
