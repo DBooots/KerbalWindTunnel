@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using KSPPluginFramework;
-using KerbalWindTunnel.Threading;
 
 namespace KerbalWindTunnel
 {
@@ -12,6 +11,9 @@ namespace KerbalWindTunnel
         DragEnabled = true,
         TooltipsEnabled = true,
         WindowMoveEventsEnabled = true)]
+
+    // Unity instead uses OnDestroy to accomplish this functionality.
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
     public partial class WindTunnelWindow : MonoBehaviourWindowPlus
     {
         #region Fields and Properties
@@ -266,7 +268,7 @@ namespace KerbalWindTunnel
         private GUIStyle styleSelectedCrossHair = new GUIStyle();
         private GUIStyle stylePlotCrossHair = new GUIStyle();
 
-        public CalculationManager.RunStatus Status { get => GraphGenerator.Status; }
+        public System.Threading.Tasks.TaskStatus Status { get => GraphGenerator.Status; }
         #endregion Fields and Properties
 
         #region Window Drawing Methods
@@ -294,7 +296,7 @@ namespace KerbalWindTunnel
                 }
                 // Display selected point details.
                 GUILayout.Label(this.conditionDetails);
-                if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == CalculationManager.RunStatus.Completed)
+                if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
                 {
                     DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
                     GUILayout.Label(String.Format("CL_Alpha_0:\t{0:F3}m^2/°\nCL_Alpha_avg:\t{1:F3}m^2/°", zeroPoint.dLift / zeroPoint.dynamicPressure, AoACurveGenerator.AverageLiftSlope));
@@ -346,7 +348,7 @@ namespace KerbalWindTunnel
 
         private void DrawSaveIcon()
         {
-            if (GraphGenerator.Status == CalculationManager.RunStatus.Completed)
+            if (GraphGenerator.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
             {
                 if (GUI.Button(new Rect(80 + graphWidth, 80 + 5 + graphHeight - 10, 25, 25), saveIconTex))
                 {
@@ -384,7 +386,7 @@ namespace KerbalWindTunnel
                     {
                         TargetAltitude = tempA;
                         TargetSpeed = tempS;
-                        EnvelopeSurfGenerator.CalculateOptimalLines(vessel, EnvelopeSurfGenerator.currentConditions, TargetSpeed, TargetAltitude, 0, 0);
+                        EnvelopeSurfGenerator.CalculateOptimalLines(EnvelopeSurfGenerator.currentConditions, TargetSpeed, TargetAltitude, 0, 0);
                     }
                     if (GUILayout.Button("Select on Graph", selectingTarget ? downButton : HighLogic.Skin.button))
                         selectingTarget = !selectingTarget;
@@ -588,7 +590,7 @@ namespace KerbalWindTunnel
         {
             Vector2 vectMouse = Event.current.mousePosition;
 
-            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0 && Status == CalculationManager.RunStatus.Completed)
+            if (selectedCrossHairVect.x >= 0 && selectedCrossHairVect.y >= 0 && Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
             {
                 if (graphRect.x + selectedCrossHairVect.x != vectMouse.x || !graphRect.Contains(vectMouse))
                     GUI.Box(new Rect(graphRect.x + selectedCrossHairVect.x, graphRect.y, 1, graphRect.height), "", styleSelectedCrossHair);
@@ -597,7 +599,7 @@ namespace KerbalWindTunnel
                         GUI.Box(new Rect(graphRect.x, graphRect.y + selectedCrossHairVect.y, graphRect.width, 1), "", styleSelectedCrossHair);
             }
 
-            if (graphRect.Contains(vectMouse) && Status == CalculationManager.RunStatus.Completed)
+            if (graphRect.Contains(vectMouse) && Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
             {
                 GUI.Box(new Rect(vectMouse.x, graphRect.y, 1, graphRect.height), "", stylePlotCrossHair);
                 if (CurrentGraphMode == GraphMode.FlightEnvelope)
@@ -630,11 +632,11 @@ namespace KerbalWindTunnel
                         Vector2 targetVect = vectMouse - graphRect.position;
                         TargetSpeed = (targetVect.x / (graphWidth - 1)) * (grapher.XMax - grapher.XMin) + grapher.XMin;
                         TargetAltitude = ((graphHeight - 1 - targetVect.y) / (graphHeight - 1)) * (grapher.YMax - grapher.YMin) + grapher.YMin;
-                        EnvelopeSurfGenerator.CalculateOptimalLines(vessel, EnvelopeSurfGenerator.currentConditions, TargetSpeed, TargetAltitude, 0, 0);
+                        EnvelopeSurfGenerator.CalculateOptimalLines(EnvelopeSurfGenerator.currentConditions, TargetSpeed, TargetAltitude, 0, 0);
                     }
                 }
             }
-            if (CurrentGraphMode == GraphMode.FlightEnvelope && cAxisRect.Contains(vectMouse) && Status == CalculationManager.RunStatus.Completed)
+            if (CurrentGraphMode == GraphMode.FlightEnvelope && cAxisRect.Contains(vectMouse) && Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
             {
                 GUI.Box(new Rect(vectMouse.x, cAxisRect.y, 1, cAxisRect.height), "", stylePlotCrossHair);
                 float showValue = (vectMouse.x - cAxisRect.x) / (cAxisRect.width - 1) * (grapher.colorAxis.Max - grapher.colorAxis.Min) + grapher.colorAxis.Min;
@@ -785,7 +787,9 @@ namespace KerbalWindTunnel
                 return;
             if (!graphRequested || graphDirty)
                 return;
-            GraphGenerator.OnAxesChanged(vessel, xMin, xMax, yMin, yMax, zMin, zMax);
+            if (xMin >= xMax || yMin >= yMax || zMin > zMax)
+                return;
+            GraphGenerator.OnAxesChanged(xMin, xMax, yMin, yMax, zMin, zMax);
         }
         public void OnAxesChangeRequested(Graphing.Grapher sender, int axis, ref float min, ref float max)
         {
@@ -820,6 +824,7 @@ namespace KerbalWindTunnel
 
             hAxisMarks.normal.textColor = hAxisMarks.focused.textColor = hAxisMarks.hover.textColor = hAxisMarks.active.textColor = Color.white;
             vAxisMarks.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = Color.white;
+            smallPercent.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = new Color(0.8f, 0.8f, 0.8f);
             exitButton.normal.textColor = exitButton.focused.textColor = exitButton.hover.textColor = exitButton.active.textColor = Color.red;
             downButton.normal = downButton.active;
 
@@ -923,18 +928,24 @@ namespace KerbalWindTunnel
         internal override void OnDestroy()
         {
             Cancel();
-            
+
             GameEvents.onEditorLoad.Remove(OnVesselLoaded);
             GameEvents.onEditorNewShipDialogDismiss.Remove(OnNewVessel);
             GameEvents.onEditorPodPicked.Remove(OnRootChanged);
+
             base.OnDestroy();
+
             grapher.Dispose();
+            EnvelopeSurfGenerator.Dispose();
+            AoACurveGenerator.Dispose();
+            VelCurveGenerator.Dispose();
             Destroy(crossHair);
             Destroy(selectedCrossHair);
             Destroy(clearTex);
             Destroy(settingsTex);
+
             if (inputLocked)
-                EditorLogic.fetch.Unlock(lockID);
+                EditorLogic.fetch?.Unlock(lockID);
         }
         #endregion MonoBehaviour Methods
 
