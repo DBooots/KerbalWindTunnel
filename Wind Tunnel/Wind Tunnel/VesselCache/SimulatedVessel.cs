@@ -37,8 +37,6 @@ namespace KerbalWindTunnel.VesselCache
         public float totalMass = 0;
         public float dryMass = 0;
 
-        private SimCurves simCurves;
-
         public override bool ThreadSafe { get { return true; } }
 
         public override float Mass { get { return totalMass; } }
@@ -189,7 +187,8 @@ namespace KerbalWindTunnel.VesselCache
 
         public void Release()
         {
-            pool.Release(this);
+            lock (pool)
+                pool.Release(this);
         }
 
         private static void Reset(SimulatedVessel obj)
@@ -207,9 +206,15 @@ namespace KerbalWindTunnel.VesselCache
         public static SimulatedVessel Borrow(IShipconstruct v)
         {
             SimulatedVessel vessel;
+            // This lock is more expansive than it needs to be.
+            // There is still a race condition within Init that causes
+            // extra drag in the simulation, but this section is not a
+            // performance bottleneck and so further refinement is #TODO.
             lock (pool)
+            {
                 vessel = pool.Borrow();
-            vessel.Init(v);
+                vessel.Init(v);
+            }
             return vessel;
         }
 
