@@ -18,6 +18,7 @@ namespace KerbalWindTunnel.Extensions
             }
             return result;
         }
+
         public static T[] Subset<T>(this T[] vals, int lowerBound, int upperBound)
         {
             T[] result = new T[upperBound - lowerBound + 1];
@@ -44,6 +45,7 @@ namespace KerbalWindTunnel.Extensions
 
             return results;
         }
+
         public static float Max(this float[,] vals, bool excludeInfinity = false)
         {
             int bound0 = vals.GetUpperBound(0);
@@ -63,6 +65,7 @@ namespace KerbalWindTunnel.Extensions
             }
             return result;
         }
+
         public static float Min(this float[,] vals, bool excludeInfinity = false)
         {
             int bound0 = vals.GetUpperBound(0);
@@ -82,6 +85,7 @@ namespace KerbalWindTunnel.Extensions
             }
             return result;
         }
+
         public static int First<T>(this T[,] vals, int dimension, int index, Predicate<T> predicate)
         {
             int limit = vals.GetUpperBound(dimension);
@@ -205,6 +209,7 @@ namespace KerbalWindTunnel.Extensions
                 }
             }
         }
+
         public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange = -1)
         {
             int width = vals.GetUpperBound(0);
@@ -225,6 +230,7 @@ namespace KerbalWindTunnel.Extensions
                 }
             }
         }
+
         public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange = -1,
             params Quadrant[] quadrants)
         {
@@ -235,6 +241,7 @@ namespace KerbalWindTunnel.Extensions
 
             return GetTaxicabNeighbors(vals, startX, startY, maxRange, quads);
         }
+
         public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange,
             bool[] quads)
         {
