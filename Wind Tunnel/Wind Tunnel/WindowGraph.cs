@@ -19,6 +19,7 @@ namespace KerbalWindTunnel
 
         private GUIStyle hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
         private GUIStyle vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
+        private GUIStyle smallPercent = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
         private Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
         private Rect cAxisRect = new Rect(0, 0, graphWidth, axisWidth);
 
@@ -272,6 +273,9 @@ namespace KerbalWindTunnel
                 axesWindow = grapher.SpawnAxesWindow();
                 axesWindow.RTrf.anchoredPosition = new Vector2(WindowRect.x + WindowRect.width, -WindowRect.y);
             }
+
+            if (GraphGenerator.InternalStatus < System.Threading.Tasks.TaskStatus.RanToCompletion && !graphDirty)
+                GUI.Label(new Rect(14, 30 + graphHeight, 40, 15), String.Format("{0:N0}%", GraphGenerator.InternalPercentComplete * 100), smallPercent);
         }
 
         private void DrawProgressBar(float percentComplete)

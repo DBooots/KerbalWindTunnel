@@ -73,6 +73,18 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
+        public override float InternalPercentComplete
+        {
+            get
+            {
+                if (InternalStatus == TaskStatus.RanToCompletion)
+                    return 1;
+                if (primaryProgress == null)
+                    return -1;
+                return (float)(primaryProgress.Count((pt) => pt.completed)) / primaryProgress.Count();
+            }
+        }
+
         public override void Clear()
         {
             base.Clear();

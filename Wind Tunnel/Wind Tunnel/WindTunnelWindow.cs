@@ -824,6 +824,7 @@ namespace KerbalWindTunnel
 
             hAxisMarks.normal.textColor = hAxisMarks.focused.textColor = hAxisMarks.hover.textColor = hAxisMarks.active.textColor = Color.white;
             vAxisMarks.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = Color.white;
+            smallPercent.normal.textColor = vAxisMarks.focused.textColor = vAxisMarks.hover.textColor = vAxisMarks.active.textColor = new Color(0.8f, 0.8f, 0.8f);
             exitButton.normal.textColor = exitButton.focused.textColor = exitButton.hover.textColor = exitButton.active.textColor = Color.red;
             downButton.normal = downButton.active;
 

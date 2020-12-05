@@ -35,7 +35,19 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
+        public virtual TaskStatus InternalStatus
+        {
+            get
+            {
+                if (task == null)
+                    return TaskStatus.WaitingForActivation;
+                return task.Status;
+            }
+        }
+
         public abstract float PercentComplete { get; }
+
+        public virtual float InternalPercentComplete => PercentComplete;
 
         /// <summary>
         /// Returns the current progress rate in amount per second.
