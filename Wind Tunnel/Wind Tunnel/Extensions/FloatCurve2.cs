@@ -23,7 +23,7 @@ namespace AscentProfilePlanner
             }
             set
             {
-                _keys[indexY, indexY] = value;
+                _keys[indexX, indexY] = value;
             }
         }
         public Keyframe2 this[float timeX, float timeY]

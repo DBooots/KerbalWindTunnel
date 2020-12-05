@@ -2,43 +2,65 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEngine;
 using KerbalWindTunnel.Extensions;
-using KerbalWindTunnel.Threading;
 using Graphing;
+using static KerbalWindTunnel.DataGenerators.EnvelopeSurf;
+using System.Threading;
 
 namespace KerbalWindTunnel.DataGenerators
 {
-    public partial class EnvelopeSurf
+    public static class EnvelopeLine
     {
-        public void CalculateOptimalLines(AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
+        public static void CalculateOptimalLines(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, EnvelopePoint[,] dataArray, CancellationTokenSource cancellationTokenSource, GraphableCollection graphables)
         {
-            float[,] accel = envelopePoints.SelectToArray(pt => pt.Accel_excess * WindTunnelWindow.gAccel);
-            float[,] burnRate = envelopePoints.SelectToArray(pt => pt.fuelBurnRate);
-            CostIncreaseFunction timeToClimb = (current, last) =>
+            float[,] accel = dataArray.SelectToArray(pt => pt.Accel_excess * WindTunnelWindow.gAccel);
+            float[,] burnRate = dataArray.SelectToArray(pt => pt.fuelBurnRate);
+            float timeToClimb(PathSolverCoords current, PathSolverCoords last)
             {
                 float dE = Mathf.Abs(WindTunnelWindow.gAccel * (last.y - current.y) / ((current.x + last.x) / 2) + (last.x - current.x));
                 float P = (accel[current.xi, current.yi] + accel[last.xi, last.yi]) / 2;
                 return (dE / P);
-            };
-            CostIncreaseFunction fuelToClimb = (current, last) =>
+            }
+            float fuelToClimb(PathSolverCoords current, PathSolverCoords last)
             {
                 float dF = (burnRate[current.xi, current.yi] + burnRate[last.xi, last.yi]) / 2;
                 return timeToClimb(current, last) * dF;
-            };
+            }
 
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, accel, timeToClimb));
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, accel, timeToClimb));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, accel, timeToClimb, cancellationTokenSource, graphables));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, accel, timeToClimb, cancellationTokenSource, graphables));
         }
 
-        private IEnumerator ProcessOptimalLine(string graphName, AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc)
+        private static IEnumerator ProcessOptimalLine(string graphName, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc, CancellationTokenSource cancellationTokenSource, GraphableCollection graphables)
         {
-            CalculationManager singleUseManager = new CalculationManager();
-            LineGenData lineGenData = new LineGenData(singleUseManager, vessel, conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, costIncreaseFunc, neighborPredicate, predicateData, timeDifferenceFunc);
-            ThreadPool.QueueUserWorkItem(OptimalLineTask, lineGenData);
-            while (!singleUseManager.Completed)
+            Task<List<AscentPathPoint>> task = Task.Factory.StartNew<List<AscentPathPoint>>(
+                () =>
+                {
+                    return GetOptimalPath(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, costIncreaseFunc, neighborPredicate, predicateData, timeDifferenceFunc);
+                }, cancellationTokenSource.Token
+                );
+
+            while (task.Status < TaskStatus.RanToCompletion)
+            {
+                //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
-            List<AscentPathPoint> results = (List<AscentPathPoint>)lineGenData.state.Result;
+            }
+
+            if (task.Status > TaskStatus.RanToCompletion)
+            {
+                if (task.Status == TaskStatus.Faulted)
+                {
+                    Debug.LogError("Wind tunnel task faulted");
+                    Debug.LogException(task.Exception);
+                }
+                else if (task.Status == TaskStatus.Canceled)
+                    Debug.Log("Wind tunnel task was canceled.");
+                yield break;
+            }
+
+            List<AscentPathPoint> results = task.Result;
             if (timeDifferenceFunc != costIncreaseFunc)
                 ((MetaLineGraph)graphables[graphName]).SetValues(results.Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray(), new float[][] { results.Select(pt => pt.climbAngle * Mathf.Rad2Deg).ToArray(), results.Select(pt => pt.climbRate).ToArray(), results.Select(pt => pt.cost).ToArray(), results.Select(pt => pt.time).ToArray() });
             else
@@ -46,44 +68,9 @@ namespace KerbalWindTunnel.DataGenerators
             //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, fuelToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
             //((LineGraph)graphables["Time-Optimal Path"]).SetValues(
             //this.GetOptimalPath(vessel, conditions, 1410, 17700, 0, 0, timeToClimb, f => f > 0, excessP).Select(pt => new Vector2(pt.speed, pt.altitude)).ToArray());
-            singleUseManager.Dispose();
         }
 
-        private void OptimalLineTask(object obj)
-        {
-            LineGenData genData = (LineGenData)obj;
-            genData.state.StoreResult(
-                GetOptimalPath(genData.vessel, genData.conditions, genData.exitSpeed, genData.exitAlt, genData.initialSpeed, genData.initialAlt, genData.costIncreaseFunc, genData.neighborPredicate, genData.predicateData, genData.timeDifferenceFunc));
-        }
-
-        private struct LineGenData
-        {
-            public readonly AeroPredictor vessel;
-            public readonly Conditions conditions;
-            public readonly float exitSpeed, exitAlt, initialSpeed, initialAlt;
-            public readonly CostIncreaseFunction costIncreaseFunc;
-            public readonly CostIncreaseFunction timeDifferenceFunc;
-            public readonly Predicate<float> neighborPredicate;
-            public readonly float[,] predicateData;
-            public readonly CalculationManager.State state;
-
-            public LineGenData(CalculationManager manager, AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc)
-            {
-                this.state = manager.GetStateToken();
-                this.vessel = vessel;
-                this.conditions = conditions;
-                this.exitSpeed = exitSpeed;
-                this.exitAlt = exitAlt;
-                this.initialSpeed = initialSpeed;
-                this.initialAlt = initialAlt;
-                this.costIncreaseFunc = costIncreaseFunc;
-                this.timeDifferenceFunc = timeDifferenceFunc;
-                this.neighborPredicate = neighborPredicate;
-                this.predicateData = predicateData;
-            }
-        }
-
-        private delegate float CostIncreaseFunction(Coords current, Coords last);
+        private delegate float CostIncreaseFunction(PathSolverCoords current, PathSolverCoords last);
 
         public struct AscentPathPoint
         {
@@ -105,7 +92,7 @@ namespace KerbalWindTunnel.DataGenerators
                 this.time = time;
             }
         }
-        private struct CoordLocator
+        public struct CoordLocator
         {
             public readonly int x;
             public readonly int y;
@@ -126,15 +113,21 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
-        private List<AscentPathPoint> GetOptimalPath(AeroPredictor vessel, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeFunc)
+        private static List<AscentPathPoint> GetOptimalPath(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeFunc)
         {
             System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
             System.Diagnostics.Stopwatch profileWatch = new System.Diagnostics.Stopwatch();
             long[] sections = new long[3];
+
+            exitSpeed = Math.Min(exitSpeed, conditions.upperBoundSpeed);
+            exitAlt = Math.Min(exitAlt, conditions.upperBoundAltitude);
+            initialSpeed = Math.Max(initialSpeed, conditions.lowerBoundSpeed);
+            initialAlt = Math.Max(initialAlt, conditions.lowerBoundAltitude);
+
             stopwatch.Start();
 
-            EnvelopePointExtensions.UniqueQueue<Coords> queue = new EnvelopePointExtensions.UniqueQueue<Coords>(500);
-            Coords baseCoord = new Coords(conditions.lowerBoundSpeed, conditions.lowerBoundAltitude, conditions.stepSpeed, conditions.stepAltitude, Mathf.RoundToInt((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / conditions.stepSpeed) + 1, Mathf.RoundToInt((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / conditions.stepAltitude) + 1);
+            EnvelopePointExtensions.UniqueQueue<PathSolverCoords> queue = new EnvelopePointExtensions.UniqueQueue<PathSolverCoords>(500);
+            PathSolverCoords baseCoord = new PathSolverCoords(conditions.lowerBoundSpeed, conditions.lowerBoundAltitude, conditions.stepSpeed, conditions.stepAltitude, conditions.XResolution, conditions.YResolution);
 
             float rangeX = (conditions.upperBoundSpeed - conditions.lowerBoundSpeed) - conditions.stepSpeed;
             float rangeY = (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) - conditions.stepAltitude;
@@ -143,25 +136,25 @@ namespace KerbalWindTunnel.DataGenerators
             float[,] costMatrix = new float[baseCoord.width, baseCoord.height];
             costMatrix.SetAll(float.MaxValue);
 
-            baseCoord = new Coords(exitSpeed, exitAlt, baseCoord);
+            baseCoord = new PathSolverCoords(exitSpeed, exitAlt, baseCoord);
             if (!neighborPredicate(predicateData.Lerp2(exitSpeed / rangeX, exitAlt / rangeY)))
             {
                 IEnumerator<CoordLocator> exitCoordFinder = CoordLocator.GenerateCoordLocators(predicateData).GetTaxicabNeighbors(baseCoord.xi, baseCoord.yi, -1, Linq2.Quadrant.II, Linq2.Quadrant.III, Linq2.Quadrant.IV);
                 while (exitCoordFinder.MoveNext() && !neighborPredicate(exitCoordFinder.Current.value)) { }
-                baseCoord = new Coords(exitCoordFinder.Current.x, exitCoordFinder.Current.y, baseCoord);
+                baseCoord = new PathSolverCoords(exitCoordFinder.Current.x, exitCoordFinder.Current.y, baseCoord);
                 exitSpeed = baseCoord.x; exitAlt = baseCoord.y;
             }
 
             costMatrix[baseCoord.xi, baseCoord.yi] = 0;
-            foreach (Coords c in baseCoord.GetNeighbors(neighborPredicate, predicateData))
+            foreach (PathSolverCoords c in baseCoord.GetNeighbors(neighborPredicate, predicateData))
                 queue.Enqueue(c);
 
-            Coords coord;
+            PathSolverCoords coord;
             while (queue.Count > 0)
             {
                 coord = queue.Dequeue();
-                List<Coords> neighbors = coord.GetNeighbors(neighborPredicate, predicateData);
-                Coords bestNeighbor = neighbors[0];
+                List<PathSolverCoords> neighbors = coord.GetNeighbors(neighborPredicate, predicateData);
+                PathSolverCoords bestNeighbor = neighbors[0];
                 float bestCost = costMatrix[bestNeighbor.xi, bestNeighbor.yi];
                 for(int i = neighbors.Count - 1; i >= 1; i--)
                     if(costMatrix[neighbors[i].xi,neighbors[i].yi] < bestCost)
@@ -209,9 +202,9 @@ namespace KerbalWindTunnel.DataGenerators
             List<AscentPathPoint> result = new List<AscentPathPoint>(300);
 
             int iter = -1;
-            coord = new Coords(initialSpeed, initialAlt, baseCoord);
-            coord = new Coords(costMatrix.First(0, 0, f => f >= initialSpeed && f < float.MaxValue / 100) + 1, coord.yi, baseCoord);
-            Coords lastCoord = coord;
+            coord = new PathSolverCoords(initialSpeed, initialAlt, baseCoord);
+            coord = new PathSolverCoords(costMatrix.First(0, 0, f => f >= initialSpeed && f < float.MaxValue / 100) + 1, coord.yi, baseCoord);
+            PathSolverCoords lastCoord = coord;
             float lastCost = 0, lastTime = 0;
             while (true)
             {
@@ -243,17 +236,20 @@ namespace KerbalWindTunnel.DataGenerators
                     if (d.sqrMagnitude <= 0)
                         break;
                     float step = 5 / Mathf.Sqrt(d.x * d.x + (d.y * conditions.stepSpeed / conditions.stepAltitude) * (d.y * conditions.stepSpeed / conditions.stepAltitude));
-                    coord = coord.Offset(-d * step);
+                    if (coord.y + -d.y * step < 0)
+                        coord = coord.Offset(-d.x * step, -coord.y);
+                    else
+                        coord = coord.Offset(-d * step);
                 }
-                catch(Exception ex)
+                catch(Exception)
                 {
                     Debug.Log("Exception in gradient finding.");
                     Debug.Log(iter);
                     Debug.Log("xW: " + xW + " yW: " + yW);
-                    throw ex;
+                    throw;
                 }
             }
-            coord = new Coords(exitSpeed, exitAlt, lastCoord);
+            coord = new PathSolverCoords(exitSpeed, exitAlt, lastCoord);
             if (result.Count > 0)
             {
                 lastCost = result[result.Count - 1].cost;
@@ -268,7 +264,7 @@ namespace KerbalWindTunnel.DataGenerators
             return result;
         }
 
-        private struct Coords : IEquatable<Coords>
+        private struct PathSolverCoords : IEquatable<PathSolverCoords>
         {
             public readonly int xi;
             public readonly int yi;
@@ -281,52 +277,52 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly int width;
             public readonly int height;
 
-            public List<Coords> GetNeighbors()
+            public List<PathSolverCoords> GetNeighbors()
             {
-                List<Coords> neighbors = new List<Coords>();
+                List<PathSolverCoords> neighbors = new List<PathSolverCoords>();
                 bool[] openings = new bool[] { xi > 0, yi > 0, xi < width - 1, yi < height - 1 };
                 if (openings[0])
-                    neighbors.Add(new Coords(xi - 1, yi, this));
+                    neighbors.Add(new PathSolverCoords(xi - 1, yi, this));
                 if (openings[0] && openings[1])
-                    neighbors.Add(new Coords(xi - 1, yi - 1, this));
+                    neighbors.Add(new PathSolverCoords(xi - 1, yi - 1, this));
                 if (openings[1])
-                    neighbors.Add(new Coords(xi, yi - 1, this));
+                    neighbors.Add(new PathSolverCoords(xi, yi - 1, this));
                 if (openings[1] && openings[2])
-                    neighbors.Add(new Coords(xi + 1, yi - 1, this));
+                    neighbors.Add(new PathSolverCoords(xi + 1, yi - 1, this));
                 if (openings[2])
-                    neighbors.Add(new Coords(xi + 1, yi, this));
+                    neighbors.Add(new PathSolverCoords(xi + 1, yi, this));
                 if (openings[2] && openings[3])
-                    neighbors.Add(new Coords(xi + 1, yi + 1, this));
+                    neighbors.Add(new PathSolverCoords(xi + 1, yi + 1, this));
                 if (openings[3])
-                    neighbors.Add(new Coords(xi, yi + 1, this));
+                    neighbors.Add(new PathSolverCoords(xi, yi + 1, this));
                 if (openings[3] && openings[0])
-                    neighbors.Add(new Coords(xi - 1, yi + 1, this));
+                    neighbors.Add(new PathSolverCoords(xi - 1, yi + 1, this));
                 return neighbors;
             }
-            public List<Coords> GetNeighbors(Predicate<float> predicate, float[,] data)
+            public List<PathSolverCoords> GetNeighbors(Predicate<float> predicate, float[,] data)
             {
-                List<Coords> neighbors = new List<Coords>();
+                List<PathSolverCoords> neighbors = new List<PathSolverCoords>();
                 bool[] openings = new bool[] { xi > 0, yi > 0, xi < width - 1, yi < height - 1 };
                 if (openings[0] && predicate(data[xi - 1, yi]))
-                    neighbors.Add(new Coords(xi - 1, yi, this));
+                    neighbors.Add(new PathSolverCoords(xi - 1, yi, this));
                 if (openings[0] && openings[1] && predicate(data[xi - 1, yi - 1]))
-                    neighbors.Add(new Coords(xi - 1, yi - 1, this));
+                    neighbors.Add(new PathSolverCoords(xi - 1, yi - 1, this));
                 if (openings[1] && predicate(data[xi, yi - 1]))
-                    neighbors.Add(new Coords(xi, yi - 1, this));
+                    neighbors.Add(new PathSolverCoords(xi, yi - 1, this));
                 if (openings[1] && openings[2] && predicate(data[xi + 1, yi - 1]))
-                    neighbors.Add(new Coords(xi + 1, yi - 1, this));
+                    neighbors.Add(new PathSolverCoords(xi + 1, yi - 1, this));
                 if (openings[2] && predicate(data[xi + 1, yi]))
-                    neighbors.Add(new Coords(xi + 1, yi, this));
+                    neighbors.Add(new PathSolverCoords(xi + 1, yi, this));
                 if (openings[2] && openings[3] && predicate(data[xi + 1, yi + 1]))
-                    neighbors.Add(new Coords(xi + 1, yi + 1, this));
+                    neighbors.Add(new PathSolverCoords(xi + 1, yi + 1, this));
                 if (openings[3] && predicate(data[xi, yi + 1]))
-                    neighbors.Add(new Coords(xi, yi + 1, this));
+                    neighbors.Add(new PathSolverCoords(xi, yi + 1, this));
                 if (openings[3] && openings[0] && predicate(data[xi - 1, yi + 1]))
-                    neighbors.Add(new Coords(xi - 1, yi + 1, this));
+                    neighbors.Add(new PathSolverCoords(xi - 1, yi + 1, this));
                 return neighbors;
             }
 
-            public Coords(int xi, int yi, Coords similar) :
+            public PathSolverCoords(int xi, int yi, PathSolverCoords similar) :
                 this(similar.offsetX, similar.offsetY, similar.stepX, similar.stepY,
                     similar.width, similar.height)
             {
@@ -335,7 +331,7 @@ namespace KerbalWindTunnel.DataGenerators
                 this.x = xi * stepX + offsetX;
                 this.y = yi * stepY + offsetY;
             }
-            public Coords(float x, float y, Coords similar) :
+            public PathSolverCoords(float x, float y, PathSolverCoords similar) :
                 this(similar.offsetX, similar.offsetY, similar.stepX, similar.stepY,
                     similar.width, similar.height)
             {
@@ -343,8 +339,13 @@ namespace KerbalWindTunnel.DataGenerators
                 this.y = y;
                 this.xi = Mathf.FloorToInt((x - offsetX) / stepX);
                 this.yi = Mathf.FloorToInt((y - offsetY) / stepY);
+                if (xi < 0 || xi > width)
+                    throw new ArgumentOutOfRangeException("xi", xi, "");
+                if (yi < 0 || yi > height)
+                    throw new ArgumentOutOfRangeException("yi", yi, "");
+
             }
-            public Coords(float offsetX, float offsetY, float stepX, float stepY, int width, int height)
+            public PathSolverCoords(float offsetX, float offsetY, float stepX, float stepY, int width, int height)
             {
                 this.xi = 0;
                 this.yi = 0;
@@ -357,18 +358,18 @@ namespace KerbalWindTunnel.DataGenerators
                 this.width = width;
                 this.height = height;
             }
-            public Coords Offset(float dx, float dy) => new Coords(this.x + dx, this.y + dy, this);
-            public Coords Offset(Vector2 d) => new Coords(this.x + d.x, this.y + d.y, this);
+            public PathSolverCoords Offset(float dx, float dy) => new PathSolverCoords(this.x + dx, this.y + dy, this);
+            public PathSolverCoords Offset(Vector2 d) => new PathSolverCoords(this.x + d.x, this.y + d.y, this);
             public override bool Equals(object obj)
             {
                 if (obj == null)
                     return false;
-                if (obj.GetType() != typeof(Coords))
+                if (obj.GetType() != typeof(PathSolverCoords))
                     return false;
-                Coords coords = (Coords)obj;
+                PathSolverCoords coords = (PathSolverCoords)obj;
                 return this.Equals(coords);
             }
-            public bool Equals(Coords coords)
+            public bool Equals(PathSolverCoords coords)
             {
                 return coords.x == this.x && coords.y == this.y;
             }
@@ -381,7 +382,7 @@ namespace KerbalWindTunnel.DataGenerators
 
     public static class EnvelopePointExtensions
     {
-        public static Vector2[] ToLine(this List<EnvelopeSurf.EnvelopePoint> points)
+        public static Vector2[] ToLine(this List<EnvelopePoint> points)
         {
             Vector2[] line = new Vector2[points.Count];
             for (int i = 0; i < points.Count; i++)
@@ -400,6 +401,7 @@ namespace KerbalWindTunnel.DataGenerators
         {
             private Queue<T> queue;
             private HashSet<T> hashSet = new HashSet<T>();
+            private Dictionary<int, int> collisionCount = new Dictionary<int, int>();
 
             public UniqueQueue() { queue = new Queue<T>(); }
             public UniqueQueue(int capacity) { queue = new Queue<T>(capacity); }
@@ -423,14 +425,27 @@ namespace KerbalWindTunnel.DataGenerators
             public bool Enqueue(T item)
             {
                 if (!hashSet.Add(item))
-                    return false;
+                {
+                    if (queue.Contains(item))
+                        return false;
+                    int hash = item.GetHashCode();
+                    if (collisionCount.ContainsKey(hash))
+                        collisionCount[hash] += 1;
+                    else
+                        collisionCount[hash] = 1;
+                }
                 queue.Enqueue(item);
                 return true;
             }
             public T Dequeue()
             {
                 T item = queue.Dequeue();
-                hashSet.Remove(item);
+                int hash = item.GetHashCode();
+                bool collided = collisionCount.TryGetValue(hash, out int count);
+                if (collided)
+                    count -= 1;
+                if (!collided || count <= 0)
+                    hashSet.Remove(item);
                 return item;
             }
 

@@ -76,10 +76,10 @@ namespace KerbalWindTunnel
             Accord.Math.Optimization.BrentSearch solver;
             if (lockPitchInput)
                 solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, pitchInputGuess) + thrustForce, (float)aoa) - offsettingForce,
-                    -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, 0.0001);
+                    -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
             else
                 solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, GetPitchInput(conditions, (float)aoa, dryTorque, pitchInputGuess)) + thrustForce, (float)aoa)
-                - offsettingForce, -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, 0.0001);
+                - offsettingForce, -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
 
             if (float.IsNaN(guess) || float.IsInfinity(guess))
                 solver.FindRoot();
@@ -222,10 +222,9 @@ namespace KerbalWindTunnel
                     this.mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
                     this.oxygenAvailable = body.atmosphereContainsOxygen;
                 }
-                FloatCurve pseudoReynoldsCurve;
+                
                 lock (PhysicsGlobals.DragCurvePseudoReynolds)
-                    pseudoReynoldsCurve = new FloatCurve(PhysicsGlobals.DragCurvePseudoReynolds.Curve.keys);
-                this.pseudoReDragMult = pseudoReynoldsCurve.Evaluate(atmDensity * speed);
+                    this.pseudoReDragMult = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
             }
         }
     }

@@ -32,7 +32,9 @@ namespace KerbalWindTunnel.VesselCache
 
         public static SimCurves Borrow(CelestialBody newBody)
         {
-            SimCurves curve = pool.Borrow();
+            SimCurves curve;
+            lock (pool)
+                curve = pool.Borrow();
             curve.Setup(newBody);
             return curve;
         }

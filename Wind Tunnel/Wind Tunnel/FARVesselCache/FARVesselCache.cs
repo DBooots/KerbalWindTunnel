@@ -44,7 +44,9 @@ namespace KerbalWindTunnel.FARVesselCache
 
         public static FARVesselCache Borrow(IShipconstruct v, CelestialBody body)
         {
-            FARVesselCache vessel = pool.Borrow();
+            FARVesselCache vessel;
+            lock (pool)
+                vessel = pool.Borrow();
             vessel.Init(v, body);
             return vessel;
         }

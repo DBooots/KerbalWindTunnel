@@ -178,8 +178,6 @@ namespace KerbalWindTunnel
 
             WindTunnelSettings.InitializeSettings();
 
-            Threading.ThreadPool.Start(-1);
-
             if (Instance)
                 Destroy(Instance);
             Instance = this;

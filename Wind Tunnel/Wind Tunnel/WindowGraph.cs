@@ -1,7 +1,6 @@
 ﻿using System;
 using Graphing;
 using KerbalWindTunnel.DataGenerators;
-using KerbalWindTunnel.Threading;
 using UnityEngine;
 
 namespace KerbalWindTunnel
@@ -11,21 +10,22 @@ namespace KerbalWindTunnel
         private float altitudeStep = 200;
         private float maxAltitude = 25000;
         private float speedStep = 20;
-        private float maxSpeed = 2000;
+        private float maxSpeed = 2500;
         public const int graphWidth = 500;
         public const int graphHeight = 400;
         public const int axisWidth = 10;
 
-        internal readonly Vector2 PlotPosition = new Vector2(25, 155);
+        //internal readonly Vector2 PlotPosition = new Vector2(25, 155);
 
         private GUIStyle hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
         private GUIStyle vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
+        private GUIStyle smallPercent = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
         private Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
         private Rect cAxisRect = new Rect(0, 0, graphWidth, axisWidth);
 
         private PopupDialog axesWindow = null;
 
-        private AeroPredictor GetAeroPredictor()
+        internal AeroPredictor GetAeroPredictor()
         {
             if (FARVesselCache.FARHook.FARInstalled)
             {
@@ -37,7 +37,7 @@ namespace KerbalWindTunnel
                 //return null;
             }
             else
-                return VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship, VesselCache.SimCurves.Borrow(body));
+                return VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship);
         }
 
         private void DrawGraph(GraphMode graphMode)
@@ -52,27 +52,37 @@ namespace KerbalWindTunnel
                     switch (graphMode)
                     {
                         case GraphMode.FlightEnvelope:
-                            EnvelopeSurfGenerator.Calculate(vessel, body, 0, maxSpeed, speedStep, 0, maxAltitude, altitudeStep);
+                            EnvelopeSurfGenerator.Calculate(body, 0, maxSpeed, 0, maxAltitude, speedStep, altitudeStep);
                             break;
                         case GraphMode.AoACurves:
-                            AoACurveGenerator.Calculate(vessel, body, Altitude, Speed, -20f * Mathf.Deg2Rad, 20f * Mathf.Deg2Rad, 0.5f * Mathf.Deg2Rad);
+                            AoACurveGenerator.Calculate(body, Altitude, Speed, -20f * Mathf.Deg2Rad, 20f * Mathf.Deg2Rad, 0.5f * Mathf.Deg2Rad);
                             break;
                         case GraphMode.VelocityCurves:
-                            VelCurveGenerator.Calculate(vessel, body, Altitude, 0, maxSpeed, speedStep);
+                            VelCurveGenerator.Calculate(body, Altitude, 0, maxSpeed, speedStep);
                             break;
                     }
                     graphRequested = true;
                 }
                 switch (GraphGenerator.Status)
                 {
-                    case CalculationManager.RunStatus.PreStart:
-                    case CalculationManager.RunStatus.Cancelled:
-                    case CalculationManager.RunStatus.Running:
+                    case System.Threading.Tasks.TaskStatus.Created:
+                    case System.Threading.Tasks.TaskStatus.WaitingForActivation:
+                    case System.Threading.Tasks.TaskStatus.WaitingToRun:
+                    case System.Threading.Tasks.TaskStatus.Running:
+                    case System.Threading.Tasks.TaskStatus.WaitingForChildrenToComplete:
                         DrawProgressBar(GraphGenerator.PercentComplete);
                         break;
-                    case CalculationManager.RunStatus.Completed:
+                    case System.Threading.Tasks.TaskStatus.RanToCompletion:
+                        graphDirty = false;
                         grapher.SetCollection(GraphGenerator.Graphables);
                         DrawGraph();
+                        break;
+                    case System.Threading.Tasks.TaskStatus.Canceled:
+                        ScreenMessages.PostScreenMessage("Background calculation canceled.", 2, ScreenMessageStyle.UPPER_CENTER);
+                        graphDirty = false;
+                        break;
+                    case System.Threading.Tasks.TaskStatus.Faulted:
+                        ScreenMessages.PostScreenMessage("Background calculation faulted!", 3, ScreenMessageStyle.UPPER_CENTER, Color.red);
                         graphDirty = false;
                         break;
                 }
@@ -174,7 +184,7 @@ namespace KerbalWindTunnel
             switch (mode)
             {
                 case GraphMode.FlightEnvelope:
-                    EnvelopeSurf.EnvelopePoint conditionPtFE = new EnvelopeSurf.EnvelopePoint(this.vessel, this.body, altitude, speed, 0);
+                    DataGenerators.EnvelopePoint conditionPtFE = new DataGenerators.EnvelopePoint(this.vessel, this.body, altitude, speed, 0);
                     if (setAoA)
                         this.AoA = conditionPtFE.AoA_level;
                     return conditionPtFE.ToString();
@@ -263,6 +273,9 @@ namespace KerbalWindTunnel
                 axesWindow = grapher.SpawnAxesWindow();
                 axesWindow.RTrf.anchoredPosition = new Vector2(WindowRect.x + WindowRect.width, -WindowRect.y);
             }
+
+            if (GraphGenerator.InternalStatus < System.Threading.Tasks.TaskStatus.RanToCompletion && !graphDirty)
+                GUI.Label(new Rect(14, 30 + graphHeight, 40, 15), String.Format("{0:N0}%", GraphGenerator.InternalPercentComplete * 100), smallPercent);
         }
 
         private void DrawProgressBar(float percentComplete)

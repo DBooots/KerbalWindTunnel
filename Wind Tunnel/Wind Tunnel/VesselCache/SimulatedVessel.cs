@@ -37,8 +37,6 @@ namespace KerbalWindTunnel.VesselCache
         public float totalMass = 0;
         public float dryMass = 0;
 
-        private SimCurves simCurves;
-
         public override bool ThreadSafe { get { return true; } }
 
         public override float Mass { get { return totalMass; } }
@@ -189,7 +187,8 @@ namespace KerbalWindTunnel.VesselCache
 
         public void Release()
         {
-            pool.Release(this);
+            lock (pool)
+                pool.Release(this);
         }
 
         private static void Reset(SimulatedVessel obj)
@@ -204,14 +203,22 @@ namespace KerbalWindTunnel.VesselCache
             obj.engines.Clear();
         }
 
-        public static SimulatedVessel Borrow(IShipconstruct v, SimCurves simCurves)
+        public static SimulatedVessel Borrow(IShipconstruct v)
         {
-            SimulatedVessel vessel = pool.Borrow();
-            vessel.Init(v, simCurves);
+            SimulatedVessel vessel;
+            // This lock is more expansive than it needs to be.
+            // There is still a race condition within Init that causes
+            // extra drag in the simulation, but this section is not a
+            // performance bottleneck and so further refinement is #TODO.
+            lock (pool)
+            {
+                vessel = pool.Borrow();
+                vessel.Init(v);
+            }
             return vessel;
         }
 
-        private void Init(IShipconstruct v, SimCurves _simCurves)
+        private void Init(IShipconstruct v)
         {
             totalMass = 0;
             dryMass = 0;
@@ -230,28 +237,29 @@ namespace KerbalWindTunnel.VesselCache
                     if (p.dragModel == Part.DragModel.CUBE && !p.DragCubes.None)
                     {
                         DragCubeList cubes = p.DragCubes;
-                        DragCubeList.CubeData p_drag_data = new DragCubeList.CubeData();
+                        lock (cubes)
+                        {
+                            DragCubeList.CubeData p_drag_data = new DragCubeList.CubeData();
 
-                        try
-                        {
-                            cubes.SetDragWeights();
-                            cubes.SetPartOcclusion();
-                            cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
-                        }
-                        catch (Exception)
-                        {
-                            cubes.SetDrag(Vector3.forward, 0);
-                            cubes.ForceUpdate(true, true);
-                            cubes.SetDragWeights();
-                            cubes.SetPartOcclusion();
-                            cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
-                            //Debug.Log(String.Format("Trajectories: Caught NRE on Drag Initialization.  Should be fixed now.  {0}", e));
+                            try
+                            {
+                                cubes.SetDragWeights();
+                                cubes.SetPartOcclusion();
+                                cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
+                            }
+                            catch (Exception)
+                            {
+                                cubes.SetDrag(Vector3.forward, 0);
+                                cubes.ForceUpdate(true, true);
+                                cubes.SetDragWeights();
+                                cubes.SetPartOcclusion();
+                                cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
+                                //Debug.Log(String.Format("Trajectories: Caught NRE on Drag Initialization.  Should be fixed now.  {0}", e));
+                            }
                         }
                     }
                 }
             }
-
-            simCurves = _simCurves;
 
             if (parts.Capacity < count)
                 parts.Capacity = count;
@@ -319,8 +327,8 @@ namespace KerbalWindTunnel.VesselCache
             CoM /= totalMass;
             CoM_dry /= dryMass;
 
-            if (lgWarning)
-                ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);
+            //if (lgWarning)
+                //ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);
 
             /*for (int i = 0; i < count; i++)
             {
