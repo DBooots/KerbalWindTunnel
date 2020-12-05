@@ -15,7 +15,7 @@ namespace KerbalWindTunnel
         public const int graphHeight = 400;
         public const int axisWidth = 10;
 
-        internal readonly Vector2 PlotPosition = new Vector2(25, 155);
+        //internal readonly Vector2 PlotPosition = new Vector2(25, 155);
 
         private GUIStyle hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
         private GUIStyle vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
