@@ -13,7 +13,6 @@ namespace KerbalWindTunnel.FARVesselCache
         public override float Mass => totalMass;
         public override bool ThreadSafe { get { return true; } }
         private static readonly Pool<FARVesselCache> pool = new Pool<FARVesselCache>(Create, Reset);
-        public List<InstantConditionSimulationWrapper> simulators = new List<InstantConditionSimulationWrapper>(Threading.ThreadPool.ThreadCount);
 
         public static bool accountForControls = false;
 
@@ -38,7 +37,6 @@ namespace KerbalWindTunnel.FARVesselCache
         private static void Reset(FARVesselCache obj)
         {
             VesselCache.SimulatedEngine.Release(obj.engines);
-            obj.simulators.Clear();
             obj.engines.Clear();
         }
 
@@ -51,26 +49,9 @@ namespace KerbalWindTunnel.FARVesselCache
             return vessel;
         }
 
-        private InstantConditionSimulationWrapper GetAvailableSimulator()
-        {
-            int i = 0;
-            while(!System.Threading.Monitor.TryEnter(simulators[i]))
-            {
-                //i = i + 1;
-                if (i >= simulators.Count)
-                    i = 0;
-            }
-            return simulators[i];
-        }
-
         public void Init(IShipconstruct v, CelestialBody body)
         {
             FARHook.UpdateCurrentBody(body);
-
-            int threads = Threading.ThreadPool.ThreadCount;
-            simulators.Clear();
-            for (int i = 0; i < threads; i++)
-                simulators.Add(new InstantConditionSimulationWrapper()); //(InstantConditionSimulationWrapper.Borrow());
 
             List<Part> oParts = v.Parts;
             int count = oParts.Count;
@@ -120,13 +101,13 @@ namespace KerbalWindTunnel.FARVesselCache
         {
             AoA *= Mathf.Rad2Deg;
             InstantConditionSimOutputWrapper output;
-            InstantConditionSimulationWrapper simulator = GetAvailableSimulator();
+            InstantConditionSimulationWrapper simulator = InstantConditionSimulationWrapper.Borrow();
             try
             {
                 output = new InstantConditionSimOutputWrapper(simulator.ComputeNonDimensionalForces(AoA, 0, 0, 0, 0, 0, conditions.mach, pitchInput, true, true));
             }
             finally
-            { System.Threading.Monitor.Exit(simulator); }
+            { simulator.Release(); }
             
             float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
             torques = new Vector3((float)output.Cm * (float)output.MAC, 0, 0) * Q * (float)output.Area;
@@ -137,13 +118,13 @@ namespace KerbalWindTunnel.FARVesselCache
         {
             AoA *= Mathf.Rad2Deg;
             InstantConditionSimOutputWrapper output;
-            InstantConditionSimulationWrapper simulator = GetAvailableSimulator();
+            InstantConditionSimulationWrapper simulator = InstantConditionSimulationWrapper.Borrow();
             try
             {
                 output = new InstantConditionSimOutputWrapper(simulator.ComputeNonDimensionalForces(AoA, 0, 0, 0, 0, 0, conditions.mach, pitchInput, true, true));
             }
             finally
-            { System.Threading.Monitor.Exit(simulator); }
+            { simulator.Release(); }
 
             float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
             return new Vector3(0, (float)output.Cl, -(float)output.Cd) * Q * (float)output.Area;
@@ -153,13 +134,13 @@ namespace KerbalWindTunnel.FARVesselCache
         {
             AoA *= Mathf.Rad2Deg;
             InstantConditionSimOutputWrapper output;
-            InstantConditionSimulationWrapper simulator =  GetAvailableSimulator();
+            InstantConditionSimulationWrapper simulator = InstantConditionSimulationWrapper.Borrow();
             try
             {
                 output = new InstantConditionSimOutputWrapper(simulator.ComputeNonDimensionalForces(AoA, 0, 0, 0, 0, 0, conditions.mach, pitchInput, true, true));
             }
             finally
-            { System.Threading.Monitor.Exit(simulator); }
+            { simulator.Release(); }
 
             float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
             return new Vector3((float)output.Cm * (float)output.MAC, 0, 0) * Q * (float)output.Area;
