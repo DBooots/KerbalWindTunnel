@@ -25,7 +25,7 @@ namespace KerbalWindTunnel
 
         private PopupDialog axesWindow = null;
 
-        internal AeroPredictor GetAeroPredictor()
+        public AeroPredictor GetAeroPredictor()
         {
             if (FARVesselCache.FARHook.FARInstalled)
             {
