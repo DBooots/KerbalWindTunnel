@@ -20,7 +20,8 @@ namespace KerbalWindTunnel.FARVesselCache
         private static void Reset(InstantConditionSimulationWrapper sim) { }
         public void Release()
         {
-            pool.Release(this);
+            lock (pool)
+                pool.Release(this);
         }
         public static void Release(List<InstantConditionSimulationWrapper> objList)
         {
@@ -32,7 +33,9 @@ namespace KerbalWindTunnel.FARVesselCache
 
         public static InstantConditionSimulationWrapper Borrow()
         {
-            InstantConditionSimulationWrapper sim = pool.Borrow();
+            InstantConditionSimulationWrapper sim;
+            lock (pool)
+                sim = pool.Borrow();
             sim.Update();
             return sim;
         }
