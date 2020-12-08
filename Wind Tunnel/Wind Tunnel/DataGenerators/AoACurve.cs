@@ -24,7 +24,7 @@ namespace KerbalWindTunnel.DataGenerators
             graphables.Add(new LineGraph(blank) { Name = "Lift", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Drag", YName = "Force", YUnit = "kN", StringFormat = "N0", Color = Color.green });
             graphables.Add(new LineGraph(blank) { Name = "Lift/Drag Ratio", YUnit = "", StringFormat = "F2", Color = Color.green });
-            graphables.Add(new LineGraph(blank) { Name = "Lift Slope", YUnit = "m^2/°", StringFormat = "F3", Color = Color.green });
+            graphables.Add(new LineGraph(blank) { Name = "Lift Slope", YUnit = "/°", StringFormat = "F3", Color = Color.green });
             IGraphable[] pitch = new IGraphable[] {
                 new LineGraph(blank) { Name = "Pitch Input (Wet)", YUnit = "", StringFormat = "F2", Color = Color.green },
                 new LineGraph(blank) { Name = "Pitch Input (Dry)", YUnit = "", StringFormat = "F2", Color = Color.yellow }
@@ -88,7 +88,6 @@ namespace KerbalWindTunnel.DataGenerators
             }
             else
             {
-                AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
                 currentConditions = newConditions;
                 UpdateGraphs();
                 valuesSet = true;
@@ -97,15 +96,20 @@ namespace KerbalWindTunnel.DataGenerators
 
         private void UpdateGraphs()
         {
+            AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
+            if (WindTunnelSettings.UseCoefficients)
+                AverageLiftSlope /= WindTunnelWindow.Instance.CommonPredictor.Area;
+
             float left = currentConditions.lowerBound * Mathf.Rad2Deg;
             float right = currentConditions.upperBound * Mathf.Rad2Deg;
             Func<AoAPoint, float> scale = (pt) => 1;
+            float invArea = 1f / WindTunnelWindow.Instance.CommonPredictor.Area;
             if (WindTunnelSettings.UseCoefficients)
             {
-                scale = (pt) => 1 / pt.dynamicPressure;
+                scale = (pt) => 1 / pt.dynamicPressure * invArea;
                 graphables["Lift"].YName = graphables["Drag"].YName = "Coefficient";
                 graphables["Lift"].YUnit = graphables["Drag"].YUnit = "";
-                ((LineGraph)graphables["Lift"]).StringFormat = ((LineGraph)graphables["Drag"]).StringFormat = "N3";
+                ((LineGraph)graphables["Lift"]).StringFormat = ((LineGraph)graphables["Drag"]).StringFormat = "N2";
             }
             else
             {
@@ -116,7 +120,7 @@ namespace KerbalWindTunnel.DataGenerators
             ((LineGraph)graphables["Lift"]).SetValues(AoAPoints.Select(pt => pt.Lift * scale(pt)).ToArray(), left, right);
             ((LineGraph)graphables["Drag"]).SetValues(AoAPoints.Select(pt => pt.Drag * scale(pt)).ToArray(), left, right);
             ((LineGraph)graphables["Lift/Drag Ratio"]).SetValues(AoAPoints.Select(pt => pt.LDRatio).ToArray(), left, right);
-            ((LineGraph)graphables["Lift Slope"]).SetValues(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right);
+            ((LineGraph)graphables["Lift Slope"]).SetValues(AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure * invArea).ToArray(), left, right);
             ((LineGraph)((GraphableCollection)graphables["Pitch Input"])["Pitch Input (Wet)"]).SetValues(AoAPoints.Select(pt => pt.pitchInput).ToArray(), left, right);
             ((LineGraph)((GraphableCollection)graphables["Pitch Input"])["Pitch Input (Dry)"]).SetValues(AoAPoints.Select(pt => pt.pitchInput_dry).ToArray(), left, right);
             ((LineGraph)((GraphableCollection)graphables["Torque"])["Torque (Wet)"]).SetValues(AoAPoints.Select(pt => pt.torque).ToArray(), left, right);
@@ -221,6 +225,7 @@ namespace KerbalWindTunnel.DataGenerators
             public readonly float torque;
             public readonly float torque_dry;
             public readonly bool completed;
+            private readonly float area;
 
             public AoAPoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA)
             {
@@ -240,15 +245,27 @@ namespace KerbalWindTunnel.DataGenerators
                 LDRatio = Math.Abs(Lift / Drag);
                 dLift = (vessel.GetLiftForceMagnitude(conditions, AoA + WindTunnelWindow.AoAdelta, pitchInput) - Lift) /
                     (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
+                area = vessel.Area;
                 completed = true;
             }
 
             public override string ToString()
             {
-                return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
-                        "Lift:\t{3:N0}kN\n" + "Drag:\t{4:N0}kN\n" + "Lift/Drag Ratio:\t{5:N2}\n" + "Pitch Input:\t{7:F3}",
+                if (WindTunnelSettings.UseCoefficients)
+                {
+                    float coefMod = 1f / dynamicPressure / area;
+                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
+                        "Lift Coefficient:\t{3:N2}\n" + "Drag Coefficient:\t{4:N2}\n" + "Lift/Drag Ratio:\t{5:N2}\n" + "Pitch Input:\t{7:F3}\n" + 
+                        "Wing Area:\t{8,F2}",
                         altitude, speed, AoA * Mathf.Rad2Deg,
-                        Lift, Drag, LDRatio, mach, pitchInput);
+                        Lift * coefMod, Drag * coefMod, LDRatio, mach, pitchInput,
+                        area);
+                }
+                else
+                    return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
+                            "Lift:\t{3:N0}kN\n" + "Drag:\t{4:N0}kN\n" + "Lift/Drag Ratio:\t{5:N2}\n" + "Pitch Input:\t{7:F3}",
+                            altitude, speed, AoA * Mathf.Rad2Deg,
+                            Lift, Drag, LDRatio, mach, pitchInput);
             }
         }
 

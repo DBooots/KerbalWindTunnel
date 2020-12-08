@@ -88,15 +88,16 @@ namespace KerbalWindTunnel.DataGenerators
         {
             float left = currentConditions.lowerBound;
             float right = currentConditions.upperBound;
+            float invArea = WindTunnelWindow.Instance.CommonPredictor.Area;
             Func<VelPoint, float> scale = (pt) => 1;
             if (WindTunnelSettings.UseCoefficients)
-                scale = (pt) => 1 / pt.dynamicPressure;
+                scale = (pt) => 1 / pt.dynamicPressure * invArea;
             ((LineGraph)graphables["Level AoA"]).SetValues(VelPoints.Select(pt => pt.AoA_level * Mathf.Rad2Deg).ToArray(), left, right);
             ((LineGraph)graphables["Max Lift AoA"]).SetValues(VelPoints.Select(pt => pt.AoA_max * Mathf.Rad2Deg).ToArray(), left, right);
             ((LineGraph)graphables["Thrust Available"]).SetValues(VelPoints.Select(pt => pt.Thrust_available).ToArray(), left, right);
             ((LineGraph)graphables["Lift/Drag Ratio"]).SetValues(VelPoints.Select(pt => pt.LDRatio).ToArray(), left, right);
             ((LineGraph)graphables["Drag"]).SetValues(VelPoints.Select(pt => pt.drag * scale(pt)).ToArray(), left, right);
-            ((LineGraph)graphables["Lift Slope"]).SetValues(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure).ToArray(), left, right);
+            ((LineGraph)graphables["Lift Slope"]).SetValues(VelPoints.Select(pt => pt.dLift / pt.dynamicPressure * invArea).ToArray(), left, right);
             ((LineGraph)graphables["Excess Thrust"]).SetValues(VelPoints.Select(pt => pt.Thrust_excess).ToArray(), left, right);
             ((LineGraph)graphables["Pitch Input"]).SetValues(VelPoints.Select(pt => pt.pitchInput).ToArray(), left, right);
             ((LineGraph)graphables["Max Lift"]).SetValues(VelPoints.Select(pt => pt.Lift_max * scale(pt)).ToArray(), left, right);
