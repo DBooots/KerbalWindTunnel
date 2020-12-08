@@ -228,6 +228,7 @@ namespace KerbalWindTunnel.VesselCache
             dryMass = 0;
             CoM = Vector3.zero;
             CoM_dry = Vector3.zero;
+            relativeWingArea = 0;
 
             List<Part> oParts = v.Parts;
             List<SimulatedPart> variableDragParts_ctrls = new List<SimulatedPart>();
