@@ -154,9 +154,11 @@ namespace KerbalWindTunnel
             {
                 new DialogGUIToggle(WindTunnelSettings.UseCoefficients, "Lift, Drag as coefficients",
                     delegate (bool b) {
-                        Instance.graphDirty = true;
-                        Instance.graphRequested = false;
-                        WindTunnelSettings.UseCoefficients = !WindTunnelSettings.UseCoefficients; }),
+                        //Instance.graphDirty = true;
+                        //Instance.graphRequested = false;
+                        WindTunnelSettings.UseCoefficients = !WindTunnelSettings.UseCoefficients;
+                        GraphGenerator.UpdateGraphs();
+                    }),
                 new DialogGUIToggle(WindTunnelSettings.DefaultToMach, "Default to speed as Mach", delegate (bool b) { WindTunnelSettings.DefaultToMach = !WindTunnelSettings.DefaultToMach; }),
                 new DialogGUIToggle(WindTunnelSettings.StartMinimized, "Start minimized", delegate (bool b) { WindTunnelSettings.StartMinimized = !WindTunnelSettings.StartMinimized; }),
                 new DialogGUIToggle(WindTunnelSettings.UseSingleColorHighlighting, "Use simple part highlighting", delegate (bool b) {WindTunnelSettings.UseSingleColorHighlighting = !WindTunnelSettings.UseSingleColorHighlighting; }),
@@ -168,7 +170,10 @@ namespace KerbalWindTunnel
             if (ToolbarManager.ToolbarAvailable)
                 dialog.Add(new DialogGUIToggle(WindTunnelSettings.UseBlizzy, "Use Blizzy's Toolbar", delegate (bool b) { WindTunnelSettings.UseBlizzy = !WindTunnelSettings.UseBlizzy; }));
 
-            dialog.Add(new DialogGUIButton("Accept", delegate { WindTunnelWindow.Instance.Visible = true; settingsDialog.Dismiss(); }));
+            dialog.Add(new DialogGUIButton("Accept", delegate {
+                WindTunnelWindow.Instance.Visible = true;
+                settingsDialog.Dismiss();
+            }));
 
             return PopupDialog.SpawnPopupDialog(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                 new MultiOptionDialog("KWTSettings", "", "Kerbal Wind Tunnel Settings", UISkinManager.defaultSkin, dialog.ToArray()),
