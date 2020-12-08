@@ -84,7 +84,7 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
-        private void UpdateGraphs()
+        public override void UpdateGraphs()
         {
             float left = currentConditions.lowerBound;
             float right = currentConditions.upperBound;

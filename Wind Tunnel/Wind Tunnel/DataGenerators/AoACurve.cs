@@ -94,7 +94,7 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
-        private void UpdateGraphs()
+        public override void UpdateGraphs()
         {
             AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
             if (WindTunnelSettings.UseCoefficients)

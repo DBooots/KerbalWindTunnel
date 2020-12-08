@@ -111,6 +111,8 @@ namespace KerbalWindTunnel.DataGenerators
             cancellationTokenSource = null;
         }
 
+        public virtual void UpdateGraphs() { }
+
         public abstract void OnAxesChanged(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax);
     }
 }

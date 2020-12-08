@@ -141,7 +141,7 @@ namespace KerbalWindTunnel.DataGenerators
             WindTunnel.Instance.StartCoroutine(Processing(newConditions, preliminaryData.To2Dimension(resolution[0, 0] + 1)));
         }
 
-        private void UpdateGraphs()
+        public override void UpdateGraphs()
         {
             float bottom = currentConditions.lowerBoundAltitude;
             float top = currentConditions.upperBoundAltitude;
