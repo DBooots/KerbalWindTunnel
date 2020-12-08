@@ -256,7 +256,7 @@ namespace KerbalWindTunnel.DataGenerators
                     float coefMod = 1f / dynamicPressure / area;
                     return String.Format("Altitude:\t{0:N0}m\n" + "Speed:\t{1:N0}m/s\n" + "Mach:\t{6:N2}\n" + "AoA:\t{2:N2}°\n" +
                         "Lift Coefficient:\t{3:N2}\n" + "Drag Coefficient:\t{4:N2}\n" + "Lift/Drag Ratio:\t{5:N2}\n" + "Pitch Input:\t{7:F3}\n" + 
-                        "Wing Area:\t{8,F2}",
+                        "Wing Area:\t{8:F2}",
                         altitude, speed, AoA * Mathf.Rad2Deg,
                         Lift * coefMod, Drag * coefMod, LDRatio, mach, pitchInput,
                         area);
