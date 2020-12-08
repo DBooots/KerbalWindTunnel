@@ -58,7 +58,7 @@ namespace KerbalWindTunnel.DataGenerators
             else
                 pitchInput = 1;
 
-            if (speed < 5 && Mathf.Abs(altitude) < 10)
+            if (speed < 5 && Math.Abs(altitude) < 10)
                 AoA_level = 0;
 
             Thrust_available = thrustForce.magnitude;
@@ -75,7 +75,7 @@ namespace KerbalWindTunnel.DataGenerators
                 AoA_level = AoA_max;
             }
             Accel_excess = (Thrust_excess / vessel.Mass / WindTunnelWindow.gAccel);
-            LDRatio = Mathf.Abs(lift / drag);
+            LDRatio = Math.Abs(lift / drag);
             dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) - lift)
                 / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
             //stabilityDerivative = (vessel.GetAeroTorque(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput).x - torque.x)
@@ -99,7 +99,7 @@ namespace KerbalWindTunnel.DataGenerators
                 torques[i] = vessel.GetAeroTorque(conditions, aoas[i], 0).x;
             }
             int eq = 0 + alphaSteps;
-            int dir = (int)Mathf.Sign(torques[eq]);
+            int dir = (int)Math.Sign(torques[eq]);
             if (dir == 0)
             {
                 start = eq - 1;
@@ -110,7 +110,7 @@ namespace KerbalWindTunnel.DataGenerators
                 while (eq > 0 && eq < 2 * alphaSteps)
                 {
                     eq += dir;
-                    if (Mathf.Sign(torques[eq]) != dir)
+                    if (Math.Sign(torques[eq]) != dir)
                         break;
                 }
                 if (eq == 0 || eq == 2 * alphaSteps)

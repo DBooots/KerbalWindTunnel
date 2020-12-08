@@ -30,7 +30,7 @@ namespace KerbalWindTunnel
                     maximizer.UpperBound = guess + 5 * Mathf.Deg2Rad;
                     if (!maximizer.Maximize())
                     {
-                        maximizer.LowerBound = Mathf.Min(10 * Mathf.Deg2Rad, guess - 10 * Mathf.Deg2Rad);
+                        maximizer.LowerBound = Math.Min(10 * Mathf.Deg2Rad, guess - 10 * Mathf.Deg2Rad);
                         maximizer.UpperBound = Mathf.Clamp(guess + 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, 90 * Mathf.Deg2Rad);
                         maximizer.Maximize();
                     }
@@ -55,7 +55,7 @@ namespace KerbalWindTunnel
                     if (!minimizer.Maximize())
                     {
                         minimizer.LowerBound = Mathf.Clamp(guess - 10 * Mathf.Deg2Rad, -90 * Mathf.Deg2Rad, -60 * Mathf.Deg2Rad);
-                        minimizer.UpperBound = Mathf.Max(-10 * Mathf.Deg2Rad, guess + 10 * Mathf.Deg2Rad);
+                        minimizer.UpperBound = Math.Max(-10 * Mathf.Deg2Rad, guess + 10 * Mathf.Deg2Rad);
                         minimizer.Maximize();
                     }
                 }
@@ -93,8 +93,8 @@ namespace KerbalWindTunnel
                     solver.UpperBound = guess + 5 * Mathf.Deg2Rad;
                     if (!solver.FindRoot())
                     {
-                        solver.LowerBound = Mathf.Min(-10 * Mathf.Deg2Rad, guess - 10 * Mathf.Deg2Rad);
-                        solver.UpperBound = Mathf.Max(35 * Mathf.Deg2Rad, guess + 10 * Mathf.Deg2Rad);
+                        solver.LowerBound = Math.Min(-10 * Mathf.Deg2Rad, guess - 10 * Mathf.Deg2Rad);
+                        solver.UpperBound = Math.Max(35 * Mathf.Deg2Rad, guess + 10 * Mathf.Deg2Rad);
                         solver.FindRoot();
                     }
                 }

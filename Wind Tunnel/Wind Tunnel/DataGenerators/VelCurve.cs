@@ -213,14 +213,14 @@ namespace KerbalWindTunnel.DataGenerators
                 float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))) - (vessel.Mass * speed * speed / (radius + altitude));
                 Vector3 thrustForce = vessel.GetThrustForce(conditions);
                 AoA_max = vessel.GetMaxAoA(conditions, out Lift_max);
-                AoA_level = Mathf.Min(vessel.GetAoA(conditions, weight), AoA_max);
+                AoA_level = Math.Min(vessel.GetAoA(conditions, weight), AoA_max);
                 pitchInput = vessel.GetPitchInput(conditions, AoA_level);
                 Thrust_available = thrustForce.magnitude;
                 Vector3 force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
                 drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                 Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
                 Accel_excess = Thrust_excess / vessel.Mass / WindTunnelWindow.gAccel;
-                LDRatio = Mathf.Abs(AeroPredictor.GetLiftForceMagnitude(force, AoA_level) / drag);
+                LDRatio = Math.Abs(AeroPredictor.GetLiftForceMagnitude(force, AoA_level) / drag);
                 dLift = (vessel.GetLiftForceMagnitude(conditions, AoA_level + WindTunnelWindow.AoAdelta, pitchInput) -
                     vessel.GetLiftForceMagnitude(conditions, AoA_level, pitchInput)) / (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
                 completed = true;

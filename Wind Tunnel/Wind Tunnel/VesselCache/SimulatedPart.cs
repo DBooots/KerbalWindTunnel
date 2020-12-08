@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using KerbalWindTunnel.Extensions;
 using Smooth.Pools;
 using UnityEngine;
@@ -182,7 +183,7 @@ namespace KerbalWindTunnel.VesselCache
                     drag *= maximum_drag;
                     break;
                 case Part.DragModel.CYLINDRICAL:
-                    drag *= Mathf.Lerp(minimum_drag, maximum_drag, Mathf.Abs(Vector3.Dot(dragReferenceVector, velocityVect)));
+                    drag *= Mathf.Lerp(minimum_drag, maximum_drag, Math.Abs(Vector3.Dot(dragReferenceVector, velocityVect)));
                     break;
                 case Part.DragModel.CONIC:
                     drag *= Mathf.Lerp(minimum_drag, maximum_drag, Vector3.Angle(dragReferenceVector, velocityVect) / 180f);

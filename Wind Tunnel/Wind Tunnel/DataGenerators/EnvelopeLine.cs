@@ -19,7 +19,7 @@ namespace KerbalWindTunnel.DataGenerators
             float[,] burnRate = dataArray.SelectToArray(pt => pt.fuelBurnRate);
             float timeToClimb(PathSolverCoords current, PathSolverCoords last)
             {
-                float dE = Mathf.Abs(WindTunnelWindow.gAccel * (last.y - current.y) / ((current.x + last.x) / 2) + (last.x - current.x));
+                float dE = Math.Abs(WindTunnelWindow.gAccel * (last.y - current.y) / ((current.x + last.x) / 2) + (last.x - current.x));
                 float P = (accel[current.xi, current.yi] + accel[last.xi, last.yi]) / 2;
                 return (dE / P);
             }
@@ -228,7 +228,7 @@ namespace KerbalWindTunnel.DataGenerators
                 }
                 float xW = (coord.x - conditions.stepSpeed / 2) / rangeX;
                 float yW = (coord.y - conditions.stepAltitude / 2) / rangeY;
-                if (Mathf.Abs(coord.x - exitSpeed) < 10 && Mathf.Abs(coord.y - exitAlt) < 100)
+                if (Math.Abs(coord.x - exitSpeed) < 10 && Math.Abs(coord.y - exitAlt) < 100)
                     break;
                 try
                 {

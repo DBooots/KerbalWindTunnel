@@ -158,12 +158,12 @@ namespace KerbalWindTunnel
                 //Vector3 partForce = highlightingVessel.parts[i].GetAero(inflow, mach, pseudoReDragMult);
                 //Vector3 partForce = StockAeroUtil.SimAeroForce(body, new ShipConstruct("test", "", new List<Part>() { EditorLogic.fetch.ship.parts[i] }), inflow * speed, altitude);
                 partForce = AeroPredictor.ToFlightFrame(partForce, aoa);  // (Quaternion.AngleAxis((aoa * 180 / Mathf.PI), Vector3.left) * partForce);
-                maxHighlights.x = Mathf.Max(Mathf.Abs(partForce.z), maxHighlights.x);
-                maxHighlights.y = Mathf.Max(Mathf.Abs(partForce.y), maxHighlights.y);
-                minHighlights.x = Mathf.Min(Mathf.Abs(partForce.z), minHighlights.x);
-                minHighlights.y = Mathf.Min(Mathf.Abs(partForce.y), minHighlights.y);
+                maxHighlights.x = Math.Max(Math.Abs(partForce.z), maxHighlights.x);
+                maxHighlights.y = Math.Max(Math.Abs(partForce.y), maxHighlights.y);
+                minHighlights.x = Math.Min(Math.Abs(partForce.z), minHighlights.x);
+                minHighlights.y = Math.Min(Math.Abs(partForce.y), minHighlights.y);
 
-                highlightingData[i] = new Vector2(Mathf.Abs(partForce.z), Mathf.Abs(partForce.y));
+                highlightingData[i] = new Vector2(Math.Abs(partForce.z), Math.Abs(partForce.y));
             }
         }
 

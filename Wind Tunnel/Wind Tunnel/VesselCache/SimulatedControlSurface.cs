@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using KerbalWindTunnel.Extensions;
 using Smooth.Pools;
 using UnityEngine;
@@ -97,10 +98,10 @@ namespace KerbalWindTunnel.VesselCache
             Vector3 relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
 
             float dot = Vector3.Dot(velocityVect, relLiftVector);
-            float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
+            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
             Vector3 lift = Vector3.zero;
             lock (this.liftCurve)
-                lift = -relLiftVector * Mathf.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+                lift = -relLiftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             return lift * 1000;
@@ -155,10 +156,10 @@ namespace KerbalWindTunnel.VesselCache
             Vector3 relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
 
             float dot = Vector3.Dot(velocityVect, relLiftVector);
-            float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
+            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
             Vector3 lift = Vector3.zero;
             lock (this.liftCurve)
-                lift = -relLiftVector * Mathf.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+                lift = -relLiftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             if (vessel != null)
@@ -180,7 +181,7 @@ namespace KerbalWindTunnel.VesselCache
                     // TODO: Check if neutral needs clamping. It can't be above 1 because math, but will negative values be an issue?
                     // So, since surfaceInput is already multiplied by authorityLimiter%, one would think it isn't needed again here.
                     // But, detailed testing shows it is required.
-                    this.part.cubes.SetCubeWeight("neutral", (this.maxAuthority - Mathf.Abs(surfaceInput * this.authorityLimiter)) * 0.01f);
+                    this.part.cubes.SetCubeWeight("neutral", (this.maxAuthority - Math.Abs(surfaceInput * this.authorityLimiter)) * 0.01f);
                     this.part.cubes.SetCubeWeight("fullDeflectionPos", Mathf.Clamp01(surfaceInput * this.authorityLimiter * 0.01f));
                     this.part.cubes.SetCubeWeight("fullDeflectionNeg", Mathf.Clamp01(-surfaceInput * this.authorityLimiter * 0.01f));
                     this.part.cubes.SetDragWeights();
@@ -207,10 +208,10 @@ namespace KerbalWindTunnel.VesselCache
             Vector3 relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
 
             float dot = Vector3.Dot(velocityVect, relLiftVector);
-            float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
+            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
             Vector3 lift = Vector3.zero;
             lock (this.liftCurve)
-                lift = -relLiftVector * Mathf.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+                lift = -relLiftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             if (!useInternalDragModel)
@@ -228,7 +229,7 @@ namespace KerbalWindTunnel.VesselCache
                     // TODO: Check if neutral needs clamping. It can't be above 1 because math, but will negative values be an issue?
                     // So, since surfaceInput is already multiplied by authorityLimiter%, one would think it isn't needed again here.
                     // But, detailed testing shows it is required.
-                    this.part.cubes.SetCubeWeight("neutral", (this.maxAuthority - Mathf.Abs(surfaceInput * this.authorityLimiter)) * 0.01f);
+                    this.part.cubes.SetCubeWeight("neutral", (this.maxAuthority - Math.Abs(surfaceInput * this.authorityLimiter)) * 0.01f);
                     this.part.cubes.SetCubeWeight("fullDeflectionPos", Mathf.Clamp01(surfaceInput * this.authorityLimiter * 0.01f));
                     this.part.cubes.SetCubeWeight("fullDeflectionNeg", Mathf.Clamp01(-surfaceInput * this.authorityLimiter * 0.01f));
 

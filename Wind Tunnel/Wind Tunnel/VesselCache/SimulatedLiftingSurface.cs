@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using KerbalWindTunnel.Extensions;
 using Smooth.Pools;
 using UnityEngine;
@@ -71,10 +72,10 @@ namespace KerbalWindTunnel.VesselCache
         virtual public Vector3 GetLift(Vector3 velocityVect, float mach)
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
-            float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
+            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
             Vector3 lift = Vector3.zero;
             lock (this.liftCurve)
-                lift = -liftVector * Mathf.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+                lift = -liftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             return lift * 1000;
@@ -92,10 +93,10 @@ namespace KerbalWindTunnel.VesselCache
         virtual public Vector3 GetForce(Vector3 velocityVect, float mach)
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
-            float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
+            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
             Vector3 lift = Vector3.zero;
             lock (this.liftCurve)
-                lift = -liftVector * Mathf.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+                lift = -liftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             if (!useInternalDragModel)
@@ -109,10 +110,10 @@ namespace KerbalWindTunnel.VesselCache
         virtual public Vector3 GetForce(Vector3 velocityVect, float mach, out Vector3 torque, bool dryTorque = false)
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
-            float absdot = omnidirectional ? Mathf.Abs(dot) : Mathf.Clamp01(dot);
+            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
             Vector3 lift = Vector3.zero;
             lock (this.liftCurve)
-                lift = -liftVector * Mathf.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+                lift = -liftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             if (vessel != null)

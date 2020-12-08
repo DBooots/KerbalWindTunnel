@@ -194,7 +194,7 @@ namespace KerbalWindTunnel.DataGenerators
             const int numPts = 80;
             xMin = (xMin < -180 ? -180 : xMin) * Mathf.Deg2Rad;
             xMax = (xMax > 180 ? 180 : xMax) * Mathf.Deg2Rad;
-            float step = Mathf.Min(2 * Mathf.Deg2Rad, (xMax - xMin) / numPts * Mathf.Deg2Rad);
+            float step = Math.Min(2 * Mathf.Deg2Rad, (xMax - xMin) / numPts * Mathf.Deg2Rad);
             if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)))
             {
                 Calculate(currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
@@ -237,7 +237,7 @@ namespace KerbalWindTunnel.DataGenerators
                 torque_dry = vessel.GetAeroTorque(conditions, AoA, 0, true).x;
                 Lift = force.y;
                 Drag = -force.z;
-                LDRatio = Mathf.Abs(Lift / Drag);
+                LDRatio = Math.Abs(Lift / Drag);
                 dLift = (vessel.GetLiftForceMagnitude(conditions, AoA + WindTunnelWindow.AoAdelta, pitchInput) - Lift) /
                     (WindTunnelWindow.AoAdelta * Mathf.Rad2Deg);
                 completed = true;
