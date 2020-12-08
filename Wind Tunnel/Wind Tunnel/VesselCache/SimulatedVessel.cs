@@ -36,10 +36,14 @@ namespace KerbalWindTunnel.VesselCache
         private int count;
         public float totalMass = 0;
         public float dryMass = 0;
+        public float relativeWingArea = 0;
 
         public override bool ThreadSafe { get { return true; } }
 
         public override float Mass { get { return totalMass; } }
+
+        public override float Area => relativeWingArea;
+
         public Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, bool dryTorque = false)
         {
             Vector3 aeroForce = Vector3.zero;
@@ -289,15 +293,25 @@ namespace KerbalWindTunnel.VesselCache
                 if (liftingSurface != null)
                 {
                     parts[i].hasLiftModule = true;
+                    SimulatedLiftingSurface surface;
                     if (liftingSurface is ModuleControlSurface ctrlSurface)
                     {
-                        ctrls.Add(SimulatedControlSurface.Borrow(ctrlSurface, simulatedPart));
+                        surface = SimulatedControlSurface.Borrow(ctrlSurface, simulatedPart);
+                        ctrls.Add((SimulatedControlSurface)surface);
                         variableDragParts_ctrls.Add(simulatedPart);
                         if (ctrlSurface.ctrlSurfaceArea < 1)
-                            surfaces.Add(SimulatedLiftingSurface.Borrow(ctrlSurface, simulatedPart));
+                        {
+                            surface = SimulatedLiftingSurface.Borrow(ctrlSurface, simulatedPart);
+                            surfaces.Add(surface);
+                        }
                     }
                     else
-                        surfaces.Add(SimulatedLiftingSurface.Borrow(liftingSurface, simulatedPart));
+                    {
+                        surface = SimulatedLiftingSurface.Borrow(liftingSurface, simulatedPart);
+                        surfaces.Add(surface);
+                    }
+                    Math.Abs(0);
+                    relativeWingArea += surface.deflectionLiftCoeff * Math.Abs(surface.liftVector[1]);
                 }
 
                 List<ITorqueProvider> torqueProviders = oParts[i].FindModulesImplementing<ITorqueProvider>();
@@ -326,6 +340,13 @@ namespace KerbalWindTunnel.VesselCache
             }
             CoM /= totalMass;
             CoM_dry /= dryMass;
+            if (relativeWingArea == 0)
+            {
+                // I'm not sure what effect calling ScreenMessages from a background thread will be.
+                // Fortunately, anyone using this mod probably has at least one wing.
+                ScreenMessages.PostScreenMessage("No wings found, using a reference area of 1.", 5, ScreenMessageStyle.UPPER_CENTER);
+                relativeWingArea = 1;
+            }
 
             //if (lgWarning)
                 //ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);

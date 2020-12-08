@@ -11,6 +11,7 @@ namespace KerbalWindTunnel.FARVesselCache
         public List<VesselCache.SimulatedEngine> engines = new List<VesselCache.SimulatedEngine>();
 
         public override float Mass => totalMass;
+        public override float Area => throw new NotImplementedException();
         public override bool ThreadSafe { get { return true; } }
         private static readonly Pool<FARVesselCache> pool = new Pool<FARVesselCache>(Create, Reset);
         public List<InstantConditionSimulationWrapper> simulators = new List<InstantConditionSimulationWrapper>(Threading.ThreadPool.ThreadCount);

@@ -11,6 +11,8 @@ namespace KerbalWindTunnel
         public Vector3 CoM;
         public Vector3 CoM_dry;
 
+        public abstract float Area { get; }
+
         public virtual float GetMaxAoA(Conditions conditions)
         {
             return (float)Accord.Math.Optimization.BrentSearch.Maximize((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, 0.0001);
