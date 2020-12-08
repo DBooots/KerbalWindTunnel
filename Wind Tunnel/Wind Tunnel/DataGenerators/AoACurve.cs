@@ -109,12 +109,16 @@ namespace KerbalWindTunnel.DataGenerators
                 scale = (pt) => 1 / pt.dynamicPressure * invArea;
                 graphables["Lift"].YName = graphables["Drag"].YName = "Coefficient";
                 graphables["Lift"].YUnit = graphables["Drag"].YUnit = "";
+                graphables["Lift"].DisplayName = "Lift Coefficient";
+                graphables["Drag"].DisplayName = "Drag Coefficient";
                 ((LineGraph)graphables["Lift"]).StringFormat = ((LineGraph)graphables["Drag"]).StringFormat = "N2";
             }
             else
             {
                 graphables["Lift"].YName = graphables["Drag"].YName = "Force";
                 graphables["Lift"].YUnit = graphables["Drag"].YUnit = "kN";
+                graphables["Lift"].DisplayName = "Lift";
+                graphables["Drag"].DisplayName = "Drag";
                 ((LineGraph)graphables["Lift"]).StringFormat = ((LineGraph)graphables["Drag"]).StringFormat = "N0";
             }
             ((LineGraph)graphables["Lift"]).SetValues(AoAPoints.Select(pt => pt.Lift * scale(pt)).ToArray(), left, right);
