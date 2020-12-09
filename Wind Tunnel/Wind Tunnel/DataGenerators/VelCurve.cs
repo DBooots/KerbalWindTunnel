@@ -152,11 +152,11 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (task.Status == TaskStatus.Faulted)
                 {
-                    Debug.LogError("Wind tunnel task faulted");
+                    Debug.LogError("Wind tunnel task faulted (Vel)");
                     Debug.LogException(task.Exception);
                 }
                 else if (task.Status == TaskStatus.Canceled)
-                    Debug.Log("Wind tunnel task was canceled.");
+                    Debug.Log("Wind tunnel task was canceled. (Vel)");
                 yield break;
             }
 
