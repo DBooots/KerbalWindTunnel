@@ -198,16 +198,13 @@ namespace KerbalWindTunnel.DataGenerators
 
         public override void OnAxesChanged(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
         {
-            const float variance = 0.5f;
+            const float variance = 0.75f;
             const int numPts = 80;
             xMin = (xMin < -180 ? -180 : xMin) * Mathf.Deg2Rad;
             xMax = (xMax > 180 ? 180 : xMax) * Mathf.Deg2Rad;
-            float step = Math.Min(2 * Mathf.Deg2Rad, (xMax - xMin) / numPts * Mathf.Deg2Rad);
-            if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)))
-            {
-                Calculate(currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
-            }
-            else if (currentConditions.step > step / variance)
+            float step = Math.Min(2 * Mathf.Deg2Rad, (xMax - xMin) / numPts);
+            if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)) ||
+                currentConditions.step * variance > step)
             {
                 Calculate(currentConditions.body, currentConditions.altitude, currentConditions.speed, xMin, xMax, step);
             }
