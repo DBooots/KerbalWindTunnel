@@ -60,8 +60,7 @@ namespace KerbalWindTunnel
             set
             {
                 Instance.highlightIgnoresLiftingSurfaces = value;
-                // This property isn't changed in the settings menu.
-                //settingsChanged = true;
+                settingsChanged = true;
             }
         }
 
