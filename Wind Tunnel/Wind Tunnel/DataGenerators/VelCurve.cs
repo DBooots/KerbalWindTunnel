@@ -173,11 +173,8 @@ namespace KerbalWindTunnel.DataGenerators
         {
             const float variance = 0.75f;
             const int numPts = 125;
-            if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)))
-            {
-                Calculate(currentConditions.body, currentConditions.altitude, xMin, xMax, (xMax - xMin) / numPts);
-            }
-            else if (currentConditions.step > (xMax - xMin / numPts) / variance)
+            if (!currentConditions.Contains(currentConditions.Modify(lowerBound: xMin, upperBound: xMax)) ||
+                currentConditions.step * variance > (xMax - xMin / numPts))
             {
                 Calculate(currentConditions.body, currentConditions.altitude, xMin, xMax, (xMax - xMin) / numPts);
             }
