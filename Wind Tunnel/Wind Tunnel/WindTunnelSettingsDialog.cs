@@ -15,7 +15,7 @@ namespace KerbalWindTunnel
             }
         }
         [Persistent]
-        public bool useCoefficients;
+        public bool useCoefficients = true;
 
         public static bool DefaultToMach
         {
