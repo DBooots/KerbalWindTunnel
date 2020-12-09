@@ -50,8 +50,23 @@ namespace KerbalWindTunnel
                 settingsChanged = true;
             }
         }
+
         [Persistent]
-        public bool useSingleColorHighlighting;
+        public bool useSingleColorHighlighting = true;
+
+        public static bool HighlightIgnoresLiftingSurfaces
+        {
+            get { return Instance.highlightIgnoresLiftingSurfaces; }
+            set
+            {
+                Instance.highlightIgnoresLiftingSurfaces = value;
+                // This property isn't changed in the settings menu.
+                //settingsChanged = true;
+            }
+        }
+
+        [Persistent]
+        public bool highlightIgnoresLiftingSurfaces = false;
 
         public static bool ShowEnvelopeMask
         {

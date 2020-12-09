@@ -156,7 +156,7 @@ namespace KerbalWindTunnel
             new string[] { "Lift Force", "Lift/Drag Ratio", "Pitch Input", "Wet", "Drag Force", "Lift Slope", "Pitching Torque", "Dry" },
             new string[] { "Level Flight AoA", "Lift/Drag Ratio", "Thrust Available", "Excess Thrust", "Excess Accleration", "Max Lift AoA", "Lift Slope", "Drag Force", "Max Lift", "Pitch Input" }
         };
-        private readonly string[] highlightModeStrings = new string[] { "Off", "Drag", "Lift" };
+        private readonly string[] highlightModeStrings = new string[] { "Off", "Drag", "Lift", "Drag/Mass", "Drag/Lift" };
 
         private bool graphDirty = true;
         private bool graphRequested = false;
@@ -308,6 +308,7 @@ namespace KerbalWindTunnel
                 DrawSelectionOptions();
 
                 DrawHighlightingOptions();
+                DrawHighlightingLiftingSurfOption();
 
                 DrawSaveIcon();
             }
@@ -315,6 +316,7 @@ namespace KerbalWindTunnel
             {
                 DrawHighlightingOptions();
                 DrawConditionOptions();
+                DrawHighlightingLiftingSurfOption();
             }
             GUILayout.EndVertical();
 
@@ -497,8 +499,12 @@ namespace KerbalWindTunnel
         private void DrawHighlightingOptions()
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Part Highlighting: ");
-            WindTunnel.HighlightMode newhighlightMode = (WindTunnel.HighlightMode)GUILayout.SelectionGrid((int)WindTunnel.Instance.highlightMode, highlightModeStrings, 3);
+            GUILayout.Label(Minimized ? "Highlight Mode: " : "Part Highlighting: ");
+            GUILayout.BeginVertical();
+            GUILayout.FlexibleSpace();
+            WindTunnel.HighlightMode newhighlightMode = (WindTunnel.HighlightMode)GUILayout.SelectionGrid((int)WindTunnel.Instance.highlightMode, highlightModeStrings, 5);
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
 
             if (newhighlightMode != Parent.highlightMode)
             {
@@ -526,6 +532,20 @@ namespace KerbalWindTunnel
                     }
                 }
                 GUILayout.EndHorizontal();
+            }
+        }
+
+        private void DrawHighlightingLiftingSurfOption()
+        {
+            if (Parent.highlightMode != WindTunnel.HighlightMode.Off && !FARVesselCache.FARHook.FARInstalled)
+            {
+                bool lastValue = WindTunnelSettings.HighlightIgnoresLiftingSurfaces;
+                bool newValue = GUILayout.Toggle(lastValue, "Ignore Lifting Surfaces");
+                if (lastValue != newValue)
+                {
+                    WindTunnelSettings.HighlightIgnoresLiftingSurfaces = newValue;
+                    Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
+                }
             }
         }
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using KSP.UI.Screens;
 using KSPPluginFramework;
@@ -17,14 +16,14 @@ namespace KerbalWindTunnel
         {
             Off = 0,
             Drag = 1,
-            Lift = 2
+            Lift = 2,
+            DragOverMass = 3,
+            DragOverLift = 4
         }
 
         public HighlightMode highlightMode = HighlightMode.Off;
         
-        private Vector2[] highlightingData;
-        private Vector2 maxHighlights;
-        private Vector2 minHighlights;
+        private PartAeroData[] highlightingData;
         private List<Part> highlightedParts = new List<Part>(100);
         CelestialBody body = null;
         float altitude = 0;
@@ -53,6 +52,7 @@ namespace KerbalWindTunnel
         
         Graphing.ColorMap dragMap = new Graphing.ColorMap(v => new Color(1, 0, 0, v));
         Graphing.ColorMap liftMap = new Graphing.ColorMap(v => new Color(0, 1, 0, v));
+        Graphing.ColorMap drag_liftMap = new Graphing.ColorMap(v => new Color(Math.Max(1 - (v - 0.5f) * 2, 0), Math.Max((v - 0.5f) * 2, 0), 0, Math.Abs(1 - v * 2)));//new Color(0, 1, 0, Math.Max((v - 0.5f) * 2, 0)) + new Color(1, 0, 0, Math.Max(1 - (v - 0.5f) * 2, 0)));
 
         public void UpdateHighlighting(HighlightMode highlightMode, CelestialBody body, float altitude, float speed, float aoa)
         {
@@ -71,26 +71,30 @@ namespace KerbalWindTunnel
 
             int count = highlightingData.Length;
             float min, max;
+            Func<PartAeroData, float> highlightValueFunc;
             switch (highlightMode)
             {
-                case HighlightMode.Drag:
-                    min = minHighlights.x;
-                    max = maxHighlights.x;
-                    for (int i = 0; i < count; i++)
-                    {
-                        float value = (highlightingData[i].x - min) / (max - min);
-                        HighlightPart(EditorLogic.fetch.ship.parts[i], value);
-                    }
-                    break;
                 case HighlightMode.Lift:
-                    min = minHighlights.y;
-                    max = maxHighlights.y;
-                    for (int i = 0; i < count; i++)
-                    {
-                        float value = (highlightingData[i].y - min) / (max - min);
-                        HighlightPart(EditorLogic.fetch.ship.parts[i], value);
-                    }
+                    highlightValueFunc = (p) => p.lift;
                     break;
+                case HighlightMode.DragOverMass:
+                    highlightValueFunc = (p) => p.drag / p.mass;
+                    break;
+                case HighlightMode.DragOverLift:
+                    highlightValueFunc = (p) => p.lift / p.drag;
+                    break;
+                case HighlightMode.Drag:
+                default:
+                    highlightValueFunc = (p) => p.drag;
+                    break;
+            }
+            float[] highlightingDataResolved = highlightingData.Select(highlightValueFunc).ToArray();
+            min = highlightingDataResolved.Where(f => !float.IsNaN(f) && !float.IsInfinity(f)).Min();
+            max = highlightingDataResolved.Where(f => !float.IsNaN(f) && !float.IsInfinity(f)).Max();
+            for (int i = 0; i < count; i++)
+            {
+                float value = (highlightingDataResolved[i] - min) / (max - min);
+                HighlightPart(EditorLogic.fetch.ship.parts[i], value);
             }
         }
 
@@ -99,19 +103,23 @@ namespace KerbalWindTunnel
             highlightedParts.Add(part);
 
             part.SetHighlightType(Part.HighlightType.AlwaysOn);
+            Graphing.ColorMap colorMap = Graphing.ColorMap.Jet;
             if (WindTunnelSettings.UseSingleColorHighlighting)
                 switch (highlightMode)
                 {
                     case HighlightMode.Lift:
-                        part.SetHighlightColor(liftMap[value]);
+                        colorMap = liftMap;
+                        break;
+                    case HighlightMode.DragOverLift:
+                        colorMap = drag_liftMap;
                         break;
                     case HighlightMode.Drag:
+                    case HighlightMode.DragOverMass:
                     default:
-                        part.SetHighlightColor(dragMap[value]);
+                        colorMap = dragMap;
                         break;
                 }
-            else
-                part.SetHighlightColor(Graphing.ColorMap.Jet[value]);
+            part.SetHighlightColor(colorMap[value]);
             part.SetHighlight(true, false);
         }
 
@@ -134,16 +142,22 @@ namespace KerbalWindTunnel
             }
 
             int count = ship.parts.Count;
-            highlightingData = new Vector2[count];
+            highlightingData = new PartAeroData[count];
 
             Vector3 inflow = AeroPredictor.InflowVect(aoa);
-            maxHighlights = Vector2.zero;
-            minHighlights = Vector2.positiveInfinity;
 
-            float pseudoReDragMult = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
+            float pseudoReDragMult;
+            lock (PhysicsGlobals.DragCurvePseudoReynolds)
+                pseudoReDragMult = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
 
             for (int i = 0; i < count; i++)
             {
+                if (WindTunnelSettings.HighlightIgnoresLiftingSurfaces && ship.parts[i].HasModuleImplementing<ModuleLiftingSurface>())
+                {
+                    highlightingData[i] = new PartAeroData(0, 0, ship.parts[i].mass);
+                    continue;
+                }
+
                 VesselCache.SimulatedPart simPart = VesselCache.SimulatedPart.Borrow(ship.parts[i], null);
                 Vector3 partForce = simPart.GetAero(inflow, mach, pseudoReDragMult);
 
@@ -158,12 +172,8 @@ namespace KerbalWindTunnel
                 //Vector3 partForce = highlightingVessel.parts[i].GetAero(inflow, mach, pseudoReDragMult);
                 //Vector3 partForce = StockAeroUtil.SimAeroForce(body, new ShipConstruct("test", "", new List<Part>() { EditorLogic.fetch.ship.parts[i] }), inflow * speed, altitude);
                 partForce = AeroPredictor.ToFlightFrame(partForce, aoa);  // (Quaternion.AngleAxis((aoa * 180 / Mathf.PI), Vector3.left) * partForce);
-                maxHighlights.x = Math.Max(Math.Abs(partForce.z), maxHighlights.x);
-                maxHighlights.y = Math.Max(Math.Abs(partForce.y), maxHighlights.y);
-                minHighlights.x = Math.Min(Math.Abs(partForce.z), minHighlights.x);
-                minHighlights.y = Math.Min(Math.Abs(partForce.y), minHighlights.y);
 
-                highlightingData[i] = new Vector2(Math.Abs(partForce.z), Math.Abs(partForce.y));
+                highlightingData[i] = new PartAeroData(Math.Abs(partForce.z), Math.Abs(partForce.y), ship.parts[i].mass);
             }
         }
 
@@ -291,15 +301,27 @@ namespace KerbalWindTunnel
             WindTunnelSettings.SaveSettings();
             
             //log.debug("Unregistering GameEvents.");
-            GameEvents.onEditorShipModified.Remove(OnEditorShipModified);
+            GameEvents.onEditorShipModified?.Remove(OnEditorShipModified);
             if (appLauncherEventSet)
-                GameEvents.onGUIApplicationLauncherReady.Remove(OnGuiApplicationLauncherReady);
+                GameEvents.onGUIApplicationLauncherReady?.Remove(OnGuiApplicationLauncherReady);
             if (appButton != null)
-                ApplicationLauncher.Instance.RemoveModApplication(appButton);
+                ApplicationLauncher.Instance?.RemoveModApplication(appButton);
             if (blizzyToolbarButton != null)
                 blizzyToolbarButton.Destroy();
+        }
 
-            //ThreadPool.Dispose();
+        public struct PartAeroData
+        {
+            public readonly float drag;
+            public readonly float lift;
+            public readonly float mass;
+
+            public PartAeroData(float drag, float lift, float mass)
+            {
+                this.drag = drag;
+                this.lift = lift;
+                this.mass = mass;
+            }
         }
     }
 }
