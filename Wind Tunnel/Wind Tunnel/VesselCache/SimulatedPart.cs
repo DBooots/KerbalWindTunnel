@@ -51,7 +51,8 @@ namespace KerbalWindTunnel.VesselCache
 
         public void Release()
         {
-            pool.Release(this);
+            lock (pool)
+                pool.Release(this);
         }
 
         public static void Release(List<SimulatedPart> objList)
@@ -73,7 +74,9 @@ namespace KerbalWindTunnel.VesselCache
 
         public static SimulatedPart Borrow(Part p, SimulatedVessel vessel)
         {
-            SimulatedPart part = pool.Borrow();
+            SimulatedPart part;
+            lock (pool)
+                part = pool.Borrow();
             part.vessel = vessel;
             part.Init(p);
             return part;
