@@ -181,11 +181,19 @@ namespace KerbalWindTunnel.DataGenerators
             //((SurfGraph)graphables["Stability Score"]).SetValues(envelopePoints.SelectToArray(pt => pt.stabilityScore), left, right, bottom, top);
 
             float[,] economy = envelopePoints.SelectToArray(pt => pt.fuelBurnRate / pt.speed * 1000 * 100);
-            int stallpt = EnvelopeLine.CoordLocator.GenerateCoordLocators(envelopePoints.SelectToArray(pt=>pt.Thrust_excess)).First(0, 0, c => c.value>=0);
             SurfGraph toModify = (SurfGraph)graphables["Fuel Economy"];
             toModify.SetValues(economy, left, right, bottom, top);
-            float minEconomy = economy[stallpt, 0] / 3;
-            toModify.ZMax = minEconomy;
+
+            try
+            {
+                int stallpt = EnvelopeLine.CoordLocator.GenerateCoordLocators(envelopePoints.SelectToArray(pt => pt.Thrust_excess)).First(0, 0, c => c.value >= 0);
+                float minEconomy = economy[stallpt, 0] / 3;
+                toModify.ZMax = minEconomy;
+            }
+            catch (InvalidOperationException)
+            {
+                Debug.LogError("The vessel cannot maintain flight at ground level. Fuel Economy graph will be weird.");
+            }
             ((OutlineMask)graphables["Envelope Mask"]).SetValues(envelopePoints.SelectToArray(pt => pt.Thrust_excess), left, right, bottom, top);
         }
 
