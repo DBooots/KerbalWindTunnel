@@ -8,6 +8,8 @@ namespace KerbalWindTunnel.Extensions
     {
         public static T[,] Subset<T>(this T[,] vals, int lowerBound0, int upperBound0, int lowerBound1, int upperBound1)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             T[,] result = new T[upperBound0 - lowerBound0 + 1, upperBound1 - lowerBound1 + 1];
             for (int i = lowerBound0; i <= upperBound0; i++)
             {
@@ -21,6 +23,8 @@ namespace KerbalWindTunnel.Extensions
 
         public static T[] Subset<T>(this T[] vals, int lowerBound, int upperBound)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             T[] result = new T[upperBound - lowerBound + 1];
             for (int i = lowerBound; i <= upperBound; i++)
             {
@@ -31,6 +35,8 @@ namespace KerbalWindTunnel.Extensions
 
         public static TResult[,] SelectToArray<TInput, TResult>(this TInput[,] vals, Func<TInput, TResult> selector)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int bound0 = vals.GetUpperBound(0);
             int bound1 = vals.GetUpperBound(1);
             TResult[,] results = new TResult[bound0 + 1, bound1 + 1];
@@ -48,10 +54,12 @@ namespace KerbalWindTunnel.Extensions
 
         public static float Max(this float[,] vals, bool excludeInfinity = false)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int bound0 = vals.GetUpperBound(0);
             int bound1 = vals.GetUpperBound(1);
             if (bound0 < 0 || bound1 < 0)
-                return 0;
+                throw new InvalidOperationException("The source sequence is empty.");
             float result = float.MinValue;
             for(int i = 0; i < bound0; i++)
             {
@@ -68,10 +76,12 @@ namespace KerbalWindTunnel.Extensions
 
         public static float Min(this float[,] vals, bool excludeInfinity = false)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int bound0 = vals.GetUpperBound(0);
             int bound1 = vals.GetUpperBound(1);
             if (bound0 < 0 || bound1 < 0)
-                return 0;
+                throw new InvalidOperationException("The source sequence is empty.");
             float result = float.MaxValue;
             for (int i = 0; i < bound0; i++)
             {
@@ -88,9 +98,13 @@ namespace KerbalWindTunnel.Extensions
 
         public static int First<T>(this T[,] vals, int dimension, int index, Predicate<T> predicate)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
+            if (dimension > 1)
+                throw new ArgumentOutOfRangeException("dimension", dimension, "The provided dimension was out of range.");
             int limit = vals.GetUpperBound(dimension);
             if (limit < 0)
-                return 0;
+                throw new InvalidOperationException("The source sequence is empty.");
             if (dimension == 0)
             {
                 for (int i = 0; i <= limit; i++)
@@ -105,11 +119,13 @@ namespace KerbalWindTunnel.Extensions
             }
             else
                 throw new ArgumentOutOfRangeException("dimension");
-            return -1;
+            throw new InvalidOperationException("No element satisfies the condition in Predicate.");
         }
 
         public static T[] To1Dmension<T>(this T[,] vals)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int length = vals.Length;
             int columns = vals.GetUpperBound(1) + 1;
             T[] result = new T[length];
@@ -124,6 +140,8 @@ namespace KerbalWindTunnel.Extensions
 
         public static T[,] To2Dimension<T>(this T[] vals, int columns)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int length = vals.Length;
             if (length % columns != 0)
                 throw new ArgumentException(String.Format("The input data {0} cannot be fit to the supplied number of columns {1}", length, columns));
@@ -139,6 +157,8 @@ namespace KerbalWindTunnel.Extensions
 
         public static float Lerp2(this float[,] vals, float x, float y)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int xI1, xI2;
             float fX;
             if (x <= 0)
@@ -212,6 +232,8 @@ namespace KerbalWindTunnel.Extensions
 
         public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange = -1)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int width = vals.GetUpperBound(0);
             int height = vals.GetUpperBound(1);
             if (startX < 0 || startX > width || startY < 0 || startY > height)
@@ -234,6 +256,8 @@ namespace KerbalWindTunnel.Extensions
         public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange = -1,
             params Quadrant[] quadrants)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             bool[] quads = new bool[4];
             for (int i = 0; i < quadrants.Length; i++)
                 if ((int)quadrants[i] - 1 >= 0)
@@ -245,6 +269,8 @@ namespace KerbalWindTunnel.Extensions
         public static IEnumerator<T> GetTaxicabNeighbors<T>(this T[,] vals, int startX, int startY, int maxRange,
             bool[] quads)
         {
+            if (vals == null)
+                throw new ArgumentNullException();
             int width = vals.GetUpperBound(0);
             int height = vals.GetUpperBound(1);
             if (startX < 0 || startX > width || startY < 0 || startY > height)
