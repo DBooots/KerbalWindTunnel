@@ -101,13 +101,10 @@ namespace KerbalWindTunnel.VesselCache
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             return lift * 1000;
         }
-        virtual public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque, bool dryTorque = false)
+        virtual public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque, Vector3 torquePoint)
         {
             Vector3 liftForce = GetLift(velocityVect, mach);
-            if (vessel != null)
-                torque = Vector3.Cross(liftForce, part.CoL - (dryTorque ? vessel.CoM_dry : vessel.CoM));
-            else
-                torque = Vector3.Cross(liftForce, part.CoL);
+            torque = Vector3.Cross(liftForce, part.CoL - torquePoint);
             return liftForce;
         }
 
@@ -128,7 +125,7 @@ namespace KerbalWindTunnel.VesselCache
 
             return (lift + drag) * 1000;
         }
-        virtual public Vector3 GetForce(Vector3 velocityVect, float mach, out Vector3 torque, bool dryTorque = false)
+        virtual public Vector3 GetForce(Vector3 velocityVect, float mach, out Vector3 torque, Vector3 torquePoint)
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
             float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
@@ -137,10 +134,7 @@ namespace KerbalWindTunnel.VesselCache
                 lift = -liftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
-            if (vessel != null)
-                torque = Vector3.Cross(lift * 1000, part.CoL - (dryTorque ? vessel.CoM_dry : vessel.CoM));
-            else
-                torque = Vector3.Cross(lift * 1000, part.CoL);
+            torque = Vector3.Cross(lift * 1000, part.CoL - torquePoint);
             if (!useInternalDragModel)
                 return lift * 1000;
 
@@ -148,10 +142,7 @@ namespace KerbalWindTunnel.VesselCache
             lock (this.dragCurve)
                 drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
 
-            if (vessel != null)
-                torque += Vector3.Cross(drag * 1000, part.CoP - (dryTorque ? vessel.CoM_dry : vessel.CoM));
-            else
-                torque += Vector3.Cross(drag * 1000, part.CoP);
+            torque += Vector3.Cross(drag * 1000, part.CoP - torquePoint);
             return (lift + drag) * 1000;
         }
     }

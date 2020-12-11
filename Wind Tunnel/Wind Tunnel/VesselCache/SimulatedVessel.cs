@@ -27,16 +27,18 @@ namespace KerbalWindTunnel.VesselCache
             RootSolver.LeftGuessBound(-2 * Mathf.PI / 180),
             RootSolver.RightGuessBound(2 * Mathf.PI / 180),
             RootSolver.ShiftWithGuess(true));*/
-        
-        public List<SimulatedPart> parts = new List<SimulatedPart>();
-        public List<SimulatedLiftingSurface> surfaces = new List<SimulatedLiftingSurface>();
-        public List<SimulatedControlSurface> ctrls = new List<SimulatedControlSurface>();
-        public List<SimulatedEngine> engines = new List<SimulatedEngine>();
+
+        //public List<SimulatedPart> parts = new List<SimulatedPart>();
+        //public List<SimulatedLiftingSurface> surfaces = new List<SimulatedLiftingSurface>();
+        //public List<SimulatedControlSurface> ctrls = new List<SimulatedControlSurface>();
+        //public List<SimulatedEngine> engines = new List<SimulatedEngine>();
+        public PartCollection partCollection;
 
         private int count;
         public float totalMass = 0;
         public float dryMass = 0;
         public float relativeWingArea = 0;
+        public int stage = 0;
 
         public override bool ThreadSafe { get { return true; } }
 
@@ -44,76 +46,36 @@ namespace KerbalWindTunnel.VesselCache
 
         public override float Area => relativeWingArea;
 
-        public Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, bool dryTorque = false)
+        public Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            Vector3 aeroForce = Vector3.zero;
+            Vector3 aeroForce;
             Vector3 inflow = InflowVect(AoA);
-            torque = Vector3.zero;
 
-            for (int i = parts.Count - 1; i >= 0; i--)
-            {
-                if (parts[i].shieldedFromAirstream)
-                    continue;
-                aeroForce += parts[i].GetAero(inflow, conditions.mach, conditions.pseudoReDragMult, out Vector3 pTorque, dryTorque);
-                torque += pTorque;
-            }
-            for (int i = surfaces.Count - 1; i >= 0; i--)
-            {
-                if (surfaces[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += surfaces[i].GetForce(inflow, conditions.mach, out Vector3 pTorque, dryTorque);
-                torque += pTorque;
-            }
-            for (int i = ctrls.Count - 1; i >=0; i--)
-            {
-                if (ctrls[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += ctrls[i].GetForce(inflow, conditions.mach, pitchInput, conditions.pseudoReDragMult, out Vector3 pTorque, dryTorque);
-                torque += pTorque;
-            }
+            aeroForce = partCollection.GetAeroForce(inflow, conditions, AoA, pitchInput, out torque, torquePoint);
+
             float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
             torque *= Q;
             return aeroForce * Q;
         }
         public override Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
-            return GetAeroForce(conditions, AoA, pitchInput, out _);
+            return GetAeroForce(conditions, AoA, pitchInput, out _, Vector3.zero);
         }
         
-        public Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, bool dryTorque = false)
+        public Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            Vector3 aeroForce = Vector3.zero;
+            Vector3 aeroForce;
             Vector3 inflow = InflowVect(AoA);
-            torque = Vector3.zero;
 
-            for (int i = parts.Count - 1; i >= 0; i--)
-            {
-                if (parts[i].shieldedFromAirstream)
-                    continue;
-                aeroForce += parts[i].GetLift(inflow, conditions.mach, out Vector3 pTorque, dryTorque);
-                torque += pTorque;
-            }
-            for (int i = surfaces.Count - 1; i >= 0; i--)
-            {
-                if (surfaces[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += surfaces[i].GetLift(inflow, conditions.mach, out Vector3 pTorque, dryTorque);
-                torque += pTorque;
-            }
-            for (int i = ctrls.Count - 1; i >= 0; i--)
-            {
-                if (ctrls[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += ctrls[i].GetLift(inflow, conditions.mach, pitchInput, out Vector3 pTorque, dryTorque);
-                torque += pTorque;
-            }
+            aeroForce = partCollection.GetAeroForce(inflow, conditions, AoA, pitchInput, out torque, torquePoint);
+            
             float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
             torque *= Q;
             return aeroForce * Q;
         }
         public override Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
-            return GetLiftForce(conditions, AoA, pitchInput, out _);
+            return GetLiftForce(conditions, AoA, pitchInput, out _, Vector3.zero);
         }
 
         // TODO: Add ITorqueProvider and thrust effect on torque
@@ -148,33 +110,23 @@ namespace KerbalWindTunnel.VesselCache
         
         public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0, bool dryTorque = false)
         {
-            GetAeroForce(conditions, AoA, pitchInput, out Vector3 torque, dryTorque);
+            GetAeroForce(conditions, AoA, pitchInput, out Vector3 torque, dryTorque ? CoM_dry : CoM);
             return torque;
         }
         
         public override void GetAeroCombined(Conditions conditions, float AoA, float pitchInput, out Vector3 forces, out Vector3 torques, bool dryTorque = false)
         {
-            forces = GetAeroForce(conditions, AoA, pitchInput, out torques, dryTorque);
+            forces = GetAeroForce(conditions, AoA, pitchInput, out torques, dryTorque ? CoM_dry : CoM);
         }
 
         public override Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
         {
-            Vector3 thrust = Vector3.zero;
-            for (int i = engines.Count - 1; i >= 0; i--)
-            {
-                thrust += engines[i].GetThrust(mach, atmDensity, atmPressure, oxygenPresent);
-            }
-            return thrust;
+            return partCollection.GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
         }
         
         public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
         {
-            float burnRate = 0;
-            for (int i = engines.Count - 1; i >= 0; i--)
-            {
-                burnRate += engines[i].GetFuelBurnRate(mach, atmDensity);
-            }
-            return burnRate;
+            return partCollection.GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent);
         }
 
         private static readonly Pool<SimulatedVessel> pool = new Pool<SimulatedVessel>(Create, Reset);
@@ -197,14 +149,8 @@ namespace KerbalWindTunnel.VesselCache
 
         private static void Reset(SimulatedVessel obj)
         {
-            SimulatedPart.Release(obj.parts);
-            obj.parts.Clear();
-            SimulatedLiftingSurface.Release(obj.surfaces);
-            obj.surfaces.Clear();
-            SimulatedControlSurface.Release(obj.ctrls);
-            obj.ctrls.Clear();
-            SimulatedEngine.Release(obj.engines);
-            obj.engines.Clear();
+            obj.partCollection.Release();
+            obj.partCollection = null;
         }
 
         public static SimulatedVessel Borrow(IShipconstruct v)
@@ -229,6 +175,7 @@ namespace KerbalWindTunnel.VesselCache
             CoM = Vector3.zero;
             CoM_dry = Vector3.zero;
             relativeWingArea = 0;
+            stage = 0;
 
             List<Part> oParts = v.Parts;
             List<SimulatedPart> variableDragParts_ctrls = new List<SimulatedPart>();
@@ -266,11 +213,7 @@ namespace KerbalWindTunnel.VesselCache
                 }
             }
 
-            if (parts.Capacity < count)
-                parts.Capacity = count;
-
             bool lgWarning = false;
-            int stage = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!lgWarning)
@@ -281,66 +224,17 @@ namespace KerbalWindTunnel.VesselCache
                     if (forcedRetract)
                         lgWarning = true;
                 }
-
-                SimulatedPart simulatedPart = SimulatedPart.Borrow(oParts[i], this);
-                parts.Add(simulatedPart);
-
-                totalMass += simulatedPart.totalMass;
-                dryMass += simulatedPart.dryMass;
-                CoM += simulatedPart.totalMass * simulatedPart.CoM;
-                CoM_dry += simulatedPart.dryMass * simulatedPart.CoM;
-                
-                ModuleLiftingSurface liftingSurface = oParts[i].FindModuleImplementing<ModuleLiftingSurface>();
-                if (liftingSurface != null)
-                {
-                    parts[i].hasLiftModule = true;
-                    SimulatedLiftingSurface surface;
-                    if (liftingSurface is ModuleControlSurface ctrlSurface)
-                    {
-                        surface = SimulatedControlSurface.Borrow(ctrlSurface, simulatedPart);
-                        ctrls.Add((SimulatedControlSurface)surface);
-                        variableDragParts_ctrls.Add(simulatedPart);
-                        if (ctrlSurface.ctrlSurfaceArea < 1)
-                        {
-                            surface = SimulatedLiftingSurface.Borrow(ctrlSurface, simulatedPart);
-                            surfaces.Add(surface);
-                        }
-                    }
-                    else
-                    {
-                        surface = SimulatedLiftingSurface.Borrow(liftingSurface, simulatedPart);
-                        surfaces.Add(surface);
-                    }
-                    Math.Abs(0);
-                    relativeWingArea += surface.deflectionLiftCoeff * Math.Abs(surface.liftVector[1]);
-                }
-
-                List<ITorqueProvider> torqueProviders = oParts[i].FindModulesImplementing<ITorqueProvider>();
-                // TODO: Add them to a list.
-
-                if(oParts[i].inverseStage > stage)
-                {
-                    SimulatedEngine.Release(engines);
-                    engines.Clear();
-                    stage = oParts[i].inverseStage;
-                }
-                if (oParts[i].inverseStage >= stage)
-                {
-                    MultiModeEngine multiMode = oParts[i].FindModuleImplementing<MultiModeEngine>();
-                    if (multiMode != null)
-                    {
-                        engines.Add(SimulatedEngine.Borrow(oParts[i].FindModulesImplementing<ModuleEngines>().Find(engine => engine.engineID == multiMode.mode), simulatedPart));
-                    }
-                    else
-                    {
-                        ModuleEngines engine = oParts[i].FindModulesImplementing<ModuleEngines>().FirstOrDefault();
-                        if (engine != null)
-                            engines.Add(SimulatedEngine.Borrow(engine, simulatedPart));
-                    }
-                }
             }
+
+            // Recursively add all parts to collections
+            // What a crazy change to make just to accomodate rotating parts!
+            partCollection = PartCollection.Borrow(this, oParts[0]);
+
             CoM /= totalMass;
             CoM_dry /= dryMass;
+
+            partCollection.origin = CoM;
+
             if (relativeWingArea == 0)
             {
                 // I'm not sure what effect calling ScreenMessages from a background thread will be.
@@ -351,49 +245,6 @@ namespace KerbalWindTunnel.VesselCache
 
             //if (lgWarning)
                 //ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);
-
-            /*for (int i = 0; i < count; i++)
-            {
-                parts[i].CoM -= this.CoM;
-                parts[i].CoL -= this.CoM;
-                parts[i].CoP -= this.CoM;
-            }*/
-
-            parts.RemoveAll(part => variableDragParts_ctrls.Contains(part));
         }
-
-        /*public static SimulatedVessel BorrowAndClone(SimulatedVessel v)
-        {
-            SimulatedVessel clonedVessel = pool.Borrow();
-            clonedVessel.CloneFrom(v);
-            return clonedVessel;
-        }
-        private void CloneFrom(SimulatedVessel v)
-        {
-            int num;
-            num = v.parts.Count;
-            for (int i = 0; i < num; i++)
-            {
-                this.parts.Add(v.parts[i].Clone());
-            }
-            num = v.surfaces.Count;
-            for (int i = 0; i < num; i++)
-            {
-                this.surfaces.Add(v.surfaces[i].Clone());
-            }
-            num = v.engines.Count;
-            for (int i = 0; i < num; i++)
-            {
-                this.engines.Add(v.engines[i].Clone());
-            }
-            this.totalMass = v.totalMass;
-            this.simCurves = v.simCurves;
-            this.count = v.count;
-        }
-
-        public override AeroPredictor Clone()
-        {
-            return SimulatedVessel.BorrowAndClone(this);
-        }*/
     }
 }
