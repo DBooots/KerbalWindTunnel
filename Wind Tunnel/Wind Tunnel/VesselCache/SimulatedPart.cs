@@ -169,9 +169,9 @@ namespace KerbalWindTunnel.VesselCache
 
         public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult)
         {
-            return GetAero(velocityVect, mach, pseudoReDragMult, out _);
+            return GetAero(velocityVect, mach, pseudoReDragMult, out _, Vector3.zero);
         }
-        public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult, out Vector3 torque, bool dryTorque = false)
+        public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult, out Vector3 torque, Vector3 torquePoint)
         {
             torque = Vector3.zero;
             if (shieldedFromAirstream || noDrag)
@@ -219,20 +219,14 @@ namespace KerbalWindTunnel.VesselCache
 
             drag *= PhysicsGlobals.DragMultiplier * pseudoReDragMult;
             //Debug.Log(name + ": " + drag.magnitude / pseudoReDragMult);
-            if (vessel != null)
-                torque = Vector3.Cross(liftV, CoL - (dryTorque ? vessel.CoM_dry : vessel.CoM)) + Vector3.Cross(drag, CoP - (dryTorque ? vessel.CoM_dry : vessel.CoM));
-            else
-                torque = Vector3.Cross(liftV, CoL) + Vector3.Cross(drag, CoP);
+            torque = Vector3.Cross(liftV, CoL - torquePoint) + Vector3.Cross(drag, CoP - torquePoint);
             return drag + liftV;
         }
 
-        public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque, bool dryTorque = false)
+        public Vector3 GetLift(Vector3 velocityVect, float mach, out Vector3 torque, Vector3 torquePoint)
         {
             Vector3 lift = GetLift(velocityVect, mach);
-            if (vessel != null)
-                torque = Vector3.Cross(lift, CoL - (dryTorque ? vessel.CoM_dry : vessel.CoM));
-            else
-                torque = Vector3.Cross(lift, CoL);
+            torque = Vector3.Cross(lift, CoL - torquePoint);
             return lift;
         }
         public Vector3 GetLift(Vector3 velocityVect, float mach)
