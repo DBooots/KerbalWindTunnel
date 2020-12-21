@@ -38,7 +38,7 @@ namespace KSPPluginFramework
             : base()
         {
             //do the assembly name add so we get different windowIDs for multiple plugins
-            this.WindowID = UnityEngine.Random.Range(1000, 2000000) + _AssemblyName.GetHashCode();
+            this.WindowID = (new System.Random()).Next(1000, 2000000) + _AssemblyName.GetHashCode();
             this._Visible = false;
             LogFormatted_DebugOnly("WindowID:{0}", WindowID);
 
@@ -85,6 +85,7 @@ namespace KSPPluginFramework
 
             blnFlightUIVisible = true;
 
+            ClampToScreenOffset = new RectOffset(0, 0, 0, 0);
         }
 
         /// <summary>
@@ -165,7 +166,7 @@ namespace KSPPluginFramework
         /// <summary>
         /// How close to the edges it can get if clamping is enabled - this can be negative if you want to allow it to go off screen by a certain amount
         /// </summary>
-        internal RectOffset ClampToScreenOffset = new RectOffset(0, 0, 0, 0);
+        internal RectOffset ClampToScreenOffset = null;
 
         private Boolean _Visible;
         /// <summary>

@@ -45,10 +45,10 @@ namespace KerbalWindTunnel
         internal const string iconPath_settings = "KWT_settings.png";
         internal const string iconPath_save = "KWT_saveIcon.png";
 
-        private Texture2D icon_on = new Texture2D(38, 38, TextureFormat.ARGB32, false);
-        private Texture2D icon = new Texture2D(38, 38, TextureFormat.ARGB32, false);
-        private Texture2D icon_blizzy_on = new Texture2D(24, 24, TextureFormat.ARGB32, false);
-        private Texture2D icon_blizzy = new Texture2D(24, 24, TextureFormat.ARGB32, false);
+        private Texture2D icon_on; // = new Texture2D(38, 38, TextureFormat.ARGB32, false);
+        private Texture2D icon; // = new Texture2D(38, 38, TextureFormat.ARGB32, false);
+        private Texture2D icon_blizzy_on; // = new Texture2D(24, 24, TextureFormat.ARGB32, false);
+        private Texture2D icon_blizzy; // = new Texture2D(24, 24, TextureFormat.ARGB32, false);
         
         Graphing.ColorMap dragMap = new Graphing.ColorMap(v => new Color(1, 0, 0, v));
         Graphing.ColorMap liftMap = new Graphing.ColorMap(v => new Color(0, 1, 0, v));
@@ -192,9 +192,13 @@ namespace KerbalWindTunnel
                 Destroy(Instance);
             Instance = this;
 
+            icon = new Texture2D(38, 38, TextureFormat.ARGB32, false);
             icon.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath_off));
+            icon_on = new Texture2D(38, 38, TextureFormat.ARGB32, false);
             icon_on.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath));
+            icon_blizzy = new Texture2D(24, 24, TextureFormat.ARGB32, false);
             icon_blizzy.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath_blizzy_off));
+            icon_blizzy_on = new Texture2D(24, 24, TextureFormat.ARGB32, false);
             icon_blizzy_on.LoadImage(System.IO.File.ReadAllBytes(texPath + iconPath_blizzy));
 
             GameEvents.onEditorShipModified.Add(OnEditorShipModified);

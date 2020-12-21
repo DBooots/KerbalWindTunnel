@@ -244,29 +244,29 @@ namespace KerbalWindTunnel
         }
         private bool selectingTarget = false;
 
-        private Graphing.Grapher grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes };
+        private Graphing.Grapher grapher;
 
         internal const float AoAdelta = 0.1f * Mathf.Deg2Rad;
 
         private List<CBItem> lstPlanets = new List<CBItem>();
         private CelestialBody cbStar;
 
-        private GUIStyle exitButton = new GUIStyle(HighLogic.Skin.button);
-        private GUIStyle downButton = new GUIStyle(HighLogic.Skin.button);
-        private GUIStyle clearBox = new GUIStyle(HighLogic.Skin.box);
-        private GUIStyle labelCentered = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
+        private GUIStyle exitButton; // = new GUIStyle(HighLogic.Skin.button);
+        private GUIStyle downButton; // = new GUIStyle(HighLogic.Skin.button);
+        private GUIStyle clearBox; // = new GUIStyle(HighLogic.Skin.box);
+        private GUIStyle labelCentered; // = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
 
-        Texture2D crossHair = new Texture2D(1, 1);
-        Texture2D selectedCrossHair = new Texture2D(1, 1);
-        Texture2D clearTex = new Texture2D(1, 1);
-        Texture2D settingsTex = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
-        Texture2D saveIconTex = new Texture2D(21, 21, TextureFormat.ARGB32, false);
+        Texture2D crossHair; // = new Texture2D(1, 1);
+        Texture2D selectedCrossHair; // = new Texture2D(1, 1);
+        Texture2D clearTex; // = new Texture2D(1, 1);
+        Texture2D settingsTex; // = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
+        Texture2D saveIconTex; // = new Texture2D(21, 21, TextureFormat.ARGB32, false);
 
         Vector2 selectedCrossHairVect = new Vector2(-1, -1);
 
         private string conditionDetails = "";
-        private GUIStyle styleSelectedCrossHair = new GUIStyle();
-        private GUIStyle stylePlotCrossHair = new GUIStyle();
+        private GUIStyle styleSelectedCrossHair; // = new GUIStyle();
+        private GUIStyle stylePlotCrossHair; // = new GUIStyle();
 
         public System.Threading.Tasks.TaskStatus Status { get => GraphGenerator.Status; }
         #endregion Fields and Properties
@@ -906,6 +906,26 @@ namespace KerbalWindTunnel
             if (Instance)
                 Destroy(Instance);
             Instance = this;
+
+            grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes };
+
+            crossHair = new Texture2D(1, 1);
+            selectedCrossHair = new Texture2D(1, 1);
+            clearTex = new Texture2D(1, 1);
+            settingsTex = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
+            saveIconTex = new Texture2D(21, 21, TextureFormat.ARGB32, false);
+
+            exitButton = new GUIStyle(HighLogic.Skin.button);
+            downButton = new GUIStyle(HighLogic.Skin.button);
+            clearBox = new GUIStyle(HighLogic.Skin.box);
+            labelCentered = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
+
+            hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
+            vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
+            smallPercent = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
+
+            styleSelectedCrossHair = new GUIStyle();
+            stylePlotCrossHair = new GUIStyle();
 
             // Fetch Celestial Bodies per TransferWindowPlanner method:
             cbStar = FlightGlobals.Bodies.FirstOrDefault(x => x.referenceBody == x.referenceBody);
