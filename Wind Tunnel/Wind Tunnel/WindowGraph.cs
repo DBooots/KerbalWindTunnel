@@ -29,13 +29,13 @@ namespace KerbalWindTunnel
 
         public AeroPredictor GetAeroPredictor()
         {
-            if (FARVesselCache.FARHook.FARInstalled)
+            if (false)//FARVesselCache.FARHook.FARInstalled)
             {
                 //Debug.Log("FAR Installed, getting FAR-type vessel.");
-                FARVesselCache.FARVesselCache obj = FARVesselCache.FARVesselCache.Borrow(EditorLogic.fetch.ship, body);
+                //FARVesselCache.FARVesselCache obj = FARVesselCache.FARVesselCache.Borrow(EditorLogic.fetch.ship, body);
                 //FARVesselCache.InstantConditionSimOutputWrapper output = new FARVesselCache.InstantConditionSimOutputWrapper(obj.simulators[0].ComputeNonDimensionalForces(5 * Mathf.Deg2Rad, 0, 0, 0, 0, 0, 0.2, 0, true, false));
                 //Debug.LogFormat("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", output.Cd, output.Cl, output.Cm, output.Cn, output.Cy, output.C_roll);
-                return obj;
+                //return obj;
                 //return null;
             }
             else
