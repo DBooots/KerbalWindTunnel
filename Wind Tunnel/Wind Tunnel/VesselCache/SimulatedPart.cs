@@ -52,8 +52,13 @@ namespace KerbalWindTunnel.VesselCache
 
         public void Release()
         {
-            lock (pool)
-                pool.Release(this);
+            foreach (DragCube cube in cubes.Cubes)
+            {
+                DragCubePool.Release(cube);
+            }
+            cubes.ClearCubes();
+            simCurves.Release();
+            pool.Release(this);
         }
 
         public static void Release(List<SimulatedPart> objList)
@@ -64,23 +69,16 @@ namespace KerbalWindTunnel.VesselCache
             }
         }
 
-        private static void Reset(SimulatedPart obj)
-        {
-            foreach (DragCube cube in obj.cubes.Cubes)
-            {
-                DragCubePool.Instance.Release(cube);
-            }
-            obj.simCurves.Release();
-        }
+        private static void Reset(SimulatedPart obj) { }
 
-        public static SimulatedPart Borrow(Part p, SimulatedVessel vessel)
+        public static SimulatedPart Borrow(Part part, SimulatedVessel vessel)
         {
-            SimulatedPart part;
+            SimulatedPart simPart;
             lock (pool)
-                part = pool.Borrow();
-            part.vessel = vessel;
-            part.Init(p);
-            return part;
+                simPart = pool.Borrow();
+            simPart.vessel = vessel;
+            simPart.Init(part);
+            return simPart;
         }
         public static SimulatedPart BorrowClone(SimulatedPart part, SimulatedVessel vessel)
         {
@@ -283,38 +281,9 @@ namespace KerbalWindTunnel.VesselCache
             return liftV;
         }
 
-        /*public virtual Vector3 Drag(Vector3 vesselVelocity, float dragFactor, float mach)
-        {
-            if (shieldedFromAirstream || noDrag)
-                return Vector3.zero;
+        public static Pool<DragCube> DragCubePool { get; } = new Pool<DragCube>(
+            () => new DragCube(), cube => { });
 
-            Vector3 dragVectorDirLocal = -(vesselToPart * vesselVelocity).normalized;
-
-            cubes.SetDrag(-dragVectorDirLocal, mach);
-
-            Vector3 drag = -vesselVelocity.normalized * cubes.AreaDrag * dragFactor;
-
-            return drag;
-        }
-
-        public virtual Vector3 Lift(Vector3 vesselVelocity, float liftFactor)
-        {
-            if (shieldedFromAirstream || hasLiftModule)
-                return Vector3.zero;
-
-            // direction of the lift in a vessel centric reference
-            Vector3 liftV = partToVessel * (cubes.LiftForce * bodyLiftMultiplier * liftFactor);
-
-            Vector3 liftVector = Vector3.ProjectOnPlane(liftV, -vesselVelocity);
-
-            return liftVector;
-        }*/
-
-        public static class DragCubePool
-        {
-            public static Pool<DragCube> Instance { get; } = new Pool<DragCube>(
-                () => new DragCube(), cube => { });
-        }
 
         protected void CopyDragCubesList(DragCubeList source, DragCubeList dest, bool sourceIsSet = false)
         {
