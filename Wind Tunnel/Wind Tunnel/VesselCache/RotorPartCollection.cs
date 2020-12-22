@@ -16,7 +16,7 @@ namespace KerbalWindTunnel.VesselCache
         {
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
-            int rotationCount = WindTunnelSettings.Instance.rotationCount;
+            int rotationCount = Math.Abs(angularVelocity) > 0 ? WindTunnelSettings.Instance.rotationCount : 1;
             float Q = 0.0005f * conditions.atmDensity;
 
             // The root part is the rotor hub, so since the rotating mesh is usually cylindrical we
@@ -165,7 +165,7 @@ namespace KerbalWindTunnel.VesselCache
         {
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
-            int rotationCount = WindTunnelSettings.Instance.rotationCount;
+            int rotationCount = Math.Abs(angularVelocity) > 0 ? WindTunnelSettings.Instance.rotationCount : 1;
             float Q = 0.0005f * conditions.atmDensity;
 
             // The root part is the rotor hub, so since the rotating mesh is usually cylindrical we
@@ -282,11 +282,6 @@ namespace KerbalWindTunnel.VesselCache
 
         private static readonly Pool<RotorPartCollection> pool = new Pool<RotorPartCollection>(Create, Reset);
 
-        new public static int PoolSize
-        {
-            get { return pool.Size; }
-        }
-
         private static RotorPartCollection Create()
         {
             return new RotorPartCollection();
@@ -309,6 +304,12 @@ namespace KerbalWindTunnel.VesselCache
             collection.parentCollection = parentCollection;
             collection.AddPart(originPart);
             return collection;
+        }
+
+        internal static RotorPartCollection DirectBorrow()
+        {
+            lock (pool)
+                return pool.Borrow();
         }
 
         new public static RotorPartCollection Borrow(SimulatedVessel vessel, Part originPart)
@@ -348,6 +349,24 @@ namespace KerbalWindTunnel.VesselCache
                 axis *= -1;
             angularVelocity = rotorModule.rpmLimit / 60 * 2 * Mathf.PI;
             fuelConsumption = rotorModule.LFPerkN * rotorModule.maxTorque;
+        }
+
+        protected override void InitClone(PartCollection collection)
+        {
+            base.InitClone(collection);
+            if (collection is RotorPartCollection rotorCollection)
+            {
+                axis = rotorCollection.axis;
+                angularVelocity = rotorCollection.angularVelocity;
+                fuelConsumption = rotorCollection.fuelConsumption;
+            }
+            else
+            {
+                // No need to throw any exceptions, we can just have this one be non-rotating.
+                axis = Vector3.forward;
+                angularVelocity = 0;
+                fuelConsumption = 0;
+            }
         }
         #endregion
     }

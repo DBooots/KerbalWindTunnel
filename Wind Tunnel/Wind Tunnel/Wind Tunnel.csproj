@@ -101,7 +101,9 @@
     <Compile Include="DataGenerators\GraphGenerator.cs" />
     <Compile Include="DataGenerators\VelCurve.cs" />
     <Compile Include="GlobalSuppressions.cs" />
+    <Compile Include="VesselCache\PartCollection.cs" />
     <Compile Include="VesselCache\IReleasable.cs" />
+    <Compile Include="VesselCache\RotorPartCollection.cs" />
     <Compile Include="VesselCache\SimulatedControlSurface.cs" />
     <Compile Include="WindowGraph.cs" />
     <Compile Include="AeroPredictor.cs" />
