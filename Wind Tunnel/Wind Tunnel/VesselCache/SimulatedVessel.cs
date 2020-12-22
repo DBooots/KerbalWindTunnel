@@ -48,14 +48,7 @@ namespace KerbalWindTunnel.VesselCache
 
         public Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            Vector3 aeroForce;
-            Vector3 inflow = InflowVect(AoA) * conditions.speed;
-
-            aeroForce = partCollection.GetAeroForce(inflow, conditions, pitchInput, out torque, torquePoint);
-
-            float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
-            torque *= Q;
-            return aeroForce * Q;
+            return partCollection.GetAeroForce(InflowVect(AoA) * conditions.speed, conditions, pitchInput, out torque, torquePoint);
         }
         public override Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
@@ -64,14 +57,7 @@ namespace KerbalWindTunnel.VesselCache
         
         public Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            Vector3 aeroForce;
-            Vector3 inflow = InflowVect(AoA) * conditions.speed;
-
-            aeroForce = partCollection.GetAeroForce(inflow, conditions, pitchInput, out torque, torquePoint);
-            
-            float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
-            torque *= Q;
-            return aeroForce * Q;
+            return partCollection.GetAeroForce(InflowVect(AoA) * conditions.speed, conditions, pitchInput, out torque, torquePoint);
         }
         public override Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
@@ -247,8 +233,6 @@ namespace KerbalWindTunnel.VesselCache
 
             if (relativeWingArea == 0)
             {
-                // I'm not sure what effect calling ScreenMessages from a background thread will be.
-                // Fortunately, anyone using this mod probably has at least one wing.
                 ScreenMessages.PostScreenMessage("No wings found, using a reference area of 1.", 5, ScreenMessageStyle.UPPER_CENTER);
                 relativeWingArea = 1;
             }
