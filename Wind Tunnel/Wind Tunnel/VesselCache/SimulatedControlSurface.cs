@@ -55,6 +55,12 @@ namespace KerbalWindTunnel.VesselCache
             surface.Init(module, part);
             return surface;
         }
+        public static SimulatedControlSurface BorrowClone(SimulatedControlSurface surface, SimulatedPart part)
+        {
+            SimulatedControlSurface clone = pool.Borrow();
+            clone.InitClone(surface, part);
+            return clone;
+        }
 
         protected void Init(ModuleControlSurface surface, SimulatedPart part)
         {
@@ -67,6 +73,15 @@ namespace KerbalWindTunnel.VesselCache
             this.rotationAxis = surface.transform.rotation * Vector3.right;
             this.ignorePitch = surface.ignorePitch;
             this.maxAuthority = 150f; // surface.maxAuthority is private. Hopefully its value never changes.
+        }
+        protected void InitClone(SimulatedControlSurface surface, SimulatedPart part)
+        {
+            base.InitClone(surface, part);
+            this.authorityLimiter = surface.authorityLimiter;
+            this.ctrlSurfaceRange = surface.ctrlSurfaceRange;
+            this.rotationAxis = surface.rotationAxis;
+            this.ignorePitch = surface.ignorePitch;
+            this.maxAuthority = surface.maxAuthority;
         }
 
         public override Vector3 GetLift(Vector3 velocityVect, float mach)

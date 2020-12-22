@@ -70,13 +70,12 @@ namespace KerbalWindTunnel.VesselCache
             engine.Init(module, part);
             return engine;
         }
-        public static SimulatedEngine Borrow(ModuleEngines module, AeroPredictor vessel)
+        public static SimulatedEngine BorrowClone(SimulatedEngine engine, SimulatedPart part)
         {
-            SimulatedEngine engine = pool.Borrow();
-            engine.vessel = vessel;
-            // This is possibly dangerous and may lead to NullReferenceException
-            engine.Init(module, null);
-            return engine;
+            SimulatedEngine clone = pool.Borrow();
+            clone.vessel = part.vessel;
+            clone.InitClone(engine, part);
+            return clone;
         }
 
         protected void Init(ModuleEngines engine, SimulatedPart part)
@@ -112,6 +111,37 @@ namespace KerbalWindTunnel.VesselCache
             }
             this.CLAMP = engine.CLAMP;
             this.stage = engine.part.inverseStage;
+            this.part = part;
+        }
+        protected void InitClone(SimulatedEngine engine, SimulatedPart part)
+        {
+            this.flameoutBar = engine.flameoutBar;
+            this.atmChangeFlow = engine.atmChangeFlow;
+            this.useAtmCurve = engine.useAtmCurve;
+            this.useAtmCurveIsp = engine.useAtmCurveIsp;
+            this.atmCurve = engine.atmCurve.Clone();
+            this.atmCurveIsp = engine.atmCurveIsp.Clone();
+            this.useVelCurve = engine.useVelCurve;
+            this.useVelCurveIsp = engine.useVelCurveIsp;
+            this.velCurve = engine.velCurve.Clone();
+            this.velCurveIsp = engine.velCurveIsp.Clone();
+            this.flowMultCap = engine.flowMultCap;
+            this.flowMultCapSharpness = engine.flowMultCapSharpness;
+            this.atmosphereCurve = engine.atmosphereCurve.Clone();
+            this.useThrustCurve = engine.useThrustCurve;
+            this.thrustCurve = engine.thrustCurve.Clone();
+            this.useThrottleIspCurve = engine.useThrottleIspCurve;
+            this.throttleIspCurve = engine.throttleIspCurve.Clone();
+            this.throttleIspCurveAtmStrength = engine.throttleIspCurveAtmStrength.Clone();
+            this.requiresOxygen = engine.requiresOxygen;
+            this.g = engine.g;
+            this.multIsp = engine.multIsp;
+            this.maxFuelFlow = engine.maxFuelFlow;
+            this.multFlow = engine.multFlow;
+            this.thrustPercentage = engine.thrustPercentage;
+            this.thrustVector = engine.thrustVector;
+            this.CLAMP = engine.CLAMP;
+            this.stage = engine.stage;
             this.part = part;
         }
 

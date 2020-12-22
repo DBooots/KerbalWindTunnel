@@ -51,10 +51,17 @@ namespace KerbalWindTunnel.VesselCache
             surface.Init(module, part);
             return surface;
         }
+        public static SimulatedLiftingSurface BorrowClone(SimulatedLiftingSurface surface, SimulatedPart part)
+        {
+            SimulatedLiftingSurface clone = pool.Borrow();
+            clone.vessel = part.vessel;
+            clone.InitClone(surface, part);
+            return clone;
+        }
 
         protected void Init(ModuleLiftingSurface surface, SimulatedPart part)
         {
-            surface.SetupCoefficients(Vector3.forward, out Vector3 nVel, out this.liftVector, out float liftDot, out float absDot);
+            surface.SetupCoefficients(Vector3.forward, out _, out this.liftVector, out _, out _);
             this.omnidirectional = surface.omnidirectional;
             this.perpendicularOnly = surface.perpendicularOnly;
             this.liftCurve = surface.liftCurve.Clone();
@@ -67,6 +74,20 @@ namespace KerbalWindTunnel.VesselCache
 
             if (surface is ModuleControlSurface ctrl)
                 this.deflectionLiftCoeff *= (1 - ctrl.ctrlSurfaceArea);
+        }
+
+        protected void InitClone(SimulatedLiftingSurface surface, SimulatedPart part)
+        {
+            this.liftVector = surface.liftVector;
+            this.omnidirectional = surface.omnidirectional;
+            this.perpendicularOnly = surface.perpendicularOnly;
+            this.liftCurve = surface.liftCurve.Clone();
+            this.liftMachCurve = surface.liftMachCurve.Clone();
+            this.dragCurve = surface.dragCurve.Clone();
+            this.dragMachCurve = surface.dragMachCurve.Clone();
+            this.deflectionLiftCoeff = surface.deflectionLiftCoeff;
+            this.useInternalDragModel = surface.useInternalDragModel;
+            this.part = part;
         }
 
         virtual public Vector3 GetLift(Vector3 velocityVect, float mach)

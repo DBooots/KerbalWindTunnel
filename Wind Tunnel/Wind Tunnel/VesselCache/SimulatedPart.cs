@@ -81,6 +81,15 @@ namespace KerbalWindTunnel.VesselCache
             part.Init(p);
             return part;
         }
+        public static SimulatedPart BorrowClone(SimulatedPart part, SimulatedVessel vessel)
+        {
+            SimulatedPart clone;
+            lock (pool)
+                clone = pool.Borrow();
+            clone.vessel = vessel;
+            clone.InitClone(part);
+            return clone;
+        }
 
         protected void Init(Part p)
         {
@@ -155,6 +164,37 @@ namespace KerbalWindTunnel.VesselCache
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
             partToVessel = p.transform.rotation;
             vesselToPart = Quaternion.Inverse(partToVessel);
+        }
+        protected void InitClone(SimulatedPart part)
+        {
+            this.name = part.name;
+
+            totalMass = part.totalMass;
+            dryMass = part.dryMass;
+            shieldedFromAirstream = part.shieldedFromAirstream;
+
+            noDrag = part.noDrag;
+            hasLiftModule = part.hasLiftModule;
+            bodyLiftMultiplier = part.bodyLiftMultiplier;
+            dragModel = part.dragModel;
+            cubesNone = part.cubesNone;
+
+            CoM = part.CoM;
+            CoP = part.CoP;
+            CoL = part.CoL;
+
+            maximum_drag = part.maximum_drag;
+            minimum_drag = part.minimum_drag;
+            dragReferenceVector = part.dragReferenceVector;
+
+            simCurves = SimCurves.Borrow(null);
+
+            lock (this.cubes)
+                CopyDragCubesList(part.cubes, cubes, true);
+
+            // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
+            partToVessel = part.partToVessel;
+            vesselToPart = part.vesselToPart;
         }
 
         public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult)
@@ -279,11 +319,14 @@ namespace KerbalWindTunnel.VesselCache
                 () => new DragCube(), cube => { });
         }
 
-        protected void CopyDragCubesList(DragCubeList source, DragCubeList dest)
+        protected void CopyDragCubesList(DragCubeList source, DragCubeList dest, bool sourceIsSet = false)
         {
-            source.ForceUpdate(true, true);
-            source.SetDragWeights();
-            source.SetPartOcclusion();
+            if (!sourceIsSet)
+            {
+                source.ForceUpdate(true, true);
+                source.SetDragWeights();
+                source.SetPartOcclusion();
+            }
 
             dest.ClearCubes();
 
