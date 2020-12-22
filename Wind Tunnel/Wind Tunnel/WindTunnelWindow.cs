@@ -715,6 +715,7 @@ namespace KerbalWindTunnel
 
             if (vessel is VesselCache.IReleasable releasable)
                 releasable.Release();
+            vessel = null;
 
             selectedCrossHairVect = new Vector2(-1, -1);
         }
@@ -729,7 +730,6 @@ namespace KerbalWindTunnel
         private void OnVesselLoaded(ShipConstruct vessel, KSP.UI.Screens.CraftBrowserDialog.LoadType loadType)
         {
             OnVesselChanged();
-            this.vessel = null;
             //this.vessel = VesselCache.SimulatedVessel.Borrow(vessel, VesselCache.SimCurves.Borrow(body));
         }
 
@@ -737,7 +737,8 @@ namespace KerbalWindTunnel
         {
             OnVesselChanged();
             // TODO: Could do fancier stuff like compare angles and then adjust all AoAs appropriately.
-            this.vessel = GetAeroPredictor();
+            if (WindTunnel.Instance.highlightMode != WindTunnel.HighlightMode.Off)
+                this.vessel = GetAeroPredictor();
         }
 
         private void OnPlanetSelected(DropDownList sender, int OldIndex, int NewIndex)
