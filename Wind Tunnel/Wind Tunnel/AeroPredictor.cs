@@ -210,6 +210,7 @@ namespace KerbalWindTunnel
             public readonly float atmPressure;
             public readonly float pseudoReDragMult;
             public readonly bool oxygenAvailable;
+            public readonly float speedOfSound;
 
             public Conditions(CelestialBody body, float speed, float altitude)
             {
@@ -221,9 +222,10 @@ namespace KerbalWindTunnel
                 {
                     this.atmPressure = (float)body.GetPressure(altitude);
                     this.atmDensity = (float)Extensions.KSPClassExtensions.GetDensity(body, altitude);
-                    this.mach = (float)(speed / body.GetSpeedOfSound(atmPressure, atmDensity));
+                    this.speedOfSound = (float) body.GetSpeedOfSound(atmPressure, atmDensity);
                     this.oxygenAvailable = body.atmosphereContainsOxygen;
                 }
+                this.mach = speed / speedOfSound;
                 
                 lock (PhysicsGlobals.DragCurvePseudoReynolds)
                     this.pseudoReDragMult = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(atmDensity * speed);
