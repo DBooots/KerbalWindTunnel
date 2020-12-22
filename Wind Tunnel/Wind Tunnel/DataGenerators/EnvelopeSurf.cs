@@ -112,11 +112,11 @@ namespace KerbalWindTunnel.DataGenerators
             float firstStepSpeed = (newConditions.upperBoundSpeed - newConditions.lowerBoundSpeed) / resolution[0, 0];
             float firstStepAltitude = (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) / resolution[0, 1];
             EnvelopePoint[] preliminaryData = new EnvelopePoint[(resolution[0, 0] + 1) * (resolution[0, 1] + 1)];
+            AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
             // Probably won't run in parallel because it's very short.
             // But the UI will hang waiting for this to complete, so a self-triggering CancellationToken is provided with a life span of 5 seconds.
             try
             {
-                AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
                 Parallel.For(0, preliminaryData.Length, new ParallelOptions() { CancellationToken = new CancellationTokenSource(5000).Token },
                     () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone), (index, state, predictor) =>
                          {
@@ -136,6 +136,9 @@ namespace KerbalWindTunnel.DataGenerators
                 Debug.LogError("Wind Tunnel: Initial pass threw an inner exception.");
                 Debug.LogException(ex.InnerException);
             }
+            
+            if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
+                releaseable.Release();
 
             cancellationTokenSource = new CancellationTokenSource();
 
@@ -208,6 +211,8 @@ namespace KerbalWindTunnel.DataGenerators
             stopwatch.Reset();
             stopwatch.Start();
 
+            AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+
             task = Task.Factory.StartNew<EnvelopePoint[,]>(
                 () =>
                 {
@@ -218,7 +223,6 @@ namespace KerbalWindTunnel.DataGenerators
 
                     try
                     {
-                        AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
                         Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
                             () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
@@ -265,6 +269,10 @@ namespace KerbalWindTunnel.DataGenerators
                 //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
             }
+
+            if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
+                releaseable.Release();
+
             //timer.Stop();
             //Debug.Log("Time taken: " + timer.ElapsedMilliseconds / 1000f);
 

@@ -111,6 +111,8 @@ namespace KerbalWindTunnel.DataGenerators
             float trueStep = (conditions.upperBound - conditions.lowerBound) / numPts;
 
             CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
+            AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+
             stopwatch.Reset();
             stopwatch.Start();
 
@@ -119,7 +121,6 @@ namespace KerbalWindTunnel.DataGenerators
                 {
                     try
                     {
-                        AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
                         Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
                             () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
@@ -148,6 +149,9 @@ namespace KerbalWindTunnel.DataGenerators
                 //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
             }
+
+            if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
+                releaseable.Release();
 
             if (task.Status > TaskStatus.RanToCompletion)
             {
