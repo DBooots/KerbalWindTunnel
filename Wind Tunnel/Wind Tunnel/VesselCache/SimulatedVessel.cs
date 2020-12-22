@@ -49,9 +49,9 @@ namespace KerbalWindTunnel.VesselCache
         public Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
             Vector3 aeroForce;
-            Vector3 inflow = InflowVect(AoA);
+            Vector3 inflow = InflowVect(AoA) * conditions.speed;
 
-            aeroForce = partCollection.GetAeroForce(inflow, conditions, AoA, pitchInput, out torque, torquePoint);
+            aeroForce = partCollection.GetAeroForce(inflow, conditions, pitchInput, out torque, torquePoint);
 
             float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
             torque *= Q;
@@ -65,9 +65,9 @@ namespace KerbalWindTunnel.VesselCache
         public Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
             Vector3 aeroForce;
-            Vector3 inflow = InflowVect(AoA);
+            Vector3 inflow = InflowVect(AoA) * conditions.speed;
 
-            aeroForce = partCollection.GetAeroForce(inflow, conditions, AoA, pitchInput, out torque, torquePoint);
+            aeroForce = partCollection.GetAeroForce(inflow, conditions, pitchInput, out torque, torquePoint);
             
             float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
             torque *= Q;
@@ -168,6 +168,15 @@ namespace KerbalWindTunnel.VesselCache
             return vessel;
         }
 
+        public static SimulatedVessel BorrowClone(SimulatedVessel vessel)
+        {
+            SimulatedVessel clone;
+            lock (pool)
+                clone = pool.Borrow();
+            clone.InitClone(vessel);
+            return clone;
+        }
+
         private void Init(IShipconstruct v)
         {
             totalMass = 0;
@@ -228,7 +237,8 @@ namespace KerbalWindTunnel.VesselCache
 
             // Recursively add all parts to collections
             // What a crazy change to make just to accomodate rotating parts!
-            partCollection = PartCollection.Borrow(this, oParts[0]);
+            partCollection = PartCollection.BorrowWithoutAdding(this);
+            partCollection.AddPart(oParts[0]);
 
             CoM /= totalMass;
             CoM_dry /= dryMass;
@@ -245,6 +255,19 @@ namespace KerbalWindTunnel.VesselCache
 
             //if (lgWarning)
                 //ScreenMessages.PostScreenMessage("Landing gear deployed, results may not be accurate.", 5, ScreenMessageStyle.UPPER_CENTER);
+        }
+
+        private void InitClone(SimulatedVessel vessel)
+        {
+            totalMass = vessel.totalMass;
+            dryMass = vessel.dryMass;
+            CoM = vessel.CoM;
+            CoM_dry = vessel.CoM_dry;
+            relativeWingArea = vessel.relativeWingArea;
+            stage = vessel.stage;
+            count = vessel.count;
+
+            partCollection = PartCollection.BorrowClone(this, vessel);
         }
     }
 }

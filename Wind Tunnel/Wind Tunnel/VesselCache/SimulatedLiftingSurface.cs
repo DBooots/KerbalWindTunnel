@@ -22,6 +22,7 @@ namespace KerbalWindTunnel.VesselCache
         public float deflectionLiftCoeff;
         public bool useInternalDragModel;
         public SimulatedPart part;
+        public Vector3 velocityOffset;
 
         private static SimulatedLiftingSurface Create()
         {
@@ -71,6 +72,10 @@ namespace KerbalWindTunnel.VesselCache
             this.deflectionLiftCoeff = surface.deflectionLiftCoeff;
             this.useInternalDragModel = surface.useInternalDragModel;
             this.part = part;
+            if (surface.displaceVelocity)
+                this.velocityOffset = surface.part.transform.TransformVector(surface.velocityOffset);
+            else
+                this.velocityOffset = Vector3.zero;
 
             if (surface is ModuleControlSurface ctrl)
                 this.deflectionLiftCoeff *= (1 - ctrl.ctrlSurfaceArea);
@@ -87,6 +92,7 @@ namespace KerbalWindTunnel.VesselCache
             this.dragMachCurve = surface.dragMachCurve.Clone();
             this.deflectionLiftCoeff = surface.deflectionLiftCoeff;
             this.useInternalDragModel = surface.useInternalDragModel;
+            this.velocityOffset = surface.velocityOffset;
             this.part = part;
         }
 

@@ -30,6 +30,7 @@ namespace KerbalWindTunnel.VesselCache
         private Quaternion vesselToPart;
         private Quaternion partToVessel;
         public Vector3 CoM, CoL, CoP;
+        public Vector3 transformPosition;
 
         private static readonly Pool<SimulatedPart> pool = new Pool<SimulatedPart>(Create, Reset);
 
@@ -91,47 +92,48 @@ namespace KerbalWindTunnel.VesselCache
             return clone;
         }
 
-        protected void Init(Part p)
+        protected void Init(Part part)
         {
-            this.name = p.name;
-            Rigidbody rigidbody = p.rb;
+            this.name = part.name;
+            Rigidbody rigidbody = part.rb;
 
             //totalMass = rigidbody == null ? 0 : rigidbody.mass; // TODO : check if we need to use this or the one without the childMass
-            totalMass = p.mass + p.GetResourceMass();
-            dryMass = p.mass;
-            shieldedFromAirstream = p.ShieldedFromAirstream;
+            totalMass = part.mass + part.GetResourceMass();
+            dryMass = part.mass;
+            shieldedFromAirstream = part.ShieldedFromAirstream;
 
             noDrag = rigidbody == null && !PhysicsGlobals.ApplyDragToNonPhysicsParts;
-            hasLiftModule = p.hasLiftModule;
-            bodyLiftMultiplier = p.bodyLiftMultiplier;
-            dragModel = p.dragModel;
-            cubesNone = p.DragCubes.None;
+            hasLiftModule = part.hasLiftModule;
+            bodyLiftMultiplier = part.bodyLiftMultiplier;
+            dragModel = part.dragModel;
+            cubesNone = part.DragCubes.None;
 
-            CoM = p.transform.TransformPoint(p.CoMOffset);
-            CoP = p.transform.TransformPoint(p.CoPOffset);
-            CoL = p.transform.TransformPoint(p.CoLOffset);
+            CoM = part.transform.TransformPoint(part.CoMOffset);
+            CoP = part.transform.TransformPoint(part.CoPOffset);
+            CoL = part.transform.TransformPoint(part.CoLOffset);
+            transformPosition = part.transform.position;
 
             switch (dragModel)
             {
                 case Part.DragModel.CYLINDRICAL:
                 case Part.DragModel.CONIC:
-                    maximum_drag = p.maximum_drag;
-                    minimum_drag = p.minimum_drag;
-                    dragReferenceVector = p.partTransform.TransformDirection(p.dragReferenceVector);
+                    maximum_drag = part.maximum_drag;
+                    minimum_drag = part.minimum_drag;
+                    dragReferenceVector = part.partTransform.TransformDirection(part.dragReferenceVector);
                     break;
                 case Part.DragModel.SPHERICAL:
-                    maximum_drag = p.maximum_drag;
+                    maximum_drag = part.maximum_drag;
                     break;
                 case Part.DragModel.CUBE:
                     if (cubesNone)
-                        maximum_drag = p.maximum_drag;
+                        maximum_drag = part.maximum_drag;
                     break;
             }
 
             simCurves = SimCurves.Borrow(null);
 
             //cubes = new DragCubeList();
-            ModuleWheels.ModuleWheelDeployment wheelDeployment = p.FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
+            ModuleWheels.ModuleWheelDeployment wheelDeployment = part.FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
             bool forcedRetract = !shieldedFromAirstream && wheelDeployment != null && wheelDeployment.Position > 0;
             float gearPosition = 0;
 
@@ -140,16 +142,16 @@ namespace KerbalWindTunnel.VesselCache
                 gearPosition = wheelDeployment.Position;
                 lock (wheelDeployment)
                 {
-                    lock (p.DragCubes)
+                    lock (part.DragCubes)
                     {
-                        p.DragCubes.SetCubeWeight("Retracted", 1);
-                        p.DragCubes.SetCubeWeight("Deployed", 0);
+                        part.DragCubes.SetCubeWeight("Retracted", 1);
+                        part.DragCubes.SetCubeWeight("Deployed", 0);
 
                         lock (this.cubes)
-                            CopyDragCubesList(p.DragCubes, cubes);
+                            CopyDragCubesList(part.DragCubes, cubes);
 
-                        p.DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
-                        p.DragCubes.SetCubeWeight("Deployed", gearPosition);
+                        part.DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
+                        part.DragCubes.SetCubeWeight("Deployed", gearPosition);
                     }
                 }
             }
@@ -157,12 +159,12 @@ namespace KerbalWindTunnel.VesselCache
             else
             {
                 lock (this.cubes)
-                    lock (p.DragCubes)
-                        CopyDragCubesList(p.DragCubes, cubes);
+                    lock (part.DragCubes)
+                        CopyDragCubesList(part.DragCubes, cubes);
             }
 
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
-            partToVessel = p.transform.rotation;
+            partToVessel = part.transform.rotation;
             vesselToPart = Quaternion.Inverse(partToVessel);
         }
         protected void InitClone(SimulatedPart part)
@@ -182,6 +184,7 @@ namespace KerbalWindTunnel.VesselCache
             CoM = part.CoM;
             CoP = part.CoP;
             CoL = part.CoL;
+            transformPosition = part.transformPosition;
 
             maximum_drag = part.maximum_drag;
             minimum_drag = part.minimum_drag;

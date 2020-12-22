@@ -9,6 +9,7 @@ namespace KerbalWindTunnel.VesselCache
     public class PartCollection
     {
         public SimulatedVessel parentVessel;
+        public PartCollection parentCollection;
         public List<SimulatedPart> parts = new List<SimulatedPart>();
         public List<SimulatedLiftingSurface> surfaces = new List<SimulatedLiftingSurface>();
         public List<SimulatedControlSurface> ctrls = new List<SimulatedControlSurface>();
@@ -18,89 +19,97 @@ namespace KerbalWindTunnel.VesselCache
 
         #region AeroPredictor Methods
 
-        public virtual Vector3 GetAeroForce(Vector3 inflow, AeroPredictor.Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
+        public virtual Vector3 GetAeroForce(Vector3 inflow, AeroPredictor.Conditions conditions, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
+            Vector3 normalizedInflow = inflow.normalized;
 
             for (int i = parts.Count - 1; i >= 0; i--)
             {
                 if (parts[i].shieldedFromAirstream)
                     continue;
-                aeroForce += parts[i].GetAero(inflow, conditions.mach, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
+                aeroForce += parts[i].GetAero(normalizedInflow, conditions.mach, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
                 torque += pTorque;
             }
             for (int i = surfaces.Count - 1; i >= 0; i--)
             {
                 if (surfaces[i].part.shieldedFromAirstream)
                     continue;
-                aeroForce += surfaces[i].GetForce(inflow, conditions.mach, out Vector3 pTorque, torquePoint);
+                aeroForce += surfaces[i].GetForce(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
                 torque += pTorque;
             }
             for (int i = ctrls.Count - 1; i >= 0; i--)
             {
                 if (ctrls[i].part.shieldedFromAirstream)
                     continue;
-                aeroForce += ctrls[i].GetForce(inflow, conditions.mach, pitchInput, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
-            for (int i = partCollections.Count - 1; i >=0; i--)
-            {
-                aeroForce += partCollections[i].GetAeroForce(inflow, conditions, AoA, pitchInput, out Vector3 pTorque, torquePoint);
+                aeroForce += ctrls[i].GetForce(normalizedInflow, conditions.mach, pitchInput, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
                 torque += pTorque;
             }
 
-            //float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
-            //torque *= Q;
-            return aeroForce; // * Q;
-        }
+            float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
+            torque *= Q;
+            aeroForce *= Q;
 
-        public virtual Vector3 GetLiftForce(Vector3 inflow, AeroPredictor.Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
-        {
-            Vector3 aeroForce = Vector3.zero;
-            torque = Vector3.zero;
-
-            for (int i = parts.Count - 1; i >= 0; i--)
-            {
-                if (parts[i].shieldedFromAirstream)
-                    continue;
-                aeroForce += parts[i].GetLift(inflow, conditions.mach, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
-            for (int i = surfaces.Count - 1; i >= 0; i--)
-            {
-                if (surfaces[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += surfaces[i].GetLift(inflow, conditions.mach, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
-            for (int i = ctrls.Count - 1; i >= 0; i--)
-            {
-                if (ctrls[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += ctrls[i].GetLift(inflow, conditions.mach, pitchInput, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
             for (int i = partCollections.Count - 1; i >= 0; i--)
             {
-                aeroForce += partCollections[i].GetLiftForce(inflow, conditions, AoA, pitchInput, out Vector3 pTorque, torquePoint);
+                aeroForce += partCollections[i].GetAeroForce(inflow, conditions, pitchInput, out Vector3 pTorque, torquePoint);
                 torque += pTorque;
             }
 
-            //float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
-            //torque *= Q;
-            return aeroForce; // * Q;
+            return aeroForce;
         }
 
-        public virtual Vector3 GetAeroTorque(Vector3 inflow, AeroPredictor.Conditions conditions, float AoA, Vector3 torquePoint, float pitchInput = 0)
+        public virtual Vector3 GetLiftForce(Vector3 inflow, AeroPredictor.Conditions conditions, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            GetAeroForce(inflow, conditions, AoA, pitchInput, out Vector3 torque, torquePoint);
+            Vector3 aeroForce = Vector3.zero;
+            torque = Vector3.zero;
+            Vector3 normalizedInflow = inflow.normalized;
+
+            for (int i = parts.Count - 1; i >= 0; i--)
+            {
+                if (parts[i].shieldedFromAirstream)
+                    continue;
+                aeroForce += parts[i].GetLift(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
+                torque += pTorque;
+            }
+            for (int i = surfaces.Count - 1; i >= 0; i--)
+            {
+                if (surfaces[i].part.shieldedFromAirstream)
+                    continue;
+                aeroForce += surfaces[i].GetLift(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
+                torque += pTorque;
+            }
+            for (int i = ctrls.Count - 1; i >= 0; i--)
+            {
+                if (ctrls[i].part.shieldedFromAirstream)
+                    continue;
+                aeroForce += ctrls[i].GetLift(normalizedInflow, conditions.mach, pitchInput, out Vector3 pTorque, torquePoint);
+                torque += pTorque;
+            }
+
+            float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
+            torque *= Q;
+            aeroForce *= Q;
+
+            for (int i = partCollections.Count - 1; i >= 0; i--)
+            {
+                aeroForce += partCollections[i].GetLiftForce(inflow, conditions, pitchInput, out Vector3 pTorque, torquePoint);
+                torque += pTorque;
+            }
+
+            return aeroForce;
+        }
+
+        public virtual Vector3 GetAeroTorque(Vector3 inflow, AeroPredictor.Conditions conditions, Vector3 torquePoint, float pitchInput = 0)
+        {
+            GetAeroForce(inflow, conditions, pitchInput, out Vector3 torque, torquePoint);
             return torque;
         }
 
-        public virtual void GetAeroCombined(Vector3 inflow, AeroPredictor.Conditions conditions, float AoA, float pitchInput, out Vector3 forces, out Vector3 torques, Vector3 torquePoint)
+        public virtual void GetAeroCombined(Vector3 inflow, AeroPredictor.Conditions conditions, float pitchInput, out Vector3 forces, out Vector3 torques, Vector3 torquePoint)
         {
-            forces = GetAeroForce(inflow, conditions, AoA, pitchInput, out torques, torquePoint);
+            forces = GetAeroForce(inflow, conditions, pitchInput, out torques, torquePoint);
         }
 
         public virtual Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
@@ -109,6 +118,10 @@ namespace KerbalWindTunnel.VesselCache
             for (int i = engines.Count - 1; i >= 0; i--)
             {
                 thrust += engines[i].GetThrust(mach, atmDensity, atmPressure, oxygenPresent);
+            }
+            for (int i = partCollections.Count - 1; i >= 0; i--)
+            {
+                thrust += partCollections[i].GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
             }
             return thrust;
         }
@@ -120,6 +133,10 @@ namespace KerbalWindTunnel.VesselCache
             {
                 burnRate += engines[i].GetFuelBurnRate(mach, atmDensity);
             }
+            for (int i = partCollections.Count - 1; i >= 0; i--)
+            {
+                burnRate += partCollections[i].GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent);
+            }
             return burnRate;
         }
 
@@ -128,11 +145,6 @@ namespace KerbalWindTunnel.VesselCache
         #region Pool Methods
 
         private static readonly Pool<PartCollection> pool = new Pool<PartCollection>(Create, Reset);
-
-        public static int PoolSize
-        {
-            get { return pool.Size; }
-        }
 
         private static PartCollection Create()
         {
@@ -167,27 +179,60 @@ namespace KerbalWindTunnel.VesselCache
             obj.partCollections.Clear();
         }
 
-        public static PartCollection Borrow(SimulatedVessel v, Part originPart)
+        public static PartCollection Borrow(PartCollection parentCollection, Part originPart)
         {
-            PartCollection collection;
-            // This lock is more expansive than it needs to be.
-            // There is still a race condition within Init that causes
-            // extra drag in the simulation, but this section is not a
-            // performance bottleneck and so further refinement is #TODO.
-            lock (pool)
-            {
-                collection = pool.Borrow();
-                collection.parentVessel = v;
-                collection.AddPart(originPart);
-            }
+            PartCollection collection = Borrow(parentCollection?.parentVessel, originPart);
+            collection.parentCollection = parentCollection;
             return collection;
         }
 
-        protected void AddPart(Part part)
+        public static PartCollection Borrow(SimulatedVessel vessel, Part originPart)
+        {
+            PartCollection collection;
+            lock (pool)
+                collection = pool.Borrow();
+            collection.parentVessel = vessel;
+            collection.AddPart(originPart);
+            return collection;
+        }
+
+        public static PartCollection BorrowWithoutAdding(SimulatedVessel vessel)
+        {
+            PartCollection collection;
+            lock (pool)
+                collection = pool.Borrow();
+            collection.parentVessel = vessel;
+            return collection;
+        }
+
+        public static PartCollection BorrowClone(SimulatedVessel vessel, SimulatedVessel vesselToClone)
+        {
+            PartCollection clone;
+            lock (pool)
+                clone = pool.Borrow();
+            clone.parentVessel = vessel;
+            clone.InitClone(vesselToClone.partCollection);
+            return clone;
+        }
+        public static PartCollection BorrowClone(PartCollection collection, PartCollection parentCollection)
+        {
+            PartCollection clone;
+            if (collection is RotorPartCollection)
+                clone = RotorPartCollection.DirectBorrow();
+            else
+                lock (pool)
+                    clone = pool.Borrow();
+            clone.parentVessel = parentCollection.parentVessel;
+            clone.parentCollection = parentCollection;
+            clone.InitClone(collection);
+            return clone;
+        }
+
+        public void AddPart(Part part)
         {
             if (parts.Count > 0 && part.HasModuleImplementing<Expansions.Serenity.ModuleRoboticServoRotor>())
             {
-                partCollections.Add(RotorPartCollection.Borrow(parentVessel, part));
+                partCollections.Add(RotorPartCollection.Borrow(this, part));
                 return;
             }
 
@@ -198,8 +243,6 @@ namespace KerbalWindTunnel.VesselCache
             parentVessel.dryMass += simulatedPart.dryMass;
             parentVessel.CoM += simulatedPart.totalMass * simulatedPart.CoM;
             parentVessel.CoM_dry += simulatedPart.dryMass * simulatedPart.CoM;
-
-            bool variableDragCube_Ctrl = false;
 
             ModuleLiftingSurface liftingSurface = part.FindModuleImplementing<ModuleLiftingSurface>();
             if (liftingSurface != null)
@@ -213,7 +256,7 @@ namespace KerbalWindTunnel.VesselCache
 
                     // Controls change their drag cubes with deployment and so we can't precalculate them.
                     // The effect of their drag cubes is captured in the methods for SimulatedControlSurface
-                    variableDragCube_Ctrl = true;
+                    parts.Remove(simulatedPart);
 
                     if (ctrlSurface.ctrlSurfaceArea < 1)
                     {
@@ -254,16 +297,45 @@ namespace KerbalWindTunnel.VesselCache
                 }
             }
 
-            if (variableDragCube_Ctrl)
-            {
-                simulatedPart.Release();
-                parts.Remove(simulatedPart);
-            }
-
             for (int i = part.children.Count - 1; i >= 0; i--)
             {
                 AddPart(part.children[i]);
             }
+        }
+
+        protected virtual void InitClone(PartCollection collection)
+        {
+            origin = collection.origin;
+            parts.AddRange(collection.parts.Select(p => SimulatedPart.BorrowClone(p, parentVessel)));
+
+            Dictionary<SimulatedPart, SimulatedPart> ctrlParts = new Dictionary<SimulatedPart, SimulatedPart>((int)(collection.ctrls.Count * 1.5f));
+            foreach (SimulatedControlSurface ctrl in collection.ctrls)
+            {
+                SimulatedPart clonedPart = SimulatedPart.BorrowClone(ctrl.part, parentVessel);
+                ctrls.Add(SimulatedControlSurface.BorrowClone(ctrl, clonedPart));
+                ctrlParts.Add(ctrl.part, clonedPart);
+            }
+            foreach (SimulatedLiftingSurface surf in collection.surfaces)
+            {
+                int partIndex = collection.parts.FindIndex(p => p == surf.part);
+                SimulatedLiftingSurface clonedSurface;
+                if (partIndex >= 0)
+                    clonedSurface = SimulatedLiftingSurface.BorrowClone(surf, parts[partIndex]);
+                else
+                    clonedSurface = SimulatedLiftingSurface.BorrowClone(surf, ctrlParts[surf.part]);
+                surfaces.Add(clonedSurface);
+            }
+            foreach (SimulatedEngine engine in collection.engines)
+            {
+                int partIndex = collection.parts.FindIndex(p => p == engine.part);
+                SimulatedEngine clonedEngine;
+                if (partIndex >= 0)
+                    clonedEngine = SimulatedEngine.BorrowClone(engine, parts[partIndex]);
+                else
+                    clonedEngine = SimulatedEngine.BorrowClone(engine, ctrlParts[engine.part]);
+                engines.Add(clonedEngine);
+            }
+            partCollections.AddRange(collection.partCollections.Select(c => PartCollection.BorrowClone(c, this)));
         }
 
         private void ClearEngines()

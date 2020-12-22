@@ -25,7 +25,10 @@ namespace KerbalWindTunnel.VesselCache
         public float ctrlSurfaceRange;
         public Vector3 rotationAxis;
         public bool ignorePitch;
+        public bool deployed;
+        public float deployAngle;
         public Quaternion inputRotation = Quaternion.identity;
+        public float deflectionDirection = 1;
 
         private static SimulatedControlSurface Create()
         {
@@ -73,6 +76,29 @@ namespace KerbalWindTunnel.VesselCache
             this.rotationAxis = surface.transform.rotation * Vector3.right;
             this.ignorePitch = surface.ignorePitch;
             this.maxAuthority = 150f; // surface.maxAuthority is private. Hopefully its value never changes.
+            try
+            {
+                if (bool.TryParse(surface.part.variants.SelectedVariant.GetExtraInfoValue("reverseDeployDirection"), out bool flipDeflectDirection))
+                    this.deflectionDirection = flipDeflectDirection ? -1 : 1;
+                else
+                    this.deflectionDirection = 1;
+            }
+            catch
+            {
+                this.deflectionDirection = 1;
+            }
+            this.deployed = surface.deploy;
+            if (deployed)
+            {
+                if (surface.usesMirrorDeploy)
+                    this.deployAngle = (surface.deployInvert ? -1 : 1) *
+                        Mathf.Sign((Quaternion.Inverse(surface.part.ship.rotation) * surface.transform.position).x);
+                else
+                    this.deployAngle = surface.deployInvert ^ surface.partDeployInvert ^ surface.mirrorDeploy ? -1 : 1;
+                this.deployAngle *= surface.deployAngle;
+            }
+            else
+                this.deployAngle = 0;
         }
         protected void InitClone(SimulatedControlSurface surface, SimulatedPart part)
         {
@@ -82,6 +108,10 @@ namespace KerbalWindTunnel.VesselCache
             this.rotationAxis = surface.rotationAxis;
             this.ignorePitch = surface.ignorePitch;
             this.maxAuthority = surface.maxAuthority;
+            this.deployed = surface.deployed;
+            this.deployAngle = surface.deployAngle;
+            this.inputRotation = surface.inputRotation;
+            this.deflectionDirection = surface.deflectionDirection;
         }
 
         public override Vector3 GetLift(Vector3 velocityVect, float mach)
@@ -102,12 +132,26 @@ namespace KerbalWindTunnel.VesselCache
         {
             // Assumes no roll input required.
             // Assumes no yaw input required.
-            Vector3 input = inputRotation * new Vector3(!this.ignorePitch ? pitchInput : 0, 0, 0);
-            float surfaceInput = Vector3.Dot(input, rotationAxis);
-            surfaceInput *= this.authorityLimiter * 0.01f;
-            surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
+            float surfaceInput = 0;
+            if (!ignorePitch)
+            {
+                Vector3 input = inputRotation * new Vector3(pitchInput, 0, 0);
+                surfaceInput = Vector3.Dot(input, rotationAxis);
+                surfaceInput *= authorityLimiter * 0.01f;
+                surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
+            }
+            if (deployed)
+            {
+                surfaceInput += deployAngle;
+                surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
+            }
+            surfaceInput *= deflectionDirection;
 
-            Vector3 relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
+            Vector3 relLiftVector;
+            if (surfaceInput != 0)
+                relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
+            else
+                relLiftVector = liftVector;
 
             float dot = Vector3.Dot(velocityVect, relLiftVector);
             float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
@@ -160,12 +204,26 @@ namespace KerbalWindTunnel.VesselCache
         {
             // Assumes no roll input required.
             // Assumes no yaw input required.
-            Vector3 input = inputRotation * new Vector3(!this.ignorePitch ? pitchInput : 0, 0, 0);
-            float surfaceInput = Vector3.Dot(input, rotationAxis);
-            surfaceInput *= this.authorityLimiter * 0.01f;
-            surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
+            float surfaceInput = 0;
+            if (!ignorePitch)
+            {
+                Vector3 input = inputRotation * new Vector3(pitchInput, 0, 0);
+                surfaceInput = Vector3.Dot(input, rotationAxis);
+                surfaceInput *= authorityLimiter * 0.01f;
+                surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
+            }
+            if (deployed)
+            {
+                surfaceInput += deployAngle;
+                surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
+            }
+            surfaceInput *= deflectionDirection;
 
-            Vector3 relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
+            Vector3 relLiftVector;
+            if (surfaceInput != 0)
+                relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
+            else
+                relLiftVector = liftVector;
 
             float dot = Vector3.Dot(velocityVect, relLiftVector);
             float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
@@ -199,22 +257,34 @@ namespace KerbalWindTunnel.VesselCache
                 }
             }
 
-            if (vessel != null)
-                torque += Vector3.Cross(drag * 1000 + partDrag, part.CoP - torquePoint);
-            else
-                torque += Vector3.Cross(drag * 1000 + partDrag, part.CoP);
+            torque += Vector3.Cross(drag * 1000 + partDrag, part.CoP - torquePoint);
+            
             return (lift + drag) * 1000 + partDrag;
         }
         public Vector3 GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult)
         {
             // Assumes no roll input required.
             // Assumes no yaw input required.
-            Vector3 input = inputRotation * new Vector3(!this.ignorePitch ? pitchInput : 0, 0, 0);
-            float surfaceInput = Vector3.Dot(input, rotationAxis);
-            surfaceInput *= this.authorityLimiter * 0.01f;
-            surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
+            float surfaceInput = 0;
+            if (!ignorePitch)
+            {
+                Vector3 input = inputRotation * new Vector3(pitchInput, 0, 0);
+                surfaceInput = Vector3.Dot(input, rotationAxis);
+                surfaceInput *= authorityLimiter * 0.01f;
+                surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
+            }
+            if (deployed)
+            {
+                surfaceInput += deployAngle;
+                surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
+            }
+            surfaceInput *= deflectionDirection;
 
-            Vector3 relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
+            Vector3 relLiftVector;
+            if (surfaceInput != 0)
+                relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
+            else
+                relLiftVector = liftVector;
 
             float dot = Vector3.Dot(velocityVect, relLiftVector);
             float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);

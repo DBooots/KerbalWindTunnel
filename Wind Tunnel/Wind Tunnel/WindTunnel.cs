@@ -144,7 +144,7 @@ namespace KerbalWindTunnel
             int count = ship.parts.Count;
             highlightingData = new PartAeroData[count];
 
-            Vector3 inflow = AeroPredictor.InflowVect(aoa);
+            Vector3 inflow = AeroPredictor.InflowVect(aoa) * speed;
 
             float pseudoReDragMult;
             lock (PhysicsGlobals.DragCurvePseudoReynolds)
