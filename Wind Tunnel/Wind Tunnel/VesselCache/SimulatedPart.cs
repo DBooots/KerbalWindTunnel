@@ -284,8 +284,7 @@ namespace KerbalWindTunnel.VesselCache
         public static Pool<DragCube> DragCubePool { get; } = new Pool<DragCube>(
             () => new DragCube(), cube => { });
 
-
-        protected void CopyDragCubesList(DragCubeList source, DragCubeList dest, bool sourceIsSet = false)
+        protected static void CopyDragCubesList(DragCubeList source, DragCubeList dest, bool sourceIsSet = false)
         {
             if (!sourceIsSet)
             {
@@ -298,6 +297,23 @@ namespace KerbalWindTunnel.VesselCache
 
             dest.SetPart(source.Part);
 
+            dest.DragCurveCd = source.DragCurveCd.Clone();
+            dest.DragCurveCdPower = source.DragCurveCdPower.Clone();
+            dest.DragCurveMultiplier = source.DragCurveMultiplier.Clone();
+
+            dest.BodyLiftCurve = new PhysicsGlobals.LiftingSurfaceCurve();
+            dest.BodyLiftCurve.name = source.BodyLiftCurve.name;
+            dest.BodyLiftCurve.liftCurve = source.BodyLiftCurve.liftCurve.Clone();
+            dest.BodyLiftCurve.dragCurve = source.BodyLiftCurve.dragCurve.Clone();
+            dest.BodyLiftCurve.dragMachCurve = source.BodyLiftCurve.dragMachCurve.Clone();
+            dest.BodyLiftCurve.liftMachCurve = source.BodyLiftCurve.liftMachCurve.Clone();
+
+            dest.SurfaceCurves = new PhysicsGlobals.SurfaceCurvesList();
+            dest.SurfaceCurves.dragCurveMultiplier = source.SurfaceCurves.dragCurveMultiplier.Clone();
+            dest.SurfaceCurves.dragCurveSurface = source.SurfaceCurves.dragCurveSurface.Clone();
+            dest.SurfaceCurves.dragCurveTail = source.SurfaceCurves.dragCurveTail.Clone();
+            dest.SurfaceCurves.dragCurveTip = source.SurfaceCurves.dragCurveTip.Clone();
+
             dest.None = source.None;
 
             // Procedural need access to part so things gets bad quick.
@@ -305,14 +321,13 @@ namespace KerbalWindTunnel.VesselCache
 
             for (int i = 0; i < source.Cubes.Count; i++)
             {
-                DragCube c;
-                lock (DragCubePool.Instance)
-                    c = DragCubePool.Instance.Borrow();
-                CopyDragCube(source.Cubes[i], c);
-                dest.Cubes.Add(c);
+                dest.Cubes.Add(CloneDragCube(source.Cubes[i]));
             }
 
             dest.SetDragWeights();
+
+            for (int i = 0; i < source.Cubes.Count; i++)
+                CloneDragCube(source.Cubes[i], dest.Cubes[i]);
 
             for (int i = 0; i < 6; i++)
             {
@@ -322,29 +337,27 @@ namespace KerbalWindTunnel.VesselCache
                 dest.WeightedDepth[i] = source.WeightedDepth[i];
             }
 
-            dest.SetDragWeights();
+            if (source.RotateDragVector)
+                dest.SetDragVectorRotation(source.DragVectorRotation);
+            else
+                dest.SetDragVectorRotation(false);
 
-            dest.BodyLiftCurve = new PhysicsGlobals.LiftingSurfaceCurve();
-            dest.SurfaceCurves = new PhysicsGlobals.SurfaceCurvesList();
-
-            dest.DragCurveCd = simCurves.DragCurveCd.Clone();
-            dest.DragCurveCdPower = simCurves.DragCurveCdPower.Clone();
-            dest.DragCurveMultiplier = simCurves.DragCurveMultiplier.Clone();
-
-            dest.BodyLiftCurve.liftCurve = simCurves.LiftCurve.Clone();
-            dest.BodyLiftCurve.dragCurve = simCurves.DragCurve.Clone();
-            dest.BodyLiftCurve.dragMachCurve = simCurves.DragMachCurve.Clone();
-            dest.BodyLiftCurve.liftMachCurve = simCurves.LiftMachCurve.Clone();
-
-            dest.SurfaceCurves.dragCurveMultiplier = simCurves.DragCurveMultiplier.Clone();
-            dest.SurfaceCurves.dragCurveSurface = simCurves.DragCurveSurface.Clone();
-            dest.SurfaceCurves.dragCurveTail = simCurves.DragCurveTail.Clone();
-            dest.SurfaceCurves.dragCurveTip = simCurves.DragCurveTip.Clone();
-
-            dest.SetPartOcclusion();
+            if (true)//!sourceIsSet)
+            {
+                dest.SetPartOcclusion();
+            }
         }
 
-        protected static void CopyDragCube(DragCube source, DragCube dest)
+        protected static DragCube CloneDragCube(DragCube source)
+        {
+            DragCube clone;
+            lock (DragCubePool)
+                clone = DragCubePool.Borrow();
+            CloneDragCube(source, clone);
+            return clone;
+        }
+
+        protected static void CloneDragCube(DragCube source, DragCube dest)
         {
             dest.Name = source.Name;
             dest.Weight = source.Weight;
