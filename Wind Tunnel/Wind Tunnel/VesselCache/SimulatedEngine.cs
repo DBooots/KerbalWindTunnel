@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Smooth.Pools;
 using UnityEngine;
+using KerbalWindTunnel.Extensions;
 
 namespace KerbalWindTunnel.VesselCache
 {
@@ -85,20 +85,20 @@ namespace KerbalWindTunnel.VesselCache
             this.atmChangeFlow = engine.atmChangeFlow;
             this.useAtmCurve = engine.useAtmCurve;
             this.useAtmCurveIsp = engine.useAtmCurveIsp;
-            this.atmCurve = new FloatCurve(engine.atmCurve.Curve.keys);
-            this.atmCurveIsp = new FloatCurve(engine.atmCurveIsp.Curve.keys);
+            this.atmCurve = engine.atmCurve.Clone();
+            this.atmCurveIsp = engine.atmCurveIsp.Clone();
             this.useVelCurve = engine.useVelCurve;
             this.useVelCurveIsp = engine.useVelCurveIsp;
-            this.velCurve = new FloatCurve(engine.velCurve.Curve.keys);
-            this.velCurveIsp = new FloatCurve(engine.velCurveIsp.Curve.keys);
+            this.velCurve = engine.velCurve.Clone();
+            this.velCurveIsp = engine.velCurveIsp.Clone();
             this.flowMultCap = engine.flowMultCap;
             this.flowMultCapSharpness = engine.flowMultCapSharpness;
-            this.atmosphereCurve = new FloatCurve(engine.atmosphereCurve.Curve.keys);
+            this.atmosphereCurve = engine.atmosphereCurve.Clone();
             this.useThrustCurve = engine.useThrustCurve;
-            this.thrustCurve = new FloatCurve(engine.thrustCurve.Curve.keys);
+            this.thrustCurve = engine.thrustCurve.Clone();
             this.useThrottleIspCurve = engine.useThrottleIspCurve;
-            this.throttleIspCurve = new FloatCurve(engine.throttleIspCurve.Curve.keys);
-            this.throttleIspCurveAtmStrength = new FloatCurve(engine.throttleIspCurveAtmStrength.Curve.keys);
+            this.throttleIspCurve = engine.throttleIspCurve.Clone();
+            this.throttleIspCurveAtmStrength = engine.throttleIspCurveAtmStrength.Clone();
             this.requiresOxygen = engine.propellants.Any(propellant => propellant.name == "IntakeAir");
             this.g = engine.g;
             this.multIsp = engine.multIsp;

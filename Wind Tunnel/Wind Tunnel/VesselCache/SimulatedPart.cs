@@ -153,18 +153,8 @@ namespace KerbalWindTunnel.VesselCache
             }
 
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
-            // QuaternionD.LookRotation is not working...
-            //partToVessel = Quaternion.LookRotation(p.vessel.GetTransform().InverseTransformDirection(p.transform.forward), p.vessel.GetTransform().InverseTransformDirection(p.transform.up));
-            //vesselToPart = Quaternion.Inverse(partToVessel);
             partToVessel = p.transform.rotation;
             vesselToPart = Quaternion.Inverse(partToVessel);
-            /*Debug.Log(p.name);
-            Debug.Log(p.transform.rotation);
-            Debug.Log(Quaternion.Inverse(p.transform.rotation));
-            Debug.Log(Quaternion.LookRotation(p.transform.forward, p.transform.up));
-            Debug.Log(p.transform.InverseTransformDirection(Vector3.forward) + " // " + Quaternion.Inverse(p.transform.rotation) * Vector3.forward + " // " + Quaternion.Inverse(Quaternion.LookRotation(p.transform.forward, p.transform.up)) * Vector3.forward);
-            Debug.Log(p.DragCubes.None + " " + p.dragModel);
-            Debug.Log("");*/
         }
 
         public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult)

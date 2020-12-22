@@ -1,4 +1,5 @@
 ﻿using Smooth.Pools;
+using KerbalWindTunnel.Extensions;
 
 namespace KerbalWindTunnel.VesselCache
 {
@@ -44,22 +45,22 @@ namespace KerbalWindTunnel.VesselCache
             // No point in copying those again if we already have them loaded
             if (!loaded)
             {
-                dragCurvePseudoReynolds = new FloatCurve(PhysicsGlobals.DragCurvePseudoReynolds.Curve.keys);
+                DragCurvePseudoReynolds = PhysicsGlobals.DragCurvePseudoReynolds.Clone();
 
-                dragCurveCd = new FloatCurve(PhysicsGlobals.DragCurveCd.Curve.keys);
-                dragCurveCdPower = new FloatCurve(PhysicsGlobals.DragCurveCdPower.Curve.keys);
-                dragCurveMultiplier = new FloatCurve(PhysicsGlobals.DragCurveMultiplier.Curve.keys);
+                DragCurveCd = PhysicsGlobals.DragCurveCd.Clone();
+                DragCurveCdPower = PhysicsGlobals.DragCurveCdPower.Clone();
+                DragCurveMultiplier = PhysicsGlobals.DragCurveMultiplier.Clone();
 
-                dragCurveSurface = new FloatCurve(PhysicsGlobals.SurfaceCurves.dragCurveSurface.Curve.keys);
-                dragCurveTail = new FloatCurve(PhysicsGlobals.SurfaceCurves.dragCurveTail.Curve.keys);
-                dragCurveTip = new FloatCurve(PhysicsGlobals.SurfaceCurves.dragCurveTip.Curve.keys);
+                DragCurveSurface = PhysicsGlobals.SurfaceCurves.dragCurveSurface.Clone();
+                DragCurveTail = PhysicsGlobals.SurfaceCurves.dragCurveTail.Clone();
+                DragCurveTip = PhysicsGlobals.SurfaceCurves.dragCurveTip.Clone();
 
-                liftCurve = new FloatCurve(PhysicsGlobals.BodyLiftCurve.liftCurve.Curve.keys);
-                liftMachCurve = new FloatCurve(PhysicsGlobals.BodyLiftCurve.liftMachCurve.Curve.keys);
-                dragCurve = new FloatCurve(PhysicsGlobals.BodyLiftCurve.dragCurve.Curve.keys);
-                dragMachCurve = new FloatCurve(PhysicsGlobals.BodyLiftCurve.dragMachCurve.Curve.keys);
+                LiftCurve = PhysicsGlobals.BodyLiftCurve.liftCurve.Clone();
+                LiftMachCurve = PhysicsGlobals.BodyLiftCurve.liftMachCurve.Clone();
+                DragCurve = PhysicsGlobals.BodyLiftCurve.dragCurve.Clone();
+                DragMachCurve = PhysicsGlobals.BodyLiftCurve.dragMachCurve.Clone();
 
-                spaceTemperature = PhysicsGlobals.SpaceTemperature;
+                SpaceTemperature = PhysicsGlobals.SpaceTemperature;
                 loaded = true;
             }
 
@@ -68,12 +69,12 @@ namespace KerbalWindTunnel.VesselCache
                 body = newBody;
                 if (body != null)
                 {
-                    atmospherePressureCurve = new FloatCurve(newBody.atmospherePressureCurve.Curve.keys);
-                    atmosphereTemperatureSunMultCurve = new FloatCurve(newBody.atmosphereTemperatureSunMultCurve.Curve.keys);
-                    latitudeTemperatureBiasCurve = new FloatCurve(newBody.latitudeTemperatureBiasCurve.Curve.keys);
-                    latitudeTemperatureSunMultCurve = new FloatCurve(newBody.latitudeTemperatureSunMultCurve.Curve.keys);
-                    atmosphereTemperatureCurve = new FloatCurve(newBody.atmosphereTemperatureCurve.Curve.keys);
-                    axialTemperatureSunMultCurve = new FloatCurve(newBody.axialTemperatureSunMultCurve.Curve.keys);
+                    AtmospherePressureCurve = newBody.atmospherePressureCurve.Clone();
+                    AtmosphereTemperatureSunMultCurve = newBody.atmosphereTemperatureSunMultCurve.Clone();
+                    LatitudeTemperatureBiasCurve = newBody.latitudeTemperatureBiasCurve.Clone();
+                    LatitudeTemperatureSunMultCurve = newBody.latitudeTemperatureSunMultCurve.Clone();
+                    AtmosphereTemperatureCurve = newBody.atmosphereTemperatureCurve.Clone();
+                    AxialTemperatureSunMultCurve = newBody.axialTemperatureSunMultCurve.Clone();
                 }
             }
         }
@@ -148,124 +149,41 @@ namespace KerbalWindTunnel.VesselCache
 
         private CelestialBody body;
 
-        private FloatCurve dragCurvePseudoReynolds;
+        public FloatCurve DragCurvePseudoReynolds { get; private set; }
 
-        private FloatCurve liftCurve;
-        private FloatCurve liftMachCurve;
-        private FloatCurve dragCurve;
-        private FloatCurve dragMachCurve;
+        public FloatCurve LiftCurve { get; private set; }
 
-        private FloatCurve dragCurveTail;
-        private FloatCurve dragCurveSurface;
-        private FloatCurve dragCurveTip;
+        public FloatCurve LiftMachCurve { get; private set; }
 
-        private FloatCurve dragCurveCd;
-        private FloatCurve dragCurveCdPower;
-        private FloatCurve dragCurveMultiplier;
+        public FloatCurve DragCurve { get; private set; }
 
-        private FloatCurve atmospherePressureCurve;
+        public FloatCurve DragMachCurve { get; private set; }
 
-        private FloatCurve atmosphereTemperatureSunMultCurve;
+        public FloatCurve DragCurveTail { get; private set; }
 
-        private FloatCurve latitudeTemperatureBiasCurve;
+        public FloatCurve DragCurveSurface { get; private set; }
 
-        private FloatCurve latitudeTemperatureSunMultCurve;
+        public FloatCurve DragCurveTip { get; private set; }
 
-        private FloatCurve axialTemperatureSunMultCurve;
+        public FloatCurve DragCurveCd { get; private set; }
 
-        private FloatCurve atmosphereTemperatureCurve;
+        public FloatCurve DragCurveCdPower { get; private set; }
 
-        private double spaceTemperature;
+        public FloatCurve DragCurveMultiplier { get; private set; }
 
-        public FloatCurve DragCurvePseudoReynolds
-        {
-            get { return dragCurvePseudoReynolds; }
-        }
+        public FloatCurve AtmospherePressureCurve { get; private set; }
 
-        public FloatCurve LiftCurve
-        {
-            get { return liftCurve; }
-        }
+        public FloatCurve AtmosphereTemperatureSunMultCurve { get; private set; }
 
-        public FloatCurve LiftMachCurve
-        {
-            get { return liftMachCurve; }
-        }
+        public FloatCurve LatitudeTemperatureBiasCurve { get; private set; }
 
-        public FloatCurve DragCurve
-        {
-            get { return dragCurve; }
-        }
+        public FloatCurve LatitudeTemperatureSunMultCurve { get; private set; }
 
-        public FloatCurve DragMachCurve
-        {
-            get { return dragMachCurve; }
-        }
+        public FloatCurve AxialTemperatureSunMultCurve { get; private set; }
 
-        public FloatCurve DragCurveTail
-        {
-            get { return dragCurveTail; }
-        }
+        public FloatCurve AtmosphereTemperatureCurve { get; private set; }
 
-        public FloatCurve DragCurveSurface
-        {
-            get { return dragCurveSurface; }
-        }
-
-        public FloatCurve DragCurveTip
-        {
-            get { return dragCurveTip; }
-        }
-
-        public FloatCurve DragCurveCd
-        {
-            get { return dragCurveCd; }
-        }
-
-        public FloatCurve DragCurveCdPower
-        {
-            get { return dragCurveCdPower; }
-        }
-
-        public FloatCurve DragCurveMultiplier
-        {
-            get { return dragCurveMultiplier; }
-        }
-
-        public FloatCurve AtmospherePressureCurve
-        {
-            get { return atmospherePressureCurve; }
-        }
-
-        public FloatCurve AtmosphereTemperatureSunMultCurve
-        {
-            get { return atmosphereTemperatureSunMultCurve; }
-        }
-
-        public FloatCurve LatitudeTemperatureBiasCurve
-        {
-            get { return latitudeTemperatureBiasCurve; }
-        }
-
-        public FloatCurve LatitudeTemperatureSunMultCurve
-        {
-            get { return latitudeTemperatureSunMultCurve; }
-        }
-
-        public FloatCurve AxialTemperatureSunMultCurve
-        {
-            get { return axialTemperatureSunMultCurve; }
-        }
-
-        public FloatCurve AtmosphereTemperatureCurve
-        {
-            get { return atmosphereTemperatureCurve; }
-        }
-
-        public double SpaceTemperature
-        {
-            get { return spaceTemperature; }
-        }
+        public double SpaceTemperature { get; private set; }
 
     }
 }
