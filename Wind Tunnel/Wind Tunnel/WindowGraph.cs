@@ -41,6 +41,12 @@ namespace KerbalWindTunnel
             else
                 return VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship);
         }
+        public static AeroPredictor GetUnitySafeAeroPredictor(AeroPredictor aeroPredictorToClone)
+        {
+            if (false) { }
+            else
+                return VesselCache.SimulatedVessel.BorrowClone((VesselCache.SimulatedVessel)aeroPredictorToClone);
+        }
 
         private void DrawGraph(GraphMode graphMode)
         {

@@ -116,8 +116,9 @@ namespace KerbalWindTunnel.DataGenerators
             // But the UI will hang waiting for this to complete, so a self-triggering CancellationToken is provided with a life span of 5 seconds.
             try
             {
+                AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
                 Parallel.For(0, preliminaryData.Length, new ParallelOptions() { CancellationToken = new CancellationTokenSource(5000).Token },
-                    WindTunnelWindow.Instance.GetAeroPredictor, (index, state, predictor) =>
+                    () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone), (index, state, predictor) =>
                          {
                              int x = index % (resolution[0, 0] + 1), y = index / (resolution[0, 0] + 1);
                              EnvelopePoint result = new EnvelopePoint(predictor, newConditions.body, y * firstStepAltitude + newConditions.lowerBoundAltitude, x * firstStepSpeed + newConditions.lowerBoundSpeed);
@@ -217,9 +218,10 @@ namespace KerbalWindTunnel.DataGenerators
 
                     try
                     {
+                        AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
                         Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
-                            WindTunnelWindow.Instance.GetAeroPredictor,
+                            () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
                             (index, state, predictor) =>
                         {
                             int x = index % conditions.XResolution, y = index / conditions.XResolution;
@@ -230,6 +232,7 @@ namespace KerbalWindTunnel.DataGenerators
                             if (!cache.TryGetValue(coords, out result))
                             {
                                 result = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
+                                cancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 cache[coords] = result;
                             }
                             else
