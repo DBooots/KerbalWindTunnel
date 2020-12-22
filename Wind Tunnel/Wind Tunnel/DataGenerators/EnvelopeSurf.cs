@@ -236,7 +236,7 @@ namespace KerbalWindTunnel.DataGenerators
                             if (!cache.TryGetValue(coords, out result))
                             {
                                 result = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
-                                cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
                                 cache[coords] = result;
                             }
                             else
@@ -252,11 +252,17 @@ namespace KerbalWindTunnel.DataGenerators
                     }
                     catch (AggregateException aggregateException)
                     {
+                        bool onlyCancelled = true;
                         foreach (var ex in aggregateException.Flatten().InnerExceptions)
                         {
+                            if (ex is OperationCanceledException)
+                                continue;
                             Debug.LogException(ex);
+                            onlyCancelled = false;
                         }
-                        throw aggregateException;
+                        if (!onlyCancelled)
+                            throw new AggregateException(aggregateException.Flatten().InnerExceptions.Where(ex => !(ex is OperationCanceledException)));
+                        return null;
                     }
                 },
             closureCancellationTokenSource.Token);
