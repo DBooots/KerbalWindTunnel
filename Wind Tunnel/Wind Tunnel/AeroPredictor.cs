@@ -19,6 +19,9 @@ namespace KerbalWindTunnel
         }
         public virtual float GetMaxAoA(Conditions conditions, out float lift, float guess = float.NaN, float tolerance = 0.0003f)
         {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("AeroPredictor.GetMaxAoA()");
+#endif
             Accord.Math.Optimization.BrentSearch maximizer = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, tolerance);
             if (float.IsNaN(guess) || float.IsInfinity(guess))
                 maximizer.Maximize();
@@ -39,6 +42,9 @@ namespace KerbalWindTunnel
                 }
             }
             lift = (float)maximizer.Value;
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
             return (float)maximizer.Solution;
         }
         public virtual float GetMinAoA(Conditions conditions, float guess = float.NaN, float tolerance = 0.0003f)
@@ -67,6 +73,9 @@ namespace KerbalWindTunnel
 
         public virtual float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false, float tolerance = 0.0003f)
         {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("AeroPredictor.GetAoA(Conditions, float, bool, bool, float, float, bool, float");
+#endif
             if (lockPitchInput && (float.IsNaN(pitchInputGuess) || float.IsInfinity(pitchInputGuess)))
                 pitchInputGuess = 0;
             Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
@@ -97,6 +106,9 @@ namespace KerbalWindTunnel
                 }
             }
 
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
             return (float)solver.Solution;
         }
 

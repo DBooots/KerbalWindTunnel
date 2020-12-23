@@ -99,6 +99,9 @@ namespace KerbalWindTunnel.DataGenerators
 
         public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepSpeed = 50f, float stepAltitude = 500)
         {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("EnvelopeSurf.Calculate");
+#endif
             // Set up calculation conditions and bounds
             Conditions newConditions;
             newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
@@ -136,13 +139,17 @@ namespace KerbalWindTunnel.DataGenerators
                 Debug.LogError("Wind Tunnel: Initial pass threw an inner exception.");
                 Debug.LogException(ex.InnerException);
             }
-            
+
             if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
                 releaseable.Release();
 
             cancellationTokenSource = new CancellationTokenSource();
 
             WindTunnel.Instance.StartCoroutine(Processing(newConditions, preliminaryData.To2Dimension(resolution[0, 0] + 1)));
+
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
         }
 
         public override void UpdateGraphs()

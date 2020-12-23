@@ -48,46 +48,81 @@ namespace KerbalWindTunnel.VesselCache
         }
         public override Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
-            return GetAeroForce(conditions, AoA, pitchInput, out _, Vector3.zero);
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetAeroForce(Conditions, float, float)");
+#endif
+            var value = GetAeroForce(conditions, AoA, pitchInput, out _, Vector3.zero);
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
+            return value;
         }
 
         public Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            return partCollection.GetAeroForce(InflowVect(AoA) * conditions.speed, conditions, pitchInput, out torque, torquePoint);
+            return partCollection.GetLiftForce(InflowVect(AoA) * conditions.speed, conditions, pitchInput, out torque, torquePoint);
         }
         public override Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
-            return GetLiftForce(conditions, AoA, pitchInput, out _, Vector3.zero);
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetLiftFoce(Conditions, float, float)");
+#endif
+            var value = GetLiftForce(conditions, AoA, pitchInput, out _, Vector3.zero);
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
+            return value;
         }
 
         // TODO: Add ITorqueProvider and thrust effect on torque
         public override float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false, float tolerance = 0.0003f)
         {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetAoA(Conditions, float, bool, bool, float, float, bool)");
+#endif
             Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
-            
+            float value;
+
             if (!accountForControls)
-                return base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, 0, true);
-            if (lockPitchInput)
-                return base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, pitchInputGuess, lockPitchInput);
-            
-            float approxAoA = GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, pitchInputGuess, true, 1 * Mathf.Deg2Rad);
-            return base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, approxAoA, pitchInputGuess, lockPitchInput);
+                value = base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, 0, true, tolerance);
+            else if (lockPitchInput)
+                value = base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, pitchInputGuess, lockPitchInput, tolerance);
+            else
+            {
+                float approxAoA = GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, pitchInputGuess, true, 1 * Mathf.Deg2Rad);
+                value = base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, approxAoA, pitchInputGuess, lockPitchInput, tolerance);
+            }
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
+            return value;
         }
 
         // TODO: Add ITorqueProvider and thrust effect on torque
         public override float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN, float tolerance = 0.0003f)
         {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetPitchInput(Conditions, float, bool, float)");
+#endif
+            float value;
             Accord.Math.Optimization.BrentSearch solver = new Accord.Math.Optimization.BrentSearch((input) => this.GetAeroTorque(conditions, AoA, (float)input, dryTorque).x, -0.3, 0.3, tolerance);
             if (solver.FindRoot())
-                return (float)solver.Solution;
-            solver.LowerBound = -1;
-            solver.UpperBound = 1;
-            if (solver.FindRoot())
-                return (float)solver.Solution;
-            if (this.GetAeroTorque(conditions, AoA, 0, dryTorque).x > 0)
-                return -1;
+                value = (float)solver.Solution;
             else
-                return 1;
+            {
+                solver.LowerBound = -1;
+                solver.UpperBound = 1;
+                if (solver.FindRoot())
+                    value = (float)solver.Solution;
+                else if (this.GetAeroTorque(conditions, AoA, 0, dryTorque).x > 0)
+                    value = -1;
+                else
+                    value = 1;
+            }
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
+            return value;
         }
         
         public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0, bool dryTorque = false)

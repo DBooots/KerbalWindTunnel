@@ -29,6 +29,9 @@ namespace KerbalWindTunnel.DataGenerators
 
         public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
         {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("EnvelopePoint..ctor");
+#endif
             this.altitude = altitude;
             this.speed = speed;
             AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, speed, altitude);
@@ -83,6 +86,10 @@ namespace KerbalWindTunnel.DataGenerators
             //GetStabilityValues(vessel, conditions, AoA_level, out stabilityRange, out stabilityScore);
 
             completed = true;
+
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
         }
 
         private static void GetStabilityValues(AeroPredictor vessel, AeroPredictor.Conditions conditions, float AoA_centre, out float stabilityRange, out float stabilityScore)
