@@ -21,7 +21,7 @@ namespace KerbalWindTunnel.VesselCache
 
             // The root part is the rotor hub, so since the rotating mesh is usually cylindrical we
             // only need to evaluate this part once.
-            if (!parts[0].shieldedFromAirstream)
+            if (!parts[0].shieldedFromAirstream && inflow.sqrMagnitude > 0)
             {
                 float localMach = inflow.magnitude;
                 float localVelFactor = localMach * localMach;
@@ -47,6 +47,8 @@ namespace KerbalWindTunnel.VesselCache
                         continue;
                     Vector3 partMotion = Vector3.Cross(axis, (parts[i].transformPosition - origin)) * angularVelocity + rotatedInflow;
                     //Vector3 partMotion = Vector3.Cross((parts[i].transformPosition - origin), axis) * angularVelocity + rotatedInflow;
+                    if (partMotion.sqrMagnitude <= 0)
+                        continue;
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
@@ -63,6 +65,8 @@ namespace KerbalWindTunnel.VesselCache
                         continue;
                     Vector3 partMotion = Vector3.Cross(axis, (surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     //Vector3 partMotion = Vector3.Cross((surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    if (partMotion.sqrMagnitude <= 0)
+                        continue;
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
@@ -82,6 +86,8 @@ namespace KerbalWindTunnel.VesselCache
                         continue;
                     Vector3 partMotion = Vector3.Cross(axis, (ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     //Vector3 partMotion = Vector3.Cross((ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    if (partMotion.sqrMagnitude <= 0)
+                        continue;
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
@@ -170,7 +176,7 @@ namespace KerbalWindTunnel.VesselCache
 
             // The root part is the rotor hub, so since the rotating mesh is usually cylindrical we
             // only need to evaluate this part once.
-            if (!parts[0].shieldedFromAirstream)
+            if (!parts[0].shieldedFromAirstream && inflow.sqrMagnitude > 0)
             {
                 float localMach = inflow.magnitude;
                 float localVelFactor = localMach * localMach;
@@ -196,6 +202,8 @@ namespace KerbalWindTunnel.VesselCache
                         continue;
                     //Vector3 partMotion = Vector3.Cross(axis, (parts[i].transformPosition - origin)) * angularVelocity + rotatedInflow;
                     Vector3 partMotion = Vector3.Cross((parts[i].transformPosition - origin), axis) * angularVelocity + rotatedInflow;
+                    if (partMotion.sqrMagnitude <= 0)
+                        continue;
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
@@ -209,6 +217,8 @@ namespace KerbalWindTunnel.VesselCache
                         continue;
                     //Vector3 partMotion = Vector3.Cross(axis, (surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     Vector3 partMotion = Vector3.Cross((surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    if (partMotion.sqrMagnitude <= 0)
+                        continue;
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
@@ -222,6 +232,8 @@ namespace KerbalWindTunnel.VesselCache
                         continue;
                     //Vector3 partMotion = Vector3.Cross(axis, (ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     Vector3 partMotion = Vector3.Cross((ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    if (partMotion.sqrMagnitude <= 0)
+                        continue;
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;

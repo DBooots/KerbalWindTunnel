@@ -23,33 +23,37 @@ namespace KerbalWindTunnel.VesselCache
         {
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
-            Vector3 normalizedInflow = inflow.normalized;
 
-            for (int i = parts.Count - 1; i >= 0; i--)
+            if (inflow.sqrMagnitude > 0)
             {
-                if (parts[i].shieldedFromAirstream)
-                    continue;
-                aeroForce += parts[i].GetAero(normalizedInflow, conditions.mach, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
-            for (int i = surfaces.Count - 1; i >= 0; i--)
-            {
-                if (surfaces[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += surfaces[i].GetForce(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
-            for (int i = ctrls.Count - 1; i >= 0; i--)
-            {
-                if (ctrls[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += ctrls[i].GetForce(normalizedInflow, conditions.mach, pitchInput, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
+                Vector3 normalizedInflow = inflow.normalized;
 
-            float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
-            torque *= Q;
-            aeroForce *= Q;
+                for (int i = parts.Count - 1; i >= 0; i--)
+                {
+                    if (parts[i].shieldedFromAirstream)
+                        continue;
+                    aeroForce += parts[i].GetAero(normalizedInflow, conditions.mach, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
+                    torque += pTorque;
+                }
+                for (int i = surfaces.Count - 1; i >= 0; i--)
+                {
+                    if (surfaces[i].part.shieldedFromAirstream)
+                        continue;
+                    aeroForce += surfaces[i].GetForce(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
+                    torque += pTorque;
+                }
+                for (int i = ctrls.Count - 1; i >= 0; i--)
+                {
+                    if (ctrls[i].part.shieldedFromAirstream)
+                        continue;
+                    aeroForce += ctrls[i].GetForce(normalizedInflow, conditions.mach, pitchInput, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
+                    torque += pTorque;
+                }
+
+                float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
+                torque *= Q;
+                aeroForce *= Q;
+            }
 
             for (int i = partCollections.Count - 1; i >= 0; i--)
             {
@@ -64,33 +68,37 @@ namespace KerbalWindTunnel.VesselCache
         {
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
-            Vector3 normalizedInflow = inflow.normalized;
 
-            for (int i = parts.Count - 1; i >= 0; i--)
+            if (inflow.sqrMagnitude > 0)
             {
-                if (parts[i].shieldedFromAirstream)
-                    continue;
-                aeroForce += parts[i].GetLift(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
-            for (int i = surfaces.Count - 1; i >= 0; i--)
-            {
-                if (surfaces[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += surfaces[i].GetLift(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
-            for (int i = ctrls.Count - 1; i >= 0; i--)
-            {
-                if (ctrls[i].part.shieldedFromAirstream)
-                    continue;
-                aeroForce += ctrls[i].GetLift(normalizedInflow, conditions.mach, pitchInput, out Vector3 pTorque, torquePoint);
-                torque += pTorque;
-            }
+                Vector3 normalizedInflow = inflow.normalized;
 
-            float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
-            torque *= Q;
-            aeroForce *= Q;
+                for (int i = parts.Count - 1; i >= 0; i--)
+                {
+                    if (parts[i].shieldedFromAirstream)
+                        continue;
+                    aeroForce += parts[i].GetLift(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
+                    torque += pTorque;
+                }
+                for (int i = surfaces.Count - 1; i >= 0; i--)
+                {
+                    if (surfaces[i].part.shieldedFromAirstream)
+                        continue;
+                    aeroForce += surfaces[i].GetLift(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
+                    torque += pTorque;
+                }
+                for (int i = ctrls.Count - 1; i >= 0; i--)
+                {
+                    if (ctrls[i].part.shieldedFromAirstream)
+                        continue;
+                    aeroForce += ctrls[i].GetLift(normalizedInflow, conditions.mach, pitchInput, out Vector3 pTorque, torquePoint);
+                    torque += pTorque;
+                }
+
+                float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
+                torque *= Q;
+                aeroForce *= Q;
+            }
 
             for (int i = partCollections.Count - 1; i >= 0; i--)
             {
