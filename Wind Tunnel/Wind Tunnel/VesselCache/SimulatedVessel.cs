@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using KerbalWindTunnel.Extensions;
 using Smooth.Pools;
 using UnityEngine;
 
@@ -35,6 +36,9 @@ namespace KerbalWindTunnel.VesselCache
         public float dryMass = 0;
         public float relativeWingArea = 0;
         public int stage = 0;
+
+        public FloatCurve maxAoA = null;
+        public static List<float> AoAMachs = null;
 
         public override bool ThreadSafe { get { return true; } }
 
@@ -124,7 +128,26 @@ namespace KerbalWindTunnel.VesselCache
 #endif
             return value;
         }
-        
+
+        // Since, on Kerbin at least, speed of sound doesn't vary with altitude
+        public override float GetMaxAoA(Conditions conditions, out float lift, float guess = float.NaN, float tolerance = 0.0003F)
+        {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetMaxAoA(Conditions, float, float, float)");
+#endif
+            if (!(conditions.body.bodyName.Equals("Kerbin", StringComparison.InvariantCultureIgnoreCase) ||
+                conditions.body.bodyName.Equals("Laythe", StringComparison.InvariantCultureIgnoreCase)))
+                return base.GetMaxAoA(conditions, out lift, guess, tolerance);
+            if (maxAoA == null)
+                InitMaxAoA(conditions.body, conditions.altitude);
+            float aoa = maxAoA.Evaluate(conditions.mach);
+            lift = GetLiftForceMagnitude(conditions, aoa, 1);
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
+            return aoa;
+        }
+
         public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0, bool dryTorque = false)
         {
             GetAeroForce(conditions, AoA, pitchInput, out Vector3 torque, dryTorque ? CoM_dry : CoM);
@@ -148,11 +171,6 @@ namespace KerbalWindTunnel.VesselCache
 
         private static readonly Pool<SimulatedVessel> pool = new Pool<SimulatedVessel>(Create, Reset);
 
-        public static int PoolSize
-        {
-            get { return pool.Size; }
-        }
-
         private static SimulatedVessel Create()
         {
             return new SimulatedVessel();
@@ -168,6 +186,7 @@ namespace KerbalWindTunnel.VesselCache
         {
             obj.partCollection.Release();
             obj.partCollection = null;
+            obj.maxAoA = null;
         }
 
         public static SimulatedVessel Borrow(IShipconstruct v)
@@ -281,8 +300,57 @@ namespace KerbalWindTunnel.VesselCache
             relativeWingArea = vessel.relativeWingArea;
             stage = vessel.stage;
             count = vessel.count;
+            maxAoA = vessel.maxAoA?.Clone();
 
             partCollection = PartCollection.BorrowClone(this, vessel);
+        }
+
+        public void InitMaxAoA(CelestialBody body, float altitude = 0)
+        {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.InitMaxAoA()");
+#endif
+            maxAoA = new FloatCurve();
+            FindAoAMachs();
+            const float machStep = 0.002f;
+            Conditions conditions = new Conditions(body, 0, altitude);
+
+            for (int i = 0; i < AoAMachs.Count; i++)
+            {
+                float inTangent = 0;
+                float outTangent = 0;
+
+                Conditions stepConditions = new Conditions(body, conditions.speedOfSound * AoAMachs[i], altitude);
+                float stepMaxAoA = base.GetMaxAoA(stepConditions, out _, 30 * Mathf.Deg2Rad);
+
+                if (i > 0)
+                {
+                    Conditions inConditions = new Conditions(body, conditions.speedOfSound * (AoAMachs[i] - machStep), altitude);
+                    inTangent = (stepMaxAoA - base.GetMaxAoA(inConditions, out _, 30 * Mathf.Deg2Rad)) / machStep;
+                }
+                if (i < AoAMachs.Count - 1)
+                {
+                    Conditions outConditions = new Conditions(body, conditions.speedOfSound * (AoAMachs[i] + machStep), altitude);
+                    outTangent = (base.GetMaxAoA(outConditions, out _, 30 * Mathf.Deg2Rad) - stepMaxAoA) / machStep;
+                }
+                maxAoA.Add(AoAMachs[i], stepMaxAoA, inTangent, outTangent);
+            }
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
+        }
+
+        private void FindAoAMachs()
+        {
+            if (AoAMachs != null)
+                return;
+
+            AoAMachs = new List<float>();
+            foreach (var curve in PhysicsGlobals.LiftingSurfaceCurves.Values)
+                foreach (Keyframe key in curve.liftMachCurve.Curve.keys)
+                    if (!AoAMachs.Contains(key.time))
+                        AoAMachs.Add(key.time);
+            AoAMachs.Sort();
         }
     }
 }

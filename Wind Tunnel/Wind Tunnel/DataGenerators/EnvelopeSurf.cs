@@ -116,6 +116,9 @@ namespace KerbalWindTunnel.DataGenerators
             float firstStepAltitude = (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) / resolution[0, 1];
             EnvelopePoint[] preliminaryData = new EnvelopePoint[(resolution[0, 0] + 1) * (resolution[0, 1] + 1)];
             AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+            if (aeroPredictorToClone is VesselCache.SimulatedVessel simVessel)
+                simVessel.InitMaxAoA(newConditions.body, (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) * 0.25f + newConditions.lowerBoundAltitude);
+
             // Probably won't run in parallel because it's very short.
             // But the UI will hang waiting for this to complete, so a self-triggering CancellationToken is provided with a life span of 5 seconds.
             try
@@ -219,6 +222,8 @@ namespace KerbalWindTunnel.DataGenerators
             stopwatch.Start();
 
             AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+            if (aeroPredictorToClone is VesselCache.SimulatedVessel simVessel)
+                simVessel.InitMaxAoA(conditions.body, (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) * 0.25f + conditions.lowerBoundAltitude);
 
             task = Task.Factory.StartNew<EnvelopePoint[,]>(
                 () =>
