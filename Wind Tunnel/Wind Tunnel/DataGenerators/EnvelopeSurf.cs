@@ -215,7 +215,7 @@ namespace KerbalWindTunnel.DataGenerators
         {
             CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
 
-            primaryProgress = new EnvelopePoint[conditions.Resolution];
+            EnvelopePoint[] closureProgress = primaryProgress = new EnvelopePoint[conditions.Resolution];
             int cachedCount = 0;
 
             stopwatch.Reset();
@@ -236,7 +236,7 @@ namespace KerbalWindTunnel.DataGenerators
                     try
                     {
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
-                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
+                        Parallel.For<AeroPredictor>(0, closureProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
                             () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
                             (index, state, predictor) =>
                         {
@@ -253,15 +253,16 @@ namespace KerbalWindTunnel.DataGenerators
                             }
                             else
                                 Interlocked.Increment(ref cachedCount);
-                            primaryProgress[index] = result;
+                            closureProgress[index] = result;
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
                         closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                        Debug.Log("KWT Data run finished. " + cachedCount + " of " + primaryProgress.Length + " retreived from cache. (" + (float)cachedCount / primaryProgress.Length * 100 + "%)");
+                        Debug.Log("KWT Data run finished. " + cachedCount + " of " + closureProgress.Length + " retreived from cache. (" + (float)cachedCount / primaryProgress.Length * 100 + "%)");
 
-                        return primaryProgress.To2Dimension(conditions.XResolution);
+                        return closureProgress.To2Dimension(conditions.XResolution);
                     }
+                    catch (OperationCanceledException) { return null; }
                     catch (AggregateException aggregateException)
                     {
                         bool onlyCancelled = true;
@@ -310,7 +311,7 @@ namespace KerbalWindTunnel.DataGenerators
                 envelopePoints = ((Task<EnvelopePoint[,]>)task).Result;
                 currentConditions = conditions;
                 UpdateGraphs();
-                EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, closureCancellationTokenSource, graphables);
+                EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, closureCancellationTokenSource.Token, graphables);
                 valuesSet = true;
             }
 
@@ -338,7 +339,11 @@ namespace KerbalWindTunnel.DataGenerators
         }
 
         public void CalculateOptimalLines(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
-            => EnvelopeLine.CalculateOptimalLines(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, envelopePoints, cancellationTokenSource, graphables);
+        {
+            if (cancellationTokenSource != null && cancellationTokenSource.IsCancellationRequested)
+                return;
+            EnvelopeLine.CalculateOptimalLines(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, envelopePoints, cancellationTokenSource.Token, graphables);
+        }
 
         public override void OnAxesChanged(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
         {

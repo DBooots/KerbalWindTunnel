@@ -13,7 +13,7 @@ namespace KerbalWindTunnel.DataGenerators
 {
     public static class EnvelopeLine
     {
-        public static void CalculateOptimalLines(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, EnvelopePoint[,] dataArray, CancellationTokenSource cancellationTokenSource, GraphableCollection graphables)
+        public static void CalculateOptimalLines(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, EnvelopePoint[,] dataArray, CancellationToken cancellationToken, GraphableCollection graphables)
         {
             float[,] accel = dataArray.SelectToArray(pt => pt.Accel_excess * WindTunnelWindow.gAccel);
             float[,] burnRate = dataArray.SelectToArray(pt => pt.fuelBurnRate);
@@ -29,17 +29,17 @@ namespace KerbalWindTunnel.DataGenerators
                 return timeToClimb(current, last) * dF;
             }
 
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, accel, timeToClimb, cancellationTokenSource, graphables));
-            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, accel, timeToClimb, cancellationTokenSource, graphables));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Fuel-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, fuelToClimb, f => f > 0, accel, timeToClimb, cancellationToken, graphables));
+            WindTunnelWindow.Instance.StartCoroutine(ProcessOptimalLine("Time-Optimal Path", conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, timeToClimb, f => f > 0, accel, timeToClimb, cancellationToken, graphables));
         }
 
-        private static IEnumerator ProcessOptimalLine(string graphName, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc, CancellationTokenSource cancellationTokenSource, GraphableCollection graphables)
+        private static IEnumerator ProcessOptimalLine(string graphName, Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeDifferenceFunc, CancellationToken cancellationToken, GraphableCollection graphables)
         {
             Task<List<AscentPathPoint>> task = Task.Factory.StartNew<List<AscentPathPoint>>(
                 () =>
                 {
                     return GetOptimalPath(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, costIncreaseFunc, neighborPredicate, predicateData, timeDifferenceFunc);
-                }, cancellationTokenSource.Token
+                }, cancellationToken
                 );
 
             while (task.Status < TaskStatus.RanToCompletion)
