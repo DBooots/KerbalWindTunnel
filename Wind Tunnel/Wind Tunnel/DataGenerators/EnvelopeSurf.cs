@@ -225,7 +225,7 @@ namespace KerbalWindTunnel.DataGenerators
             if (aeroPredictorToClone is VesselCache.SimulatedVessel simVessel)
                 simVessel.InitMaxAoA(conditions.body, (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) * 0.25f + conditions.lowerBoundAltitude);
 
-            task = Task.Factory.StartNew<EnvelopePoint[,]>(
+            task = new Task<EnvelopePoint[,]>(
                 () =>
                 {
                     float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
@@ -277,10 +277,9 @@ namespace KerbalWindTunnel.DataGenerators
                         return null;
                     }
                 },
-            closureCancellationTokenSource.Token);
+            closureCancellationTokenSource.Token, TaskCreationOptions.LongRunning);
 
-            //if (task.Wait(25))
-                //Debug.Log("KWT: Waiting actually did something!");
+            task.Start();
 
             while (task.Status < TaskStatus.RanToCompletion)
             {
