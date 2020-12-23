@@ -52,7 +52,7 @@ namespace KerbalWindTunnel.DataGenerators
             else
             {
                 AoA_max = maxA_guess;
-                Lift_max = AeroPredictor.GetLiftForceMagnitude(vessel.GetAeroForce(conditions, AoA_max, 1) + thrustForce, AoA_max);
+                Lift_max = AeroPredictor.GetLiftForceMagnitude(vessel.GetLiftForce(conditions, AoA_max, 1) + thrustForce, AoA_max);
             }
 
             AoA_level = vessel.GetAoA(conditions, weight, guess: AoA_guess, pitchInputGuess: 0, lockPitchInput: true);
