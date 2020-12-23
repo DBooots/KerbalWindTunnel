@@ -13,27 +13,27 @@ namespace KerbalWindTunnel
 
         public abstract float Area { get; }
 
-        public virtual float GetMaxAoA(Conditions conditions)
+        public virtual float GetMaxAoA(Conditions conditions, float tolerance = 0.0003f)
         {
-            return (float)Accord.Math.Optimization.BrentSearch.Maximize((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, 0.0001);
+            return (float)Accord.Math.Optimization.BrentSearch.Maximize((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, tolerance);
         }
-        public virtual float GetMaxAoA(Conditions conditions, out float lift, float guess = float.NaN)
+        public virtual float GetMaxAoA(Conditions conditions, out float lift, float guess = float.NaN, float tolerance = 0.0003f)
         {
-            Accord.Math.Optimization.BrentSearch maximizer = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, 0.0001);
+            Accord.Math.Optimization.BrentSearch maximizer = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, tolerance);
             if (float.IsNaN(guess) || float.IsInfinity(guess))
                 maximizer.Maximize();
             else
             {
-                maximizer.LowerBound = guess - 2 * Mathf.Deg2Rad;
-                maximizer.UpperBound = guess + 2 * Mathf.Deg2Rad;
+                maximizer.LowerBound = guess - 5 * Mathf.Deg2Rad;
+                maximizer.UpperBound = guess + 5 * Mathf.Deg2Rad;
                 if (!maximizer.Maximize())
                 {
-                    maximizer.LowerBound = guess - 5 * Mathf.Deg2Rad;
-                    maximizer.UpperBound = guess + 5 * Mathf.Deg2Rad;
+                    maximizer.LowerBound = guess - 10 * Mathf.Deg2Rad;
+                    maximizer.UpperBound = guess + 10 * Mathf.Deg2Rad;
                     if (!maximizer.Maximize())
                     {
-                        maximizer.LowerBound = Math.Min(10 * Mathf.Deg2Rad, guess - 10 * Mathf.Deg2Rad);
-                        maximizer.UpperBound = Mathf.Clamp(guess + 10 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, 90 * Mathf.Deg2Rad);
+                        maximizer.LowerBound = Math.Min(10 * Mathf.Deg2Rad, guess - 15 * Mathf.Deg2Rad);
+                        maximizer.UpperBound = Mathf.Clamp(guess + 15 * Mathf.Deg2Rad, 60 * Mathf.Deg2Rad, 90 * Mathf.Deg2Rad);
                         maximizer.Maximize();
                     }
                 }
@@ -41,9 +41,9 @@ namespace KerbalWindTunnel
             lift = (float)maximizer.Value;
             return (float)maximizer.Solution;
         }
-        public virtual float GetMinAoA(Conditions conditions, float guess = float.NaN)
+        public virtual float GetMinAoA(Conditions conditions, float guess = float.NaN, float tolerance = 0.0003f)
         {
-            Accord.Math.Optimization.BrentSearch minimizer = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), -60 * Mathf.Deg2Rad, -10 * Mathf.Deg2Rad, 0.0001);
+            Accord.Math.Optimization.BrentSearch minimizer = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(conditions, (float)aoa, 1), -60 * Mathf.Deg2Rad, -10 * Mathf.Deg2Rad, tolerance);
             if (float.IsNaN(guess) || float.IsInfinity(guess))
                 minimizer.Maximize();
             else
@@ -65,12 +65,7 @@ namespace KerbalWindTunnel
             return (float)minimizer.Solution;
         }
 
-        
-        public virtual float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false)
-        {
-            return GetAoA(conditions, offsettingForce, useThrust, dryTorque, guess, pitchInputGuess, lockPitchInput, 0.0001f);
-        }
-        protected float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false, float tolerance = 0.0001f)
+        public virtual float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false, float tolerance = 0.0003f)
         {
             if (lockPitchInput && (float.IsNaN(pitchInputGuess) || float.IsInfinity(pitchInputGuess)))
                 pitchInputGuess = 0;
@@ -105,7 +100,7 @@ namespace KerbalWindTunnel
             return (float)solver.Solution;
         }
 
-        public abstract float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN);
+        public abstract float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN, float tolerance = 0.0003f);
         
         public abstract Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0);
 

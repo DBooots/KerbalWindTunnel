@@ -27,11 +27,7 @@ namespace KerbalWindTunnel.VesselCache
             RootSolver.LeftGuessBound(-2 * Mathf.PI / 180),
             RootSolver.RightGuessBound(2 * Mathf.PI / 180),
             RootSolver.ShiftWithGuess(true));*/
-
-        //public List<SimulatedPart> parts = new List<SimulatedPart>();
-        //public List<SimulatedLiftingSurface> surfaces = new List<SimulatedLiftingSurface>();
-        //public List<SimulatedControlSurface> ctrls = new List<SimulatedControlSurface>();
-        //public List<SimulatedEngine> engines = new List<SimulatedEngine>();
+        
         public PartCollection partCollection;
 
         private int count;
@@ -54,7 +50,7 @@ namespace KerbalWindTunnel.VesselCache
         {
             return GetAeroForce(conditions, AoA, pitchInput, out _, Vector3.zero);
         }
-        
+
         public Vector3 GetLiftForce(Conditions conditions, float AoA, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
             return partCollection.GetAeroForce(InflowVect(AoA) * conditions.speed, conditions, pitchInput, out torque, torquePoint);
@@ -65,7 +61,7 @@ namespace KerbalWindTunnel.VesselCache
         }
 
         // TODO: Add ITorqueProvider and thrust effect on torque
-        public override float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false)
+        public override float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false, float tolerance = 0.0003f)
         {
             Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
             
@@ -79,9 +75,9 @@ namespace KerbalWindTunnel.VesselCache
         }
 
         // TODO: Add ITorqueProvider and thrust effect on torque
-        public override float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN)
+        public override float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN, float tolerance = 0.0003f)
         {
-            Accord.Math.Optimization.BrentSearch solver = new Accord.Math.Optimization.BrentSearch((input) => this.GetAeroTorque(conditions, AoA, (float)input, dryTorque).x, -0.3, 0.3, 0.0001);
+            Accord.Math.Optimization.BrentSearch solver = new Accord.Math.Optimization.BrentSearch((input) => this.GetAeroTorque(conditions, AoA, (float)input, dryTorque).x, -0.3, 0.3, tolerance);
             if (solver.FindRoot())
                 return (float)solver.Solution;
             solver.LowerBound = -1;
