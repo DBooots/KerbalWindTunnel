@@ -173,9 +173,10 @@ namespace KerbalWindTunnel.VesselCache
                 lock (velCurveIsp)
                     isp *= velCurveIsp.Evaluate(mach);
 
-
+#if DEBUG
             if (!requiresOxygen)
-                Debug.Log(string.Format("Fuel: {0}, ISP: {1}, Thrust: {2}", fuelBurnRate, isp, fuelBurnRate * g * multIsp * thrustPercentage / 100f));
+                Debug.LogFormat("Fuel: {0}, ISP: {1}, Thrust: {2}", fuelBurnRate, isp, fuelBurnRate * g * multIsp * thrustPercentage / 100f);
+#endif
             return thrustVector * fuelBurnRate * g * multIsp * isp * (thrustPercentage / 100f);
         }
 

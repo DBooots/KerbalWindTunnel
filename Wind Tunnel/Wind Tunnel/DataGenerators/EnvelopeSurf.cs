@@ -257,8 +257,8 @@ namespace KerbalWindTunnel.DataGenerators
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
-                        Debug.Log("KWT Data run finished. " + cachedCount + " of " + closureProgress.Length + " retreived from cache. (" + (float)cachedCount / primaryProgress.Length * 100 + "%)");
                         closureCancellationToken.ThrowIfCancellationRequested();
+                        Debug.LogFormat("Wind Tunnel - Data run finished. {0} of {1} ({2F0}%) retrieved from cache.", cachedCount, closureProgress.Length, (float)cachedCount / closureProgress.Length * 100);
 
                         return closureProgress.To2Dimension(conditions.XResolution);
                     }
@@ -328,7 +328,7 @@ namespace KerbalWindTunnel.DataGenerators
                         newConditions = conditions.Modify(
                             stepSpeed: Math.Min((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / resolution[i, 0], conditions.stepSpeed),
                             stepAltitude: Math.Min((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / resolution[i, 1], conditions.stepAltitude));
-                        Debug.Log("Wind Tunnel graphing higher res at:" + newConditions.XResolution + " by " + newConditions.YResolution);
+                        Debug.LogFormat("Wind Tunnel graphing higher res at: {0} by {1}.", newConditions.XResolution, newConditions.YResolution);
                         WindTunnel.Instance.StartCoroutine(Processing(newConditions, envelopePoints));
                         yield break;
                     }

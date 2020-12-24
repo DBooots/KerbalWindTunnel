@@ -259,8 +259,8 @@ namespace KerbalWindTunnel.DataGenerators
             profileWatch.Stop();
             stopwatch.Stop();
 
-            Debug.Log("Time: " + stopwatch.ElapsedMilliseconds + "  Iterations: " + iter);
-            Debug.Log("Costing: " + sections[0] + " Gradients: " + sections[1] + " Minimizing: " + profileWatch.ElapsedMilliseconds);
+            Debug.LogFormat("Time: {0}\tIterations: {1}", stopwatch.ElapsedMilliseconds, iter);
+            Debug.LogFormat("Costing: {0}\tGradients: {1}\tMinimizing: {2}", sections[0], sections[1], profileWatch.ElapsedMilliseconds);
             return result;
         }
 
