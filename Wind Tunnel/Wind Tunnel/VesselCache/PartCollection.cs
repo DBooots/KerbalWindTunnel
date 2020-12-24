@@ -240,8 +240,11 @@ namespace KerbalWindTunnel.VesselCache
         {
             if (parts.Count > 0 && part.HasModuleImplementing<Expansions.Serenity.ModuleRoboticServoRotor>())
             {
-                partCollections.Add(RotorPartCollection.Borrow(this, part));
-                return;
+                if (part.FindModuleImplementing<Expansions.Serenity.ModuleRoboticServoRotor>().rpmLimit != 0)
+                {
+                    partCollections.Add(RotorPartCollection.Borrow(this, part));
+                    return;
+                }
             }
 
             SimulatedPart simulatedPart = SimulatedPart.Borrow(part, parentVessel);

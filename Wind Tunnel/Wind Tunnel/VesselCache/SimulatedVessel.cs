@@ -135,6 +135,11 @@ namespace KerbalWindTunnel.VesselCache
 #if ENABLE_PROFILER
             UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetMaxAoA(Conditions, float, float, float)");
 #endif
+            // Rotating parts ruin everything... Because their mach number is the sum of the inflow and their rotation,
+            // the FloatCurve method isn't valid.
+            if (partCollection.partCollections.Count > 0)
+                return base.GetMaxAoA(conditions, out lift, guess, tolerance);
+
             if (!(conditions.body.bodyName.Equals("Kerbin", StringComparison.InvariantCultureIgnoreCase) ||
                 conditions.body.bodyName.Equals("Laythe", StringComparison.InvariantCultureIgnoreCase)))
                 return base.GetMaxAoA(conditions, out lift, guess, tolerance);
@@ -307,6 +312,9 @@ namespace KerbalWindTunnel.VesselCache
 
         public void InitMaxAoA(CelestialBody body, float altitude = 0)
         {
+            // If there are rotating parts, this won't ever come in handy so it's not worth the time.
+            if (partCollection.partCollections.Count > 0)
+                return;
 #if ENABLE_PROFILER
             UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.InitMaxAoA()");
 #endif
