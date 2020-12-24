@@ -258,7 +258,7 @@ namespace KerbalWindTunnel.DataGenerators
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
                         closureCancellationToken.ThrowIfCancellationRequested();
-                        Debug.LogFormat("Wind Tunnel - Data run finished. {0} of {1} ({2F0}%) retrieved from cache.", cachedCount, closureProgress.Length, (float)cachedCount / closureProgress.Length * 100);
+                        Debug.LogFormat("Wind Tunnel - Data run finished. {0} of {1} ({2:F0}%) retrieved from cache.", cachedCount, closureProgress.Length, (float)cachedCount / closureProgress.Length * 100);
 
                         return closureProgress.To2Dimension(conditions.XResolution);
                     }

@@ -175,7 +175,7 @@ namespace KerbalWindTunnel.VesselCache
 
 #if DEBUG
             if (!requiresOxygen)
-                Debug.LogFormat("Fuel: {0}, ISP: {1}, Thrust: {2}", fuelBurnRate, isp, fuelBurnRate * g * multIsp * thrustPercentage / 100f);
+                Debug.LogFormat("Fuel: {0:F3}, ISP: {1:F1}, Thrust: {2:F2}", fuelBurnRate, isp, fuelBurnRate * g * multIsp * thrustPercentage / 100f);
 #endif
             return thrustVector * fuelBurnRate * g * multIsp * isp * (thrustPercentage / 100f);
         }
