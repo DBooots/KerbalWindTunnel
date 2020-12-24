@@ -213,7 +213,7 @@ namespace KerbalWindTunnel.DataGenerators
 
         private IEnumerator Processing(Conditions conditions, EnvelopePoint[,] prelimData)
         {
-            CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
+            CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
 
             EnvelopePoint[] closureProgress = primaryProgress = new EnvelopePoint[conditions.Resolution];
             int cachedCount = 0;
@@ -236,7 +236,7 @@ namespace KerbalWindTunnel.DataGenerators
                     try
                     {
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
-                        Parallel.For<AeroPredictor>(0, closureProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
+                        Parallel.For<AeroPredictor>(0, closureProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationToken },
                             () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
                             (index, state, predictor) =>
                         {
@@ -248,7 +248,7 @@ namespace KerbalWindTunnel.DataGenerators
                             if (!cache.TryGetValue(coords, out result))
                             {
                                 result = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
-                                closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                closureCancellationToken.ThrowIfCancellationRequested();
                                 cache[coords] = result;
                             }
                             else
@@ -257,8 +257,8 @@ namespace KerbalWindTunnel.DataGenerators
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
-                        closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
                         Debug.Log("KWT Data run finished. " + cachedCount + " of " + closureProgress.Length + " retreived from cache. (" + (float)cachedCount / primaryProgress.Length * 100 + "%)");
+                        closureCancellationToken.ThrowIfCancellationRequested();
 
                         return closureProgress.To2Dimension(conditions.XResolution);
                     }
@@ -278,7 +278,7 @@ namespace KerbalWindTunnel.DataGenerators
                         return null;
                     }
                 },
-            closureCancellationTokenSource.Token, TaskCreationOptions.LongRunning);
+            closureCancellationToken, TaskCreationOptions.LongRunning);
 
             task.Start();
 
@@ -306,19 +306,19 @@ namespace KerbalWindTunnel.DataGenerators
                 yield break;
             }
 
-            if (!closureCancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationToken.IsCancellationRequested)
             {
                 envelopePoints = ((Task<EnvelopePoint[,]>)task).Result;
                 currentConditions = conditions;
                 UpdateGraphs();
-                EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, closureCancellationTokenSource.Token, graphables);
+                EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, closureCancellationToken, graphables);
                 valuesSet = true;
             }
 
             if (cachedCount < primaryProgress.Length)
                 yield return 0;
 
-            if (!closureCancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationToken.IsCancellationRequested)
             {
                 Conditions newConditions;
                 for (int i = 1; i <= resolution.GetUpperBound(0); i++)
