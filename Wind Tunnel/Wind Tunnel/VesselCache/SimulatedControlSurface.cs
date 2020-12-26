@@ -25,10 +25,11 @@ namespace KerbalWindTunnel.VesselCache
         public float ctrlSurfaceRange;
         public Vector3 rotationAxis;
         public bool ignorePitch;
+        public bool ignoresAllControls;
         public bool deployed;
         public float deployAngle;
         public Quaternion inputRotation = Quaternion.identity;
-        public float deflectionDirection = 1;
+        public float deploymentDirection = 1;
 
         private static SimulatedControlSurface Create()
         {
@@ -75,17 +76,18 @@ namespace KerbalWindTunnel.VesselCache
             // TODO: Incorporate transformName if required.
             this.rotationAxis = surface.transform.rotation * Vector3.right;
             this.ignorePitch = surface.ignorePitch;
+            this.ignoresAllControls = surface.ignorePitch && surface.ignoreRoll && surface.ignoreYaw;
             this.maxAuthority = 150f; // surface.maxAuthority is private. Hopefully its value never changes.
             try
             {
-                if (bool.TryParse(surface.part.variants.SelectedVariant.GetExtraInfoValue("reverseDeployDirection"), out bool flipDeflectDirection))
-                    this.deflectionDirection = flipDeflectDirection ? -1 : 1;
+                if (bool.TryParse(surface.part.variants.SelectedVariant.GetExtraInfoValue("reverseDeployDirection"), out bool flipDeployDirection))
+                    this.deploymentDirection = flipDeployDirection ? -1 : 1;
                 else
-                    this.deflectionDirection = 1;
+                    this.deploymentDirection = 1;
             }
             catch
             {
-                this.deflectionDirection = 1;
+                this.deploymentDirection = 1;
             }
             this.deployed = surface.deploy;
             if (deployed)
@@ -107,11 +109,12 @@ namespace KerbalWindTunnel.VesselCache
             this.ctrlSurfaceRange = surface.ctrlSurfaceRange;
             this.rotationAxis = surface.rotationAxis;
             this.ignorePitch = surface.ignorePitch;
+            this.ignoresAllControls = surface.ignoresAllControls;
             this.maxAuthority = surface.maxAuthority;
             this.deployed = surface.deployed;
             this.deployAngle = surface.deployAngle;
             this.inputRotation = surface.inputRotation;
-            this.deflectionDirection = surface.deflectionDirection;
+            this.deploymentDirection = surface.deploymentDirection;
         }
 
         public override Vector3 GetLift(Vector3 velocityVect, float mach)
@@ -124,45 +127,17 @@ namespace KerbalWindTunnel.VesselCache
         }
         public Vector3 GetLift(Vector3 velocityVect, float mach, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            Vector3 lift = GetLift(velocityVect, mach, pitchInput);
+            GetForce(velocityVect, mach, pitchInput, 0, out Vector3 lift, out _, true);
             torque = Vector3.Cross(lift, part.CoL - torquePoint);
             return lift;
         }
         public Vector3 GetLift(Vector3 velocityVect, float mach, float pitchInput)
         {
-            // Assumes no roll input required.
-            // Assumes no yaw input required.
-            float surfaceInput = 0;
-            if (!ignorePitch)
-            {
-                Vector3 input = inputRotation * new Vector3(pitchInput, 0, 0);
-                surfaceInput = Vector3.Dot(input, rotationAxis);
-                surfaceInput *= authorityLimiter * 0.01f;
-                surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
-            }
-            if (deployed)
-            {
-                surfaceInput += deployAngle;
-                surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
-            }
-            surfaceInput *= deflectionDirection;
-
-            Vector3 relLiftVector;
-            if (surfaceInput != 0)
-                relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
-            else
-                relLiftVector = liftVector;
-
-            float dot = Vector3.Dot(velocityVect, relLiftVector);
-            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
-            Vector3 lift = Vector3.zero;
-            lock (this.liftCurve)
-                lift = -relLiftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
-            if (perpendicularOnly)
-                lift = Vector3.ProjectOnPlane(lift, -velocityVect);
-            return lift * 1000;
+            GetForce(velocityVect, mach, pitchInput, 0, out Vector3 liftForce, out _, true);
+            return liftForce;
         }
 
+        /*
         /// <summary>
         /// Use <see cref="GetForce(Vector3 velocityVect, float mach, float pseudoReDragMult)"/> instead.
         /// </summary>
@@ -181,17 +156,17 @@ namespace KerbalWindTunnel.VesselCache
         }
         public override Vector3 GetForce(Vector3 velocityVect, float mach, out Vector3 torque, Vector3 torquePoint)
         {
+            Vector3 result = base.GetForce(velocityVect, mach, out torque, torquePoint);
             // Air Density: 1.225kg/m3
             // rho/rho_0 assumed to be 0.5
             // Speed of sound assumed to be ~300m/s
             float pseudoReDragMult;
             lock (part.simCurves.DragCurvePseudoReynolds)
                 pseudoReDragMult = part.simCurves.DragCurvePseudoReynolds.Evaluate((1.225f * 0.5f) * (300f * mach));
-            Vector3 result = base.GetForce(velocityVect, mach, out torque, torquePoint);
             result += part.GetAero(velocityVect, mach, pseudoReDragMult, out Vector3 pTorque, torquePoint);
             torque += pTorque;
             return result;
-        }
+        }*/
         public Vector3 GetForce(Vector3 velocityVect, float mach, float pseudoReDragMult)
         {
             return GetForce(velocityVect, mach, 0, pseudoReDragMult);
@@ -202,71 +177,25 @@ namespace KerbalWindTunnel.VesselCache
         }
         public Vector3 GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult, out Vector3 torque, Vector3 torquePoint)
         {
-            // Assumes no roll input required.
-            // Assumes no yaw input required.
-            float surfaceInput = 0;
-            if (!ignorePitch)
-            {
-                Vector3 input = inputRotation * new Vector3(pitchInput, 0, 0);
-                surfaceInput = Vector3.Dot(input, rotationAxis);
-                surfaceInput *= authorityLimiter * 0.01f;
-                surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
-            }
-            if (deployed)
-            {
-                surfaceInput += deployAngle;
-                surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
-            }
-            surfaceInput *= deflectionDirection;
-
-            Vector3 relLiftVector;
-            if (surfaceInput != 0)
-                relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
-            else
-                relLiftVector = liftVector;
-
-            float dot = Vector3.Dot(velocityVect, relLiftVector);
-            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
-            Vector3 lift = Vector3.zero;
-            lock (this.liftCurve)
-                lift = -relLiftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
-            if (perpendicularOnly)
-                lift = Vector3.ProjectOnPlane(lift, -velocityVect);
-            torque = Vector3.Cross(lift * 1000, part.CoL - torquePoint);
-            if (!useInternalDragModel)
-                return lift * 1000;
-
-            Vector3 drag = Vector3.zero;
-            lock (this.dragCurve)
-                drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
-
-            Vector3 partDrag = Vector3.zero;
-            if ((this.part.dragModel == Part.DragModel.DEFAULT || this.part.dragModel == Part.DragModel.CUBE) && !this.part.cubesNone && pseudoReDragMult > 0)
-            {
-                lock (this.part.cubes)
-                {
-                    // TODO: Check if neutral needs clamping. It can't be above 1 because math, but will negative values be an issue?
-                    // So, since surfaceInput is already multiplied by authorityLimiter%, one would think it isn't needed again here.
-                    // But, detailed testing shows it is required.
-                    this.part.cubes.SetCubeWeight("neutral", (this.maxAuthority - Math.Abs(surfaceInput * this.authorityLimiter)) * 0.01f);
-                    this.part.cubes.SetCubeWeight("fullDeflectionPos", Mathf.Clamp01(surfaceInput * this.authorityLimiter * 0.01f));
-                    this.part.cubes.SetCubeWeight("fullDeflectionNeg", Mathf.Clamp01(-surfaceInput * this.authorityLimiter * 0.01f));
-                    this.part.cubes.SetDragWeights();
-
-                    partDrag = this.part.GetAero(velocityVect, mach, pseudoReDragMult);
-                }
-            }
-
-            torque += Vector3.Cross(drag * 1000 + partDrag, part.CoP - torquePoint);
-            
-            return (lift + drag) * 1000 + partDrag;
+            GetForce(velocityVect, mach, pitchInput, pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, !useInternalDragModel);
+            torque = Vector3.Cross(liftForce, part.CoL - torquePoint);
+            torque += Vector3.Cross(dragForce, part.CoP - torquePoint);
+            return liftForce + dragForce;
         }
         public Vector3 GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult)
         {
+            GetForce(velocityVect, mach, pitchInput, pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, !useInternalDragModel);
+            return liftForce + dragForce;
+        }
+
+        private void GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, bool? liftOnly = null)
+        {
+            if (liftOnly == null)
+                liftOnly = !this.useInternalDragModel;
             // Assumes no roll input required.
             // Assumes no yaw input required.
             float surfaceInput = 0;
-            if (!ignorePitch)
+            if (!ignorePitch && pitchInput != 0)
             {
                 Vector3 input = inputRotation * new Vector3(pitchInput, 0, 0);
                 surfaceInput = Vector3.Dot(input, rotationAxis);
@@ -275,10 +204,9 @@ namespace KerbalWindTunnel.VesselCache
             }
             if (deployed)
             {
-                surfaceInput += deployAngle;
+                surfaceInput += deployAngle * deploymentDirection;
                 surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
             }
-            surfaceInput *= deflectionDirection;
 
             Vector3 relLiftVector;
             if (surfaceInput != 0)
@@ -288,19 +216,21 @@ namespace KerbalWindTunnel.VesselCache
 
             float dot = Vector3.Dot(velocityVect, relLiftVector);
             float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
-            Vector3 lift = Vector3.zero;
             lock (this.liftCurve)
-                lift = -relLiftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
+                liftForce = -relLiftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
-                lift = Vector3.ProjectOnPlane(lift, -velocityVect);
-            if (!useInternalDragModel)
-                return lift * 1000;
+                liftForce = Vector3.ProjectOnPlane(liftForce, -velocityVect);
+            liftForce *= 1000;
+            if ((bool)liftOnly)
+            {
+                dragForce = Vector3.zero;
+                return;
+            }
 
-            Vector3 drag = Vector3.zero;
             lock (this.dragCurve)
-                drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
+                dragForce = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
+            dragForce *= 1000;
 
-            Vector3 partDrag = Vector3.zero;
             if ((this.part.dragModel == Part.DragModel.DEFAULT || this.part.dragModel == Part.DragModel.CUBE) && !this.part.cubesNone && pseudoReDragMult > 0)
             {
                 lock (this.part.cubes)
@@ -312,11 +242,9 @@ namespace KerbalWindTunnel.VesselCache
                     this.part.cubes.SetCubeWeight("fullDeflectionPos", Mathf.Clamp01(surfaceInput * this.authorityLimiter * 0.01f));
                     this.part.cubes.SetCubeWeight("fullDeflectionNeg", Mathf.Clamp01(-surfaceInput * this.authorityLimiter * 0.01f));
 
-                    partDrag = this.part.GetAero(velocityVect, mach, pseudoReDragMult);
+                    dragForce = this.part.GetAero(velocityVect, mach, pseudoReDragMult);
                 }
             }
-
-            return (lift + drag) * 1000 + partDrag;
         }
     }
 }

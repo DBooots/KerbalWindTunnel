@@ -113,10 +113,9 @@ namespace KerbalWindTunnel.VesselCache
                             }
                             if (ctrls[i].deployed)
                             {
-                                surfaceInput += ctrls[i].deployAngle;
+                                surfaceInput += ctrls[i].deployAngle * ctrls[i].deploymentDirection;
                                 surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
                             }
-                            surfaceInput *= ctrls[i].deflectionDirection;
 
                             Vector3 relLiftVector;
                             if (surfaceInput != 0)
