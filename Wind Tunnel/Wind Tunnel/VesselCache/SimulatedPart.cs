@@ -190,8 +190,13 @@ namespace KerbalWindTunnel.VesselCache
 
             simCurves = SimCurves.Borrow(null);
 
-            lock (this.cubes)
-                CopyDragCubesList(part.cubes, cubes, true);
+            // Calling cubes.SetPartOcclusion() is somehow necessary for correct data, despite my belief that all relevant
+            // fields are copied in CopyDragCubesList().
+            // But SetPartOcclusion() accesses Part.get_transform(), which is invalid from other than the main thread.
+            // Fortunately, there doesn't seem to be a performance issue with sharing cubes and locking against them.
+            //lock (this.cubes)
+            //    CopyDragCubesList(part.cubes, cubes, true);
+            this.cubes = part.cubes;
 
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
             partToVessel = part.partToVessel;
