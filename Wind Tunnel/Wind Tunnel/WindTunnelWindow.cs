@@ -802,30 +802,33 @@ namespace KerbalWindTunnel
             SetEnvGraphs(NewIndex, lineFlags[0]);
         }
 
-        public void OnAxesChanged(Graphing.Grapher sender, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
+        public void OnAxesChanged(object sender, Graphing.AxesChangeEventArgs eventArgs)
         {
             if (sender != grapher)
                 return;
             if (!graphRequested || graphDirty)
                 return;
-            if (xMin >= xMax || yMin >= yMax || zMin > zMax)
+            if (eventArgs.XMin >= eventArgs.XMax || eventArgs.YMin >= eventArgs.YMax || eventArgs.ZMin > eventArgs.ZMax)
                 return;
-            GraphGenerator.OnAxesChanged(xMin, xMax, yMin, yMax, zMin, zMax);
+            GraphGenerator.OnAxesChanged(eventArgs.XMin, eventArgs.XMax, eventArgs.YMin, eventArgs.YMax, eventArgs.ZMin, eventArgs.ZMax);
         }
-        public void OnAxesChangeRequested(Graphing.Grapher sender, int axis, ref float min, ref float max)
+        public void OnAxesChangeRequested(object sender, Graphing.AxesChangeRequestedEventArgs eventArgs)
         {
             if (sender != grapher)
                 return;
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    if (axis == 1 && min < 0) min = 0;
+                    if (eventArgs.AxisIndex == 1 && eventArgs.Min < 0)
+                        eventArgs.Min = 0;
                     break;
                 case GraphMode.AoACurves:
-                    if (axis == 0)
+                    if (eventArgs.AxisIndex == 0)
                     {
-                        if (min < -180) min = -180;
-                        if (max > 180) max = 180;
+                        if (eventArgs.Min < -180)
+                            eventArgs.Min = -180;
+                        if (eventArgs.Max > 180)
+                            eventArgs.Max = 180;
                     }
                     break;
                 case GraphMode.VelocityCurves: break;
