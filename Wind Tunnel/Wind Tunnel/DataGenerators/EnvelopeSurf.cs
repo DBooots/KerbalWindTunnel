@@ -480,10 +480,9 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (obj == null)
                     return false;
-                if (obj.GetType() != typeof(Conditions))
-                    return false;
-                Conditions conditions = (Conditions)obj;
-                return this.Equals(conditions);
+                if (obj is Conditions conditions)
+                    return Equals(conditions);
+                return false;
             }
 
             public bool Equals(Conditions conditions)
@@ -496,6 +495,12 @@ namespace KerbalWindTunnel.DataGenerators
                     this.upperBoundAltitude == conditions.upperBoundAltitude &&
                     this.stepAltitude == conditions.stepAltitude;
             }
+
+            public static bool operator ==(Conditions left, Conditions right)
+            {
+                return left.Equals(right);
+            }
+            public static bool operator !=(Conditions left, Conditions right) => !(left.Equals(right));
 
             public override int GetHashCode()
             {
