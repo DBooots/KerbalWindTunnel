@@ -90,9 +90,14 @@ namespace KerbalWindTunnel.DataGenerators
             Cancel();
         }
 
-        public virtual void Dispose()
+        public void Dispose()
         {
-            DisposeOfCancellationToken();
+            Dispose(true);
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+                DisposeOfCancellationToken();
         }
 
         protected void DisposeOfCancellationToken()
