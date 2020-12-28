@@ -56,12 +56,14 @@ namespace KerbalWindTunnel.VesselCache
         public static SimulatedControlSurface Borrow(ModuleControlSurface module, SimulatedPart part)
         {
             SimulatedControlSurface surface = pool.Borrow();
+            surface.vessel = part.vessel;
             surface.Init(module, part);
             return surface;
         }
         public static SimulatedControlSurface BorrowClone(SimulatedControlSurface surface, SimulatedPart part)
         {
             SimulatedControlSurface clone = pool.Borrow();
+            clone.vessel = surface.vessel;
             clone.InitClone(surface, part);
             return clone;
         }
