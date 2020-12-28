@@ -214,7 +214,6 @@ namespace KerbalWindTunnel.DataGenerators
         {
             CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
 
-            EnvelopePoint[] closureProgress = new EnvelopePoint[conditions.Resolution];
             progressNumerator = 0;
             progressDenominator = conditions.Resolution;
             int cachedCount = 0;
@@ -229,6 +228,7 @@ namespace KerbalWindTunnel.DataGenerators
             task = new Task<EnvelopePoint[,]>(
                 () =>
                 {
+                    EnvelopePoint[] closureProgress = new EnvelopePoint[conditions.Resolution];
                     float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
                     AoAs_guess = prelimData.SelectToArray(pt => pt.AoA_level);
                     maxAs_guess = prelimData.SelectToArray(pt => pt.AoA_max);
@@ -317,7 +317,7 @@ namespace KerbalWindTunnel.DataGenerators
                 valuesSet = true;
             }
 
-            if (cachedCount < closureProgress.Length)
+            if (cachedCount < conditions.Resolution)
                 yield return 0;
 
             if (!closureCancellationToken.IsCancellationRequested)
