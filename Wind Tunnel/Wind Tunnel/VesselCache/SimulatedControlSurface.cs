@@ -242,7 +242,7 @@ namespace KerbalWindTunnel.VesselCache
                     this.part.cubes.SetCubeWeight("fullDeflectionPos", Mathf.Clamp01(surfaceInput * this.authorityLimiter * 0.01f));
                     this.part.cubes.SetCubeWeight("fullDeflectionNeg", Mathf.Clamp01(-surfaceInput * this.authorityLimiter * 0.01f));
 
-                    dragForce = this.part.GetAero(velocityVect, mach, pseudoReDragMult);
+                    dragForce += this.part.GetAero(velocityVect, mach, pseudoReDragMult);
                 }
             }
         }
