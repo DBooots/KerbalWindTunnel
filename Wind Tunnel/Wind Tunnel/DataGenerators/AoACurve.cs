@@ -97,8 +97,6 @@ namespace KerbalWindTunnel.DataGenerators
         public override void UpdateGraphs()
         {
             AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
-            if (WindTunnelSettings.UseCoefficients)
-                AverageLiftSlope /= WindTunnelWindow.Instance.CommonPredictor.Area;
 
             float left = currentConditions.lowerBound * Mathf.Rad2Deg;
             float right = currentConditions.upperBound * Mathf.Rad2Deg;
