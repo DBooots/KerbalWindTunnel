@@ -108,8 +108,15 @@ namespace KerbalWindTunnel.VesselCache
 #if ENABLE_PROFILER
             UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetPitchInput(Conditions, float, bool, float)");
 #endif
+            Vector3 inflow = InflowVect(AoA) * conditions.speed;
+            partCollection.GetAeroForceStatic(inflow, conditions, out Vector3 staticTorque, dryTorque ? CoM_dry : CoM);
+            float staticPitchTorque = staticTorque.x;
             float value;
-            Accord.Math.Optimization.BrentSearch solver = new Accord.Math.Optimization.BrentSearch((input) => this.GetAeroTorque(conditions, AoA, (float)input, dryTorque).x, -0.3, 0.3, tolerance);
+            Accord.Math.Optimization.BrentSearch solver = new Accord.Math.Optimization.BrentSearch((input) =>
+            {
+                partCollection.GetAeroForceDynamic(inflow, conditions, (float)input, out Vector3 torque, dryTorque ? CoM_dry : CoM);
+                return torque.x + staticPitchTorque;
+            }, -0.3, 0.3, tolerance);
             if (solver.FindRoot())
                 value = (float)solver.Solution;
             else

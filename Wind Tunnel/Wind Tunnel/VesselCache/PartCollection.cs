@@ -21,6 +21,14 @@ namespace KerbalWindTunnel.VesselCache
 
         public virtual Vector3 GetAeroForce(Vector3 inflow, AeroPredictor.Conditions conditions, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
+            Vector3 aeroForce = GetAeroForceStatic(inflow, conditions, out torque, torquePoint);
+            aeroForce += GetAeroForceDynamic(inflow, conditions, pitchInput, out Vector3 pTorque, torquePoint);
+            torque += pTorque;
+            return aeroForce;
+        }
+
+        public Vector3 GetAeroForceStatic(Vector3 inflow, AeroPredictor.Conditions conditions, out Vector3 torque, Vector3 torquePoint)
+        {
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
 
@@ -42,6 +50,24 @@ namespace KerbalWindTunnel.VesselCache
                     aeroForce += surfaces[i].GetForce(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
                     torque += pTorque;
                 }
+
+                float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
+                torque *= Q;
+                aeroForce *= Q;
+            }
+
+            return aeroForce;
+        }
+
+        public Vector3 GetAeroForceDynamic(Vector3 inflow, AeroPredictor.Conditions conditions, float pitchInput, out Vector3 torque, Vector3 torquePoint)
+        {
+            Vector3 aeroForce = Vector3.zero;
+            torque = Vector3.zero;
+
+            if (inflow.sqrMagnitude > 0)
+            {
+                Vector3 normalizedInflow = inflow.normalized;
+
                 for (int i = ctrls.Count - 1; i >= 0; i--)
                 {
                     if (ctrls[i].part.shieldedFromAirstream)
