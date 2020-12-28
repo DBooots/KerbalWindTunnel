@@ -357,14 +357,9 @@ namespace KerbalWindTunnel.DataGenerators
 
         private struct SurfCoords : IEquatable<SurfCoords>
         {
-            public readonly int speed, altitude;
+            public readonly float speed, altitude;
 
             public SurfCoords(float speed, float altitude)
-            {
-                this.speed = Mathf.RoundToInt(speed);
-                this.altitude = Mathf.RoundToInt(altitude);
-            }
-            public SurfCoords(int speed, int altitude)
             {
                 this.speed = speed;
                 this.altitude = altitude;
@@ -391,7 +386,7 @@ namespace KerbalWindTunnel.DataGenerators
                 // same quality as the default uint/int hash
                 // (which may or may not be just that number).
                 // This means that there will be zero collisions within the expected range.
-                return ((((uint)speed) << 17) | (uint)altitude).GetHashCode();
+                return ((((uint)Mathf.RoundToInt(speed)) << 17) | (uint)Mathf.RoundToInt(altitude)).GetHashCode();
             }
         }
 
