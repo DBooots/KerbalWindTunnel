@@ -129,13 +129,21 @@ namespace KerbalWindTunnel.VesselCache
         }
         public Vector3 GetLift(Vector3 velocityVect, float mach, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
-            GetForce(velocityVect, mach, pitchInput, 0, out Vector3 lift, out _, true);
+            bool isAheadOfCoM;
+            if (torquePoint == vessel.CoM_dry)
+                isAheadOfCoM = part.transformPosition.z > vessel.CoM_dry.z;
+            else
+                isAheadOfCoM = part.transformPosition.z > vessel.CoM.z;
+
+            GetForce(velocityVect, mach, pitchInput, 0, out Vector3 lift, out _, isAheadOfCoM, true);
             torque = Vector3.Cross(lift, part.CoL - torquePoint);
             return lift;
         }
         public Vector3 GetLift(Vector3 velocityVect, float mach, float pitchInput)
         {
-            GetForce(velocityVect, mach, pitchInput, 0, out Vector3 liftForce, out _, true);
+            bool isAheadOfCoM = part.transformPosition.z > vessel.CoM.z;
+
+            GetForce(velocityVect, mach, pitchInput, 0, out Vector3 liftForce, out _, isAheadOfCoM, true);
             return liftForce;
         }
 
@@ -179,18 +187,26 @@ namespace KerbalWindTunnel.VesselCache
         }
         public Vector3 GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult, out Vector3 torque, Vector3 torquePoint)
         {
-            GetForce(velocityVect, mach, pitchInput, pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, !useInternalDragModel);
+            bool isAheadOfCoM;
+            if (torquePoint == vessel.CoM_dry)
+                isAheadOfCoM = part.transformPosition.z > vessel.CoM_dry.z;
+            else
+                isAheadOfCoM = part.transformPosition.z > vessel.CoM.z;
+
+            GetForce(velocityVect, mach, pitchInput, pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, isAheadOfCoM, !useInternalDragModel);
             torque = Vector3.Cross(liftForce, part.CoL - torquePoint);
             torque += Vector3.Cross(dragForce, part.CoP - torquePoint);
             return liftForce + dragForce;
         }
         public Vector3 GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult)
         {
-            GetForce(velocityVect, mach, pitchInput, pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, !useInternalDragModel);
+            bool isAheadOfCoM = part.transformPosition.z > vessel.CoM.z;
+
+            GetForce(velocityVect, mach, pitchInput, pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, isAheadOfCoM, !useInternalDragModel);
             return liftForce + dragForce;
         }
 
-        private void GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, bool? liftOnly = null)
+        private void GetForce(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult, out Vector3 liftForce, out Vector3 dragForce, bool isAheadOfCoM, bool? liftOnly = null)
         {
             if (liftOnly == null)
                 liftOnly = !this.useInternalDragModel;
@@ -203,6 +219,8 @@ namespace KerbalWindTunnel.VesselCache
                 surfaceInput = Vector3.Dot(input, rotationAxis);
                 surfaceInput *= authorityLimiter * 0.01f;
                 surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
+                if (isAheadOfCoM)
+                    surfaceInput *= -1;
             }
             if (deployed)
             {
