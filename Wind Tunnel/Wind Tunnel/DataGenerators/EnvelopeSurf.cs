@@ -21,7 +21,6 @@ namespace KerbalWindTunnel.DataGenerators
         //private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
         private ConcurrentDictionary<SurfCoords, EnvelopePoint> cache = new ConcurrentDictionary<SurfCoords, EnvelopePoint>();
         
-        private EnvelopePoint[] primaryProgress = null;
         public int[,] resolution = { { 10, 10 }, { 40, 120 }, { 80, 180 }, { 160, 360 } };
 
         public EnvelopeSurf()
@@ -67,9 +66,7 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (Status == TaskStatus.RanToCompletion)
                     return 1;
-                if (primaryProgress == null)
-                    return -1;
-                return (float)(primaryProgress.Count((pt) => pt.completed)) / primaryProgress.Count();
+                return (float)progressNumerator / progressDenominator;
             }
         }
 
@@ -79,18 +76,20 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (InternalStatus == TaskStatus.RanToCompletion)
                     return 1;
-                if (primaryProgress == null)
-                    return -1;
-                return (float)(primaryProgress.Count((pt) => pt.completed)) / primaryProgress.Count();
+                return (float)progressNumerator / progressDenominator;
             }
         }
+
+        private int progressNumerator = -1;
+        private int progressDenominator = 1;
 
         public override void Clear()
         {
             base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
-            primaryProgress = null;
+            progressNumerator = -1;
+            progressDenominator = 1;
             envelopePoints = new EnvelopePoint[0, 0];
 
             ((LineGraph)graphables["Fuel-Optimal Path"]).SetValues(new Vector2[0]);
@@ -215,7 +214,9 @@ namespace KerbalWindTunnel.DataGenerators
         {
             CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
 
-            EnvelopePoint[] closureProgress = primaryProgress = new EnvelopePoint[conditions.Resolution];
+            EnvelopePoint[] closureProgress = new EnvelopePoint[conditions.Resolution];
+            progressNumerator = 0;
+            progressDenominator = conditions.Resolution;
             int cachedCount = 0;
 
             stopwatch.Reset();
@@ -254,6 +255,7 @@ namespace KerbalWindTunnel.DataGenerators
                             else
                                 Interlocked.Increment(ref cachedCount);
                             closureProgress[index] = result;
+                            Interlocked.Increment(ref progressNumerator);
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
@@ -315,7 +317,7 @@ namespace KerbalWindTunnel.DataGenerators
                 valuesSet = true;
             }
 
-            if (cachedCount < primaryProgress.Length)
+            if (cachedCount < closureProgress.Length)
                 yield return 0;
 
             if (!closureCancellationToken.IsCancellationRequested)
