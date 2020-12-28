@@ -391,7 +391,7 @@ namespace KerbalWindTunnel.DataGenerators
                 // same quality as the default uint/int hash
                 // (which may or may not be just that number).
                 // This means that there will be zero collisions within the expected range.
-                return ((((uint)speed) << 17) & (uint)altitude).GetHashCode();
+                return ((((uint)speed) << 17) | (uint)altitude).GetHashCode();
             }
         }
 
