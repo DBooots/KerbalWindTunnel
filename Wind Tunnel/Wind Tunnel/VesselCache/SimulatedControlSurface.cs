@@ -221,16 +221,17 @@ namespace KerbalWindTunnel.VesselCache
                 surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
                 if (isAheadOfCoM)
                     surfaceInput *= -1;
+                surfaceInput *= ctrlSurfaceRange;
             }
             if (deployed)
             {
                 surfaceInput += deployAngle * deploymentDirection;
-                surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
+                //surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
             }
 
             Vector3 relLiftVector;
             if (surfaceInput != 0)
-                relLiftVector = Quaternion.AngleAxis(ctrlSurfaceRange * surfaceInput, rotationAxis) * liftVector;
+                relLiftVector = Quaternion.AngleAxis(surfaceInput, rotationAxis) * liftVector;
             else
                 relLiftVector = liftVector;
 
