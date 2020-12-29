@@ -73,12 +73,6 @@ namespace KerbalWindTunnel.VesselCache
                     localMach /= conditions.speedOfSound;
                     rAeroForce += surfaces[i].GetForce(partInflow, localMach, out Vector3 pTorque, origin) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
-                    if (conditions.altitude <= 50 && conditions.speed >= 15 && conditions.speed < 25 && Vector3.Angle(inflow, Vector3.forward) < 10)
-                    {
-                        if (i == surfaces.Count - 1)
-                            Debug.LogFormat("\nAxis {0}\tAngularVelocity {1}\nSpeed {2}\tAltitude {3}", axis, angularVelocity, conditions.speed, conditions.altitude);
-                        Debug.LogFormat("Surface {4}\tInflow {0}\tPartMotion {1}\tTorque {2}\tAeroForce{3}", rotatedInflow, partMotion, Quaternion.AngleAxis(-360f / rotationCount * r, axis) * pTorque, surfaces[i].GetForce(inflow + partMotion, conditions.mach, out _, origin), i);
-                    }
                 }
                 for (int i = ctrls.Count - 1; i >= 0; i--)
                 {
@@ -97,44 +91,6 @@ namespace KerbalWindTunnel.VesselCache
                     localMach /= conditions.speedOfSound;
                     rAeroForce += ctrls[i].GetForce(partInflow, localMach, pitchInput, localPRDM, out Vector3 pTorque, origin) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
-                    if (conditions.altitude <= 50 && conditions.speed >= 15 && conditions.speed < 25 && Vector3.Angle(inflow, Vector3.forward) < 10)
-                    {
-                        if (i == ctrls.Count - 1 && surfaces.Count == 0)
-                        {
-                            Debug.LogFormat("\nAxis {0}\tAngularVelocity {1}\nSpeed {2}\tAltitude {3}\tRotated Inflow {4}", axis, angularVelocity, conditions.speed, conditions.altitude, rotatedInflow);
-
-                            float surfaceInput = 0;
-                            if (!ctrls[i].ignorePitch)
-                            {
-                                Vector3 input = ctrls[i].inputRotation * new Vector3(!ctrls[i].ignorePitch ? pitchInput : 0, 0, 0);
-                                surfaceInput = Vector3.Dot(input, ctrls[i].rotationAxis);
-                                surfaceInput *= ctrls[i].authorityLimiter * 0.01f;
-                                surfaceInput = Mathf.Clamp(surfaceInput, -1, 1);
-                            }
-                            if (ctrls[i].deployed)
-                            {
-                                surfaceInput += ctrls[i].deployAngle * ctrls[i].deploymentDirection;
-                                surfaceInput = Mathf.Clamp(surfaceInput, -1.5f, 1.5f);
-                            }
-
-                            Vector3 relLiftVector;
-                            if (surfaceInput != 0)
-                                relLiftVector = Quaternion.AngleAxis(ctrls[i].ctrlSurfaceRange * surfaceInput, ctrls[i].rotationAxis) * ctrls[i].liftVector;
-                            else
-                                relLiftVector = ctrls[i].liftVector;
-
-                            float dot = Vector3.Dot(partInflow, relLiftVector);
-                            float absdot = ctrls[i].omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
-                            Vector3 lift = Vector3.zero;
-                            lock (ctrls[i].liftCurve)
-                                lift = -relLiftVector * Math.Sign(dot) * ctrls[i].liftCurve.Evaluate(absdot) * ctrls[i].liftMachCurve.Evaluate(localMach) * ctrls[i].deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
-                            if (ctrls[i].perpendicularOnly)
-                                lift = Vector3.ProjectOnPlane(lift, -partInflow);
-                            Debug.LogFormat("Inflow vector: {3}\tBase lift vector: {0}\tCtrl lift vector: {1}\tDot: {2}\tAoA: {4}", ctrls[i].liftVector, relLiftVector, dot, partInflow, Mathf.Acos(-dot) * Mathf.Rad2Deg);
-                            Debug.LogFormat("Lifting surface forces: {0} (without part drag)", lift * 1000 * Q * localVelFactor);
-                        }
-                        Debug.LogFormat("Ctrl {3}\tPartMotion {0}\tTorque {1}\tAeroForce{2}", partMotion, Quaternion.AngleAxis(-360f / rotationCount * r, axis) * pTorque * Q, ctrls[i].GetForce(inflow + partMotion, conditions.mach, pitchInput, conditions.pseudoReDragMult, out _, origin) * localVelFactor * Q, i);
-                    }
                 }
 
                 rTorque *= Q;
