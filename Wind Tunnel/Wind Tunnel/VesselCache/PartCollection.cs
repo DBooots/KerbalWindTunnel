@@ -286,7 +286,7 @@ namespace KerbalWindTunnel.VesselCache
             {
                 part.hasLiftModule = true;
                 SimulatedLiftingSurface surface;
-                if (liftingSurface is ModuleControlSurface ctrlSurface && !ctrlSurface.ignorePitch && !ctrlSurface.deploy)
+                if (liftingSurface is ModuleControlSurface ctrlSurface && (!ctrlSurface.ignorePitch || ctrlSurface.deploy))
                 {
                     surface = SimulatedControlSurface.Borrow(ctrlSurface, simulatedPart);
                     ctrls.Add((SimulatedControlSurface)surface);
