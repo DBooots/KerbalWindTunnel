@@ -45,7 +45,7 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     if (parts[i].shieldedFromAirstream)
                         continue;
-                    Vector3 partMotion = Vector3.Cross((parts[i].transformPosition - origin), axis) * angularVelocity + rotatedInflow;
+                    Vector3 partMotion = Vector3.Cross(axis, (parts[i].transformPosition - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
                     Vector3 partInflow = partMotion.normalized;
@@ -62,7 +62,7 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     if (surfaces[i].part.shieldedFromAirstream)
                         continue;
-                    Vector3 partMotion = Vector3.Cross((surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    Vector3 partMotion = Vector3.Cross(axis, (surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
                     Vector3 partInflow = partMotion.normalized;
@@ -76,7 +76,7 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     if (ctrls[i].part.shieldedFromAirstream)
                         continue;
-                    Vector3 partMotion = Vector3.Cross((ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    Vector3 partMotion = Vector3.Cross(axis, (ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
                     Vector3 partInflow = partMotion.normalized;
@@ -95,7 +95,7 @@ namespace KerbalWindTunnel.VesselCache
 
                 for (int i = partCollections.Count - 1; i >= 0; i--)
                 {
-                    Vector3 partMotion = Vector3.Cross((parts[i].transformPosition - origin), axis) * angularVelocity;
+                    Vector3 partMotion = Vector3.Cross(axis, (parts[i].transformPosition - origin)) * angularVelocity;
                     rAeroForce += partCollections[i].GetAeroForce(rotatedInflow + partMotion, conditions, pitchInput, out Vector3 pTorque, origin);
                     rTorque += pTorque;
                 }
@@ -151,7 +151,7 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     if (parts[i].shieldedFromAirstream)
                         continue;
-                    Vector3 partMotion = Vector3.Cross((parts[i].transformPosition - origin), axis) * angularVelocity + rotatedInflow;
+                    Vector3 partMotion = Vector3.Cross(axis, (parts[i].transformPosition - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
                     Vector3 partInflow = partMotion.normalized;
@@ -165,7 +165,7 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     if (surfaces[i].part.shieldedFromAirstream)
                         continue;
-                    Vector3 partMotion = Vector3.Cross((surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    Vector3 partMotion = Vector3.Cross(axis, (surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
                     Vector3 partInflow = partMotion.normalized;
@@ -179,7 +179,7 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     if (ctrls[i].part.shieldedFromAirstream)
                         continue;
-                    Vector3 partMotion = Vector3.Cross((ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin), axis) * angularVelocity + rotatedInflow;
+                    Vector3 partMotion = Vector3.Cross(axis, (ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
                     Vector3 partInflow = partMotion.normalized;
@@ -195,7 +195,7 @@ namespace KerbalWindTunnel.VesselCache
 
                 for (int i = partCollections.Count - 1; i >= 0; i--)
                 {
-                    Vector3 partMotion = Vector3.Cross(partCollections[i].origin - this.origin, axis) * angularVelocity;
+                    Vector3 partMotion = Vector3.Cross(axis, partCollections[i].origin - this.origin) * angularVelocity;
                     rAeroForce += partCollections[i].GetLiftForce(rotatedInflow + partMotion, conditions, pitchInput, out Vector3 pTorque, torquePoint);
                     rTorque += pTorque;
                 }
