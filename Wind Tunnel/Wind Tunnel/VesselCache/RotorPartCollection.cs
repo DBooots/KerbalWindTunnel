@@ -234,7 +234,7 @@ namespace KerbalWindTunnel.VesselCache
             //
             // Users should be aware, though, and de-tune their rotors to provide only sufficient torque throughout
             // their target flight regime.
-            return base.GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent) + fuelConsumption;
+            return fuelConsumption + base.GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent);
         }
 
         #region Pool Methods
