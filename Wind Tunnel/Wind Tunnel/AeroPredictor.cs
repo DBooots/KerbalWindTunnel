@@ -195,6 +195,15 @@ namespace KerbalWindTunnel
             return Quaternion.AngleAxis((-AoA * Mathf.Rad2Deg), Vector3.left) * force;
         }
 
+        public static float GetUsefulThrustMagnitude(Vector3 thrustVector)
+        {
+            Vector2 usefulThrust = new Vector2(Math.Max(thrustVector.z, 0), Math.Max(thrustVector.y, 0));
+            if (usefulThrust.x == thrustVector.z && usefulThrust.y == thrustVector.y)
+                return usefulThrust.magnitude;
+            Vector2 antiThrust = new Vector2(Math.Min(thrustVector.z, 0), Math.Min(thrustVector.y, 0));
+            return usefulThrust.magnitude - antiThrust.magnitude;
+        }
+
         public static Vector3 InflowVect(float AoA)
         {
             Vector3 vesselForward = Vector3d.forward;

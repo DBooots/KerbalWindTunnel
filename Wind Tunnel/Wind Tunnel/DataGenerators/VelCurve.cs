@@ -214,11 +214,11 @@ namespace KerbalWindTunnel.DataGenerators
                 this.mach = conditions.mach;
                 this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
                 float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))) - (vessel.Mass * speed * speed / (radius + altitude));
-                Vector3 thrustForce = vessel.GetThrustForce(conditions);
                 AoA_max = vessel.GetMaxAoA(conditions, out Lift_max);
                 AoA_level = Math.Min(vessel.GetAoA(conditions, weight), AoA_max);
+                Vector3 thrustForce = vessel.GetThrustForce(conditions, AoA_level);
                 pitchInput = vessel.GetPitchInput(conditions, AoA_level);
-                Thrust_available = thrustForce.magnitude;
+                Thrust_available = AeroPredictor.GetUsefulThrustMagnitude(thrustForce);
                 Vector3 force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
                 drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                 Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
