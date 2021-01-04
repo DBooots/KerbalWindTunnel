@@ -50,10 +50,25 @@ namespace KerbalWindTunnel.VesselCache
                     aeroForce += surfaces[i].GetForce(normalizedInflow, conditions.mach, out Vector3 pTorque, torquePoint);
                     torque += pTorque;
                 }
+                for (int i = ctrls.Count - 1; i >= 0; i--)
+                {
+                    if (ctrls[i].part.shieldedFromAirstream)
+                        continue;
+                    if (!ctrls[i].ignorePitch)
+                        continue;
+                    aeroForce += ctrls[i].GetForce(normalizedInflow, conditions.mach, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
+                    torque += pTorque;
+                }
 
                 float Q = 0.0005f * conditions.atmDensity * inflow.sqrMagnitude;
                 torque *= Q;
                 aeroForce *= Q;
+            }
+
+            for (int i = partCollections.Count - 1; i >= 0; i--)
+            {
+                aeroForce += partCollections[i].GetAeroForceStatic(inflow, conditions, out Vector3 pTorque, torquePoint);
+                torque += pTorque;
             }
 
             return aeroForce;
@@ -72,6 +87,8 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     if (ctrls[i].part.shieldedFromAirstream)
                         continue;
+                    if (ctrls[i].ignorePitch)
+                        continue;
                     aeroForce += ctrls[i].GetForce(normalizedInflow, conditions.mach, pitchInput, conditions.pseudoReDragMult, out Vector3 pTorque, torquePoint);
                     torque += pTorque;
                 }
@@ -83,7 +100,7 @@ namespace KerbalWindTunnel.VesselCache
 
             for (int i = partCollections.Count - 1; i >= 0; i--)
             {
-                aeroForce += partCollections[i].GetAeroForce(inflow, conditions, pitchInput, out Vector3 pTorque, torquePoint);
+                aeroForce += partCollections[i].GetAeroForceDynamic(inflow, conditions, pitchInput, out Vector3 pTorque, torquePoint);
                 torque += pTorque;
             }
 
