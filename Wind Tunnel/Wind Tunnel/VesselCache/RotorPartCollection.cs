@@ -108,11 +108,12 @@ namespace KerbalWindTunnel.VesselCache
                     rTorque += pTorque;
                 }
 
-                // Rotate torque backwards
+                // Rotate vectors backwards
                 if (r != 0)
                 {
                     Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
                     rTorque = inverseRotation * rTorque;
+                    rAeroForce = inverseRotation * rTorque;
                 }
 
                 torque += rTorque;
@@ -121,6 +122,7 @@ namespace KerbalWindTunnel.VesselCache
 
             aeroForce /= rotationCount;
             torque /= rotationCount;
+            torque = Vector3.ProjectOnPlane(torque, axis);
             torque += Vector3.Cross(aeroForce, origin - torquePoint);
 
             return aeroForce;
@@ -179,6 +181,7 @@ namespace KerbalWindTunnel.VesselCache
                 {
                     Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
                     rTorque = inverseRotation * rTorque;
+                    rAeroForce = inverseRotation * rTorque;
                 }
 
                 torque += rTorque;
@@ -187,6 +190,7 @@ namespace KerbalWindTunnel.VesselCache
 
             aeroForce /= rotationCount;
             torque /= rotationCount;
+            torque = Vector3.ProjectOnPlane(torque, axis);
             torque += Vector3.Cross(aeroForce, origin - torquePoint);
 
             return aeroForce;
@@ -277,11 +281,12 @@ namespace KerbalWindTunnel.VesselCache
                     rTorque += pTorque;
                 }
 
-                // Rotate torque backwards
+                // Rotate vectors backwards
                 if (r != 0)
                 {
                     Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
                     rTorque = inverseRotation * rTorque;
+                    rAeroForce = inverseRotation * rTorque;
                 }
 
                 torque += rTorque;
@@ -289,6 +294,7 @@ namespace KerbalWindTunnel.VesselCache
             }
             aeroForce /= rotationCount;
             torque /= rotationCount;
+            torque = Vector3.ProjectOnPlane(torque, axis);
             torque += Vector3.Cross(aeroForce, origin - torquePoint);
 
             return aeroForce;
