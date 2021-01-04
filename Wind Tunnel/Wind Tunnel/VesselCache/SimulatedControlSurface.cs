@@ -80,25 +80,40 @@ namespace KerbalWindTunnel.VesselCache
             this.ignorePitch = surface.ignorePitch;
             this.ignoresAllControls = surface.ignorePitch && surface.ignoreRoll && surface.ignoreYaw;
             this.maxAuthority = 150f; // surface.maxAuthority is private. Hopefully its value never changes.
-            try
-            {
-                if (bool.TryParse(surface.part.variants.SelectedVariant.GetExtraInfoValue("reverseDeployDirection"), out bool flipDeployDirection))
-                    this.deploymentDirection = flipDeployDirection ? -1 : 1;
-                else
-                    this.deploymentDirection = 1;
-            }
-            catch
-            {
-                this.deploymentDirection = 1;
-            }
+            
             this.deployed = surface.deploy;
             if (deployed)
             {
-                if (surface.usesMirrorDeploy)
-                    this.deployAngle = (surface.deployInvert ? -1 : 1) *
-                        Mathf.Sign((Quaternion.Inverse(surface.part.ship.rotation) * surface.transform.position).x);
+                if (!surface.displaceVelocity)
+                {
+                    if (!surface.usesMirrorDeploy)
+                    {
+                        // Annoying that we have to calculate vessel CoM here just for this, but it can affect assymetric vessels with flaps
+                        // or vessels where the entire vessel has been shifted off the centerline.
+                        // Because the SimulatedVessel is still being constructed at this point, we can't just take its CoM value.
+                        Vector3 CoM = Vector3.zero;
+                        foreach (Part p in surface.part.ship.parts)
+                            CoM += p.transform.TransformPoint(p.CoMOffset) * (p.mass + p.GetResourceMass());
+                        CoM /= surface.part.ship.GetTotalMass();
+                        this.deployAngle = (surface.deployInvert ? -1 : 1) *
+                            Mathf.Sign((Quaternion.Inverse(surface.part.ship.rotation) * (surface.transform.position - CoM)).x);
+                    }
+                    else
+                        this.deployAngle = surface.deployInvert ^ surface.partDeployInvert ^ surface.mirrorDeploy ? -1 : 1;
+                    this.deployAngle *= -1;
+                }
                 else
-                    this.deployAngle = surface.deployInvert ^ surface.partDeployInvert ^ surface.mirrorDeploy ? -1 : 1;
+                {
+                    this.deployAngle = surface.deployInvert ^ surface.partDeployInvert ? -1 : 1;
+                }
+
+                try
+                {
+                    if (bool.TryParse(surface.part.variants.SelectedVariant.GetExtraInfoValue("reverseDeployDirection"), out bool flipDeployDirection))
+                        this.deployAngle *= flipDeployDirection ? -1 : 1;
+                }
+                catch (NullReferenceException) { }
+
                 this.deployAngle *= surface.deployAngle;
             }
             else
@@ -177,6 +192,25 @@ namespace KerbalWindTunnel.VesselCache
             torque += pTorque;
             return result;
         }*/
+
+        public Vector3 GetDrag(Vector3 velocityVect, float mach, float pseudoReDragMult)
+            => GetDrag(velocityVect, mach, 0, pseudoReDragMult);
+        public Vector3 GetDrag(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult)
+        {
+            bool isAheadOfCoM = part.transformPosition.z > vessel.CoM.z;
+
+            GetForce(velocityVect, mach, pitchInput, pseudoReDragMult, out _, out Vector3 drag, isAheadOfCoM, false);
+            return drag;
+        }
+        public Vector3 GetDrag(Vector3 velocityVect, float mach, float pseudoReDragMult, out Vector3 torque, Vector3 torquePoint)
+            => GetDrag(velocityVect, mach, 0, pseudoReDragMult, out torque, torquePoint);
+        public Vector3 GetDrag(Vector3 velocityVect, float mach, float pitchInput, float pseudoReDragMult, out Vector3 torque, Vector3 torquePoint)
+        {
+            Vector3 drag = GetDrag(velocityVect, mach, pitchInput, pseudoReDragMult);
+            torque = Vector3.Cross(drag, part.CoP - torquePoint);
+            return drag;
+        }
+
         public Vector3 GetForce(Vector3 velocityVect, float mach, float pseudoReDragMult)
         {
             return GetForce(velocityVect, mach, 0, pseudoReDragMult);

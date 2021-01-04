@@ -100,7 +100,7 @@ namespace KerbalWindTunnel.VesselCache
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
             float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
-            Vector3 lift = Vector3.zero;
+            Vector3 lift;
             lock (this.liftCurve)
                 lift = -liftVector * Math.Sign(dot) * liftCurve.Evaluate(absdot) * liftMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftMultiplier;
             if (perpendicularOnly)
@@ -114,6 +114,27 @@ namespace KerbalWindTunnel.VesselCache
             return liftForce;
         }
 
+        virtual public Vector3 GetDrag(Vector3 velocityVect, float mach)
+        {
+            if (!useInternalDragModel)
+                return Vector3.zero;
+            float dot = Vector3.Dot(velocityVect, liftVector);
+            float absdot = omnidirectional ? Math.Abs(dot) : Mathf.Clamp01(dot);
+            Vector3 drag;
+            lock (this.dragCurve)
+                drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
+            return drag * 1000;
+        }
+        virtual public Vector3 GetDrag(Vector3 velocityVect, float mach, out Vector3 torque, Vector3 torquePoint)
+        {
+            if (!useInternalDragModel)
+                return torque = Vector3.zero;
+
+            Vector3 dragForce = GetDrag(velocityVect, mach);
+            torque = Vector3.Cross(dragForce, part.CoP - torquePoint);
+            return dragForce;
+        }
+
         virtual public Vector3 GetForce(Vector3 velocityVect, float mach)
         {
             float dot = Vector3.Dot(velocityVect, liftVector);
@@ -125,7 +146,7 @@ namespace KerbalWindTunnel.VesselCache
                 lift = Vector3.ProjectOnPlane(lift, -velocityVect);
             if (!useInternalDragModel)
                 return lift * 1000;
-            Vector3 drag = Vector3.zero;
+            Vector3 drag;
             lock (this.dragCurve)
                 drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
 
@@ -144,7 +165,7 @@ namespace KerbalWindTunnel.VesselCache
             if (!useInternalDragModel)
                 return lift * 1000;
 
-            Vector3 drag = Vector3.zero;
+            Vector3 drag;
             lock (this.dragCurve)
                 drag = -velocityVect * dragCurve.Evaluate(absdot) * dragMachCurve.Evaluate(mach) * deflectionLiftCoeff * PhysicsGlobals.LiftDragMultiplier;
 
