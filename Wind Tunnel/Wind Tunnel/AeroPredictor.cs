@@ -8,6 +8,7 @@ namespace KerbalWindTunnel
         public virtual bool ThreadSafe { get { return false; } }
 
         public abstract float Mass { get; }
+        public abstract bool ThrustIsConstantWithAoA { get; }
         public Vector3 CoM;
         public Vector3 CoM_dry;
 

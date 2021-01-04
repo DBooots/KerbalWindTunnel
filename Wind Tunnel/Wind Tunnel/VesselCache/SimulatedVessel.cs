@@ -40,9 +40,11 @@ namespace KerbalWindTunnel.VesselCache
         public FloatCurve maxAoA = null;
         public static List<float> AoAMachs = null;
 
-        public override bool ThreadSafe { get { return true; } }
+        public override bool ThreadSafe => true;
 
-        public override float Mass { get { return totalMass; } }
+        public override float Mass { get => totalMass; }
+
+        public override bool ThrustIsConstantWithAoA => partCollection.partCollections.Count == 0;
 
         public override float Area => relativeWingArea;
 
