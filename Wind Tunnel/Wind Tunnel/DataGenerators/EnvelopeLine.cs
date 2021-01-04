@@ -38,7 +38,7 @@ namespace KerbalWindTunnel.DataGenerators
             Task<List<AscentPathPoint>> task = Task.Factory.StartNew<List<AscentPathPoint>>(
                 () =>
                 {
-                    return GetOptimalPath(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, costIncreaseFunc, neighborPredicate, predicateData, timeDifferenceFunc);
+                    return GetOptimalPath(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, costIncreaseFunc, neighborPredicate, predicateData, timeDifferenceFunc, cancellationToken);
                 }, cancellationToken
                 );
 
@@ -113,7 +113,7 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
-        private static List<AscentPathPoint> GetOptimalPath(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeFunc)
+        private static List<AscentPathPoint> GetOptimalPath(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt, CostIncreaseFunction costIncreaseFunc, Predicate<float> neighborPredicate, float[,] predicateData, CostIncreaseFunction timeFunc, CancellationToken cancellationToken)
         {
             System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
             System.Diagnostics.Stopwatch profileWatch = new System.Diagnostics.Stopwatch();
@@ -140,10 +140,12 @@ namespace KerbalWindTunnel.DataGenerators
             if (!neighborPredicate(predicateData.Lerp2(exitSpeed / rangeX, exitAlt / rangeY)))
             {
                 IEnumerator<CoordLocator> exitCoordFinder = CoordLocator.GenerateCoordLocators(predicateData).GetTaxicabNeighbors(baseCoord.xi, baseCoord.yi, -1, Linq2.Quadrant.II, Linq2.Quadrant.III, Linq2.Quadrant.IV);
-                while (exitCoordFinder.MoveNext() && !neighborPredicate(exitCoordFinder.Current.value)) { }
+                while (exitCoordFinder.MoveNext() && !cancellationToken.IsCancellationRequested && !neighborPredicate(exitCoordFinder.Current.value)) { }
                 baseCoord = new PathSolverCoords(exitCoordFinder.Current.x, exitCoordFinder.Current.y, baseCoord);
                 exitSpeed = baseCoord.x; exitAlt = baseCoord.y;
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             costMatrix[baseCoord.xi, baseCoord.yi] = 0;
             foreach (PathSolverCoords c in baseCoord.GetNeighbors(neighborPredicate, predicateData))
@@ -152,6 +154,7 @@ namespace KerbalWindTunnel.DataGenerators
             PathSolverCoords coord;
             while (queue.Count > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 coord = queue.Dequeue();
                 List<PathSolverCoords> neighbors = coord.GetNeighbors(neighborPredicate, predicateData);
                 PathSolverCoords bestNeighbor = neighbors[0];
@@ -181,6 +184,7 @@ namespace KerbalWindTunnel.DataGenerators
             float[,] gradienty = new float[baseCoord.width - 1, baseCoord.height - 1];
             for (int i = baseCoord.width - 2; i >= 0; i--)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 for (int j = baseCoord.height - 2; j >= 0; j--)
                 {
                     gradientx[i, j] = ((costMatrix[i + 1, j] - costMatrix[i, j]) + (costMatrix[i + 1, j + 1] - costMatrix[i, j + 1])) / 2 / conditions.stepAltitude;
@@ -208,6 +212,7 @@ namespace KerbalWindTunnel.DataGenerators
             float lastCost = 0, lastTime = 0;
             while (true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 iter++;
                 if (iter % 10 == 0)
                 {
@@ -258,6 +263,8 @@ namespace KerbalWindTunnel.DataGenerators
             result.Add(new AscentPathPoint(coord.x, coord.y, costIncreaseFunc(coord, lastCoord) + lastCost, (coord.y - lastCoord.y) / timeFunc(coord, lastCoord), timeFunc(coord, lastCoord) + lastTime));
             profileWatch.Stop();
             stopwatch.Stop();
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             Debug.LogFormat("Time: {0}\tIterations: {1}", stopwatch.ElapsedMilliseconds, iter);
             Debug.LogFormat("Costing: {0}\tGradients: {1}\tMinimizing: {2}", sections[0], sections[1], profileWatch.ElapsedMilliseconds);

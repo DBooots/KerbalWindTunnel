@@ -20,6 +20,7 @@ namespace KerbalWindTunnel.DataGenerators
         public Conditions currentConditions = Conditions.Blank;
         //private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
         private ConcurrentDictionary<SurfCoords, EnvelopePoint> cache = new ConcurrentDictionary<SurfCoords, EnvelopePoint>();
+        private CancellationTokenSource optimalLineCancellationTokenSource;
         
         public int[,] resolution = { { 10, 10 }, { 40, 120 }, { 80, 180 }, { 160, 360 } };
 
@@ -94,6 +95,25 @@ namespace KerbalWindTunnel.DataGenerators
 
             ((LineGraph)graphables["Fuel-Optimal Path"]).SetValues(new Vector2[0]);
             ((LineGraph)graphables["Time-Optimal Path"]).SetValues(new Vector2[0]);
+        }
+
+        public override void Cancel()
+        {
+            base.Cancel();
+            optimalLineCancellationTokenSource?.Cancel();
+            optimalLineCancellationTokenSource = null;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing && optimalLineCancellationTokenSource != null)
+            {
+                if (!optimalLineCancellationTokenSource.IsCancellationRequested)
+                    cancellationTokenSource.Cancel();
+                cancellationTokenSource.Dispose();
+                cancellationTokenSource = null;
+            }
         }
 
         public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepSpeed = 50f, float stepAltitude = 500)
@@ -213,6 +233,9 @@ namespace KerbalWindTunnel.DataGenerators
         private IEnumerator Processing(Conditions conditions, EnvelopePoint[,] prelimData)
         {
             CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
+            optimalLineCancellationTokenSource?.CancelAfter(2000);
+            optimalLineCancellationTokenSource = new CancellationTokenSource();
+            CancellationToken optimalLineCancellationToken = optimalLineCancellationTokenSource.Token;
 
             progressNumerator = 0;
             progressDenominator = conditions.Resolution;
@@ -313,7 +336,8 @@ namespace KerbalWindTunnel.DataGenerators
                 envelopePoints = ((Task<EnvelopePoint[,]>)task).Result;
                 currentConditions = conditions;
                 UpdateGraphs();
-                EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, closureCancellationToken, graphables);
+                if (!optimalLineCancellationToken.IsCancellationRequested)
+                    EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, optimalLineCancellationToken, graphables);
                 valuesSet = true;
             }
 
