@@ -32,8 +32,8 @@ namespace KerbalWindTunnel.VesselCache
                 float localMach = inflow.magnitude;
                 float localVelFactor = localMach * localMach;
                 float localPRDM;
-                lock (PhysicsGlobals.DragCurvePseudoReynolds)
-                    localPRDM = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
+                lock (parentVessel.DragCurvePseudoReynolds)
+                    localPRDM = parentVessel.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
                 localMach /= conditions.speedOfSound;
                 aeroForce += parts[0].GetAero(inflow.normalized, localMach, localPRDM, out Vector3 pTorque, origin) * localVelFactor * Q;
                 torque += pTorque * localVelFactor * Q;
@@ -58,8 +58,8 @@ namespace KerbalWindTunnel.VesselCache
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
                     float localPRDM;
-                    lock (PhysicsGlobals.DragCurvePseudoReynolds)
-                        localPRDM = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
+                    lock (parentVessel.DragCurvePseudoReynolds)
+                        localPRDM = parentVessel.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
                     localMach /= conditions.speedOfSound;
                     rAeroForce += parts[i].GetAero(partInflow, localMach, localPRDM, out Vector3 pTorque, origin) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
@@ -91,8 +91,8 @@ namespace KerbalWindTunnel.VesselCache
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
                     float localPRDM;
-                    lock (PhysicsGlobals.DragCurvePseudoReynolds)
-                        localPRDM = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
+                    lock (parentVessel.DragCurvePseudoReynolds)
+                        localPRDM = parentVessel.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
                     localMach /= conditions.speedOfSound;
                     Vector3 pTorque;
                     if (ctrls[i].ignoresAllControls && ctrls[i].ignorePitch)
@@ -163,8 +163,8 @@ namespace KerbalWindTunnel.VesselCache
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
                     float localPRDM;
-                    lock (PhysicsGlobals.DragCurvePseudoReynolds)
-                        localPRDM = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
+                    lock (parentVessel.DragCurvePseudoReynolds)
+                        localPRDM = parentVessel.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
                     localMach /= conditions.speedOfSound;
                     rAeroForce += ctrls[i].GetForce(partInflow, localMach, pitchInput, localPRDM, out Vector3 pTorque, origin) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
@@ -217,8 +217,8 @@ namespace KerbalWindTunnel.VesselCache
                 float localMach = inflow.magnitude;
                 float localVelFactor = localMach * localMach;
                 float localPRDM;
-                lock (PhysicsGlobals.DragCurvePseudoReynolds)
-                    localPRDM = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
+                lock (parentVessel.DragCurvePseudoReynolds)
+                    localPRDM = parentVessel.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
                 localMach /= conditions.speedOfSound;
                 aeroForce += parts[0].GetAero(inflow.normalized, localMach, localPRDM, out Vector3 pTorque, origin) * localVelFactor * Q;
                 torque += pTorque * localVelFactor * Q;

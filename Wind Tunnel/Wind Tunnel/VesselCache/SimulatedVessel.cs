@@ -36,6 +36,7 @@ namespace KerbalWindTunnel.VesselCache
         public float dryMass = 0;
         public float relativeWingArea = 0;
         public int stage = 0;
+        public FloatCurve DragCurvePseudoReynolds;
 
         public FloatCurve maxAoA = null;
         public static List<float> AoAMachs = null;
@@ -230,6 +231,8 @@ namespace KerbalWindTunnel.VesselCache
 
         private void Init(IShipconstruct v)
         {
+            if (DragCurvePseudoReynolds == null)
+                DragCurvePseudoReynolds = PhysicsGlobals.DragCurvePseudoReynolds.Clone();
             totalMass = 0;
             dryMass = 0;
             CoM = Vector3.zero;
@@ -308,6 +311,8 @@ namespace KerbalWindTunnel.VesselCache
 
         private void InitClone(SimulatedVessel vessel)
         {
+            if (DragCurvePseudoReynolds == null)
+                DragCurvePseudoReynolds = PhysicsGlobals.DragCurvePseudoReynolds.Clone();
             totalMass = vessel.totalMass;
             dryMass = vessel.dryMass;
             CoM = vessel.CoM;
