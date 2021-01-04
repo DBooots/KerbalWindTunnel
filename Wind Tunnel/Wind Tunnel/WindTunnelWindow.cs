@@ -911,7 +911,7 @@ namespace KerbalWindTunnel
                 Destroy(Instance);
             Instance = this;
 
-            grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes };
+            grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes, ExpandSurfFilter = true };
 
             crossHair = new Texture2D(1, 1);
             selectedCrossHair = new Texture2D(1, 1);
