@@ -75,7 +75,7 @@ namespace KerbalWindTunnel.VesselCache
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
                     localMach /= conditions.speedOfSound;
-                    rAeroForce += surfaces[i].GetForce(partInflow, localMach, out Vector3 pTorque, origin) * localVelFactor;
+                    rAeroForce += surfaces[i].GetDrag(partInflow, localMach, out Vector3 pTorque, origin) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
                 }
                 for (int i = ctrls.Count - 1; i >= 0; i--)
@@ -94,7 +94,11 @@ namespace KerbalWindTunnel.VesselCache
                     lock (PhysicsGlobals.DragCurvePseudoReynolds)
                         localPRDM = PhysicsGlobals.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
                     localMach /= conditions.speedOfSound;
-                    rAeroForce += ctrls[i].GetForce(partInflow, localMach, pitchInput, localPRDM, out Vector3 pTorque, origin) * localVelFactor;
+                    Vector3 pTorque;
+                    if (ctrls[i].ignoresAllControls && ctrls[i].ignorePitch)
+                        rAeroForce += ctrls[i].GetDrag(partInflow, localMach, localPRDM, out pTorque, origin) * localVelFactor;
+                    else
+                        rAeroForce += ctrls[i].GetForce(partInflow, localMach, localPRDM, out pTorque, origin) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
                 }
 
@@ -242,7 +246,7 @@ namespace KerbalWindTunnel.VesselCache
                     rAeroForce += parts[i].GetLift(partInflow, localMach, out Vector3 pTorque, torquePoint) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
                 }
-                for (int i = surfaces.Count - 1; i >= 0; i--)
+                /*for (int i = surfaces.Count - 1; i >= 0; i--)
                 {
                     if (surfaces[i].part.shieldedFromAirstream)
                         continue;
@@ -255,10 +259,12 @@ namespace KerbalWindTunnel.VesselCache
                     localMach /= conditions.speedOfSound;
                     rAeroForce += surfaces[i].GetLift(partInflow, localMach, out Vector3 pTorque, torquePoint) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
-                }
+                }*/
                 for (int i = ctrls.Count - 1; i >= 0; i--)
                 {
                     if (ctrls[i].part.shieldedFromAirstream)
+                        continue;
+                    if (ctrls[i].ignoresAllControls && ctrls[i].ignorePitch)
                         continue;
                     Vector3 partMotion = Vector3.Cross(axis, (ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
@@ -302,24 +308,18 @@ namespace KerbalWindTunnel.VesselCache
 
         public override Vector3 GetThrustForce(Vector3 inflow, AeroPredictor.Conditions conditions)
         {
-            Vector3 thrust;
-            if ((enginesUseVelCurve || enginesUseVelCurveISP) && isRotating)
-            {
-                thrust = GetThrustForce(inflow, conditions, out _, Vector3.zero);
-            }
-            else
-                thrust = Vector3.Project(base.GetThrustForce(inflow, conditions), axis);
-
-            return thrust;
+            return GetThrustForce(inflow, conditions, out _, Vector3.zero);
         }
 
         public override Vector3 GetThrustForce(Vector3 inflow, AeroPredictor.Conditions conditions, out Vector3 torque, Vector3 torquePoint)
         {
-            Vector3 thrust;
+            Vector3 engineThrust;
+            Vector3 engineTorque;
             if ((enginesUseVelCurve || enginesUseVelCurveISP) && isRotating)
             {
-                thrust = Vector3.zero;
-                torque = Vector3.zero;
+                engineThrust = Vector3.zero;
+                engineTorque = Vector3.zero;
+                float Q = 0.0005f * conditions.atmDensity;
                 int rotationCount = WindTunnelSettings.Instance.rotationCount;
 
                 for (int r = 0; r < rotationCount; r++)
@@ -352,22 +352,95 @@ namespace KerbalWindTunnel.VesselCache
                     {
                         Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
                         rTorque = inverseRotation * rTorque;
+                        rThrust = inverseRotation * rTorque;
                     }
 
-                    torque += rTorque;
-                    thrust += rThrust;
+                    engineTorque += rTorque;
+                    engineThrust += rThrust;
                 }
 
-                torque /= rotationCount;
-                thrust /= rotationCount;
+                engineTorque /= rotationCount;
+                engineThrust /= rotationCount;
+            }
+            else if (engines.Count > 0)
+                engineThrust = Vector3.Project(base.GetThrustForce(inflow, conditions, out engineTorque, origin), axis);
+            else
+                engineThrust = engineTorque = Vector3.zero;
+
+            if (isRotating)
+            {
+                Vector3 propThrust = Vector3.zero;
+                Vector3 propTorque = Vector3.zero;
+                float Q = 0.0005f * conditions.atmDensity;
+                int rotationCount = WindTunnelSettings.Instance.rotationCount;
+
+                for (int r = 0; r < rotationCount; r++)
+                {
+                    Quaternion rotation = Quaternion.AngleAxis(360f / rotationCount * r, axis);
+                    Vector3 rTorque = Vector3.zero;
+                    Vector3 rAeroForce = Vector3.zero;
+                    // Rotate inflow
+                    Vector3 rotatedInflow = rotation * inflow;
+                    // Calculate forces
+                    for (int i = surfaces.Count - 1; i >= 0; i--)
+                    {
+                        if (surfaces[i].part.shieldedFromAirstream)
+                            continue;
+                        Vector3 partMotion = Vector3.Cross(axis, (surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
+                        if (partMotion.sqrMagnitude <= 0)
+                            continue;
+                        Vector3 partInflow = partMotion.normalized;
+                        float localMach = partMotion.magnitude;
+                        float localVelFactor = localMach * localMach;
+                        localMach /= conditions.speedOfSound;
+                        rAeroForce += surfaces[i].GetLift(partInflow, localMach, out Vector3 pTorque, origin) * localVelFactor;
+                        rTorque += pTorque * localVelFactor;
+                    }
+                    for (int i = ctrls.Count - 1; i >= 0; i--)
+                    {
+                        if (ctrls[i].part.shieldedFromAirstream)
+                            continue;
+                        if (!ctrls[i].ignoresAllControls || !ctrls[i].ignorePitch)
+                            continue;
+                        Vector3 partMotion = Vector3.Cross(axis, (ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
+                        if (partMotion.sqrMagnitude <= 0)
+                            continue;
+                        Vector3 partInflow = partMotion.normalized;
+                        float localMach = partMotion.magnitude;
+                        float localVelFactor = localMach * localMach;
+                        localMach /= conditions.speedOfSound;
+                        rAeroForce += ctrls[i].GetLift(partInflow, localMach, out Vector3 pTorque, origin) * localVelFactor;
+                        rTorque += pTorque * localVelFactor;
+                    }
+
+                    rTorque *= Q;
+                    rAeroForce *= Q;
+
+                    // Rotate vectors backwards
+                    if (r != 0)
+                    {
+                        Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
+                        rTorque = inverseRotation * rTorque;
+                        rAeroForce = inverseRotation * rAeroForce;
+                    }
+
+                    propTorque += rTorque;
+                    propThrust += rAeroForce;
+                }
+
+                propTorque /= rotationCount;
+                propThrust /= rotationCount;
+
+                torque = Vector3.ProjectOnPlane(engineTorque + propTorque, axis);
+                torque += Vector3.Cross(engineThrust + propThrust, origin - torquePoint);
+                return engineThrust + propThrust;
             }
             else
             {
-                thrust = Vector3.Project(base.GetThrustForce(inflow, conditions, out torque, origin), axis);
+                torque = Vector3.ProjectOnPlane(engineTorque, axis);
+                engineTorque += Vector3.Cross(engineThrust, origin - torquePoint);
+                return engineThrust;
             }
-            torque = Vector3.ProjectOnPlane(torque, axis);
-            torque += Vector3.Cross(thrust, origin - torquePoint);
-            return thrust;
         }
 
         public override float GetFuelBurnRate(Vector3 inflow, AeroPredictor.Conditions conditions)
