@@ -194,9 +194,9 @@ namespace KerbalWindTunnel
             };
 
             if (!FARVesselCache.FARHook.FARInstalled)
-                dialog.Add(new DialogGUIHorizontalLayout(
-                    new DialogGUILabel("Propeller rotation evaluations:"),
-                    new DialogGUITextInput(WindTunnelSettings.RotationCount.ToString(), false, 2, delegate (string s) { if (int.TryParse(s, out int r)) WindTunnelSettings.RotationCount = Mathf.Clamp(r,1,16); return WindTunnelSettings.RotationCount.ToString(); })));
+                dialog.Add(new DialogGUIHorizontalLayout(TextAnchor.MiddleLeft,
+                    new DialogGUILabel(() => string.Format("Propeller rotation evaluations: {0}", WindTunnelSettings.RotationCount), UISkinManager.defaultSkin.toggle, true),
+                    new DialogGUISlider(() => Mathf.Log(WindTunnelSettings.RotationCount, 2), 0, 4, true, 100, 20, value => WindTunnelSettings.RotationCount = (int)Mathf.Pow(2, value))));
 
             if (ToolbarManager.ToolbarAvailable)
                 dialog.Add(new DialogGUIToggle(WindTunnelSettings.UseBlizzy, "Use Blizzy's Toolbar", delegate (bool b) { WindTunnelSettings.UseBlizzy = !WindTunnelSettings.UseBlizzy; }));
