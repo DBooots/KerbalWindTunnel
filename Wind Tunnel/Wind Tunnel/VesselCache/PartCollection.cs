@@ -297,11 +297,12 @@ namespace KerbalWindTunnel.VesselCache
             return clone;
         }
 
-        public void AddPart(Part part)
+        public virtual void AddPart(Part part)
         {
             if (parts.Count > 0 && part.HasModuleImplementing<Expansions.Serenity.ModuleRoboticServoRotor>())
             {
-                if (part.FindModuleImplementing<Expansions.Serenity.ModuleRoboticServoRotor>().rpmLimit != 0)
+                Expansions.Serenity.ModuleRoboticServoRotor rotorModule = part.FindModuleImplementing<Expansions.Serenity.ModuleRoboticServoRotor>();
+                if (rotorModule.servoIsMotorized && rotorModule.rpmLimit != 0)
                 {
                     partCollections.Add(RotorPartCollection.Borrow(this, part));
                     return;
