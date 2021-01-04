@@ -86,7 +86,6 @@ namespace KerbalWindTunnel.VesselCache
 #if ENABLE_PROFILER
             UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.GetAoA(Conditions, float, bool, bool, float, float, bool)");
 #endif
-            Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
             float value;
 
             if (!accountForControls)
@@ -173,14 +172,16 @@ namespace KerbalWindTunnel.VesselCache
             forces = GetAeroForce(conditions, AoA, pitchInput, out torques, dryTorque ? CoM_dry : CoM);
         }
 
-        public override Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public override Vector3 GetThrustForce(Conditions conditions, float AoA)
         {
-            return partCollection.GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
+            Vector3 inflow = InflowVect(AoA) * conditions.speed;
+            return partCollection.GetThrustForce(inflow, conditions);
         }
         
-        public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public override float GetFuelBurnRate(Conditions conditions, float AoA)
         {
-            return partCollection.GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent);
+            Vector3 inflow = InflowVect(AoA) * conditions.speed;
+            return partCollection.GetFuelBurnRate(inflow, conditions);
         }
 
         private static readonly Pool<SimulatedVessel> pool = new Pool<SimulatedVessel>(Create, Reset);

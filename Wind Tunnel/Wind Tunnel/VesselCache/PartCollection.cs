@@ -146,30 +146,48 @@ namespace KerbalWindTunnel.VesselCache
             forces = GetAeroForce(inflow, conditions, pitchInput, out torques, torquePoint);
         }
 
-        public virtual Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public virtual Vector3 GetThrustForce(Vector3 inflow, AeroPredictor.Conditions conditions)
         {
             Vector3 thrust = Vector3.zero;
             for (int i = engines.Count - 1; i >= 0; i--)
             {
-                thrust += engines[i].GetThrust(mach, atmDensity, atmPressure, oxygenPresent);
+                thrust += engines[i].GetThrust(conditions.mach, conditions.atmDensity, conditions.atmPressure, conditions.oxygenAvailable);
             }
             for (int i = partCollections.Count - 1; i >= 0; i--)
             {
-                thrust += partCollections[i].GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
+                thrust += partCollections[i].GetThrustForce(inflow, conditions);
             }
             return thrust;
         }
 
-        public virtual float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public virtual Vector3 GetThrustForce(Vector3 inflow, AeroPredictor.Conditions conditions, out Vector3 torque, Vector3 torquePoint)
+        {
+            Vector3 thrust = Vector3.zero;
+            torque = Vector3.zero;
+            for (int i = engines.Count - 1; i >= 0; i--)
+            {
+                Vector3 eThrust = engines[i].GetThrust(conditions.mach, conditions.atmDensity, conditions.atmPressure, conditions.oxygenAvailable);
+                thrust += eThrust;
+                torque += Vector3.Cross(eThrust, engines[i].thrustPoint - torquePoint);
+            }
+            for (int i = partCollections.Count - 1; i >= 0; i--)
+            {
+                thrust += partCollections[i].GetThrustForce(inflow, conditions, out Vector3 pTorque, torquePoint);
+                torque += pTorque;
+            }
+            return thrust;
+        }
+
+        public virtual float GetFuelBurnRate(Vector3 inflow, AeroPredictor.Conditions conditions)
         {
             float burnRate = 0;
             for (int i = engines.Count - 1; i >= 0; i--)
             {
-                burnRate += engines[i].GetFuelBurnRate(mach, atmDensity);
+                burnRate += engines[i].GetFuelBurnRate(conditions.mach, conditions.atmDensity);
             }
             for (int i = partCollections.Count - 1; i >= 0; i--)
             {
-                burnRate += partCollections[i].GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent);
+                burnRate += partCollections[i].GetFuelBurnRate(inflow, conditions);
             }
             return burnRate;
         }

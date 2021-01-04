@@ -79,14 +79,30 @@ namespace KerbalWindTunnel
 #endif
             if (lockPitchInput && (float.IsNaN(pitchInputGuess) || float.IsInfinity(pitchInputGuess)))
                 pitchInputGuess = 0;
-            Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
             Accord.Math.Optimization.BrentSearch solver;
-            if (lockPitchInput)
-                solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, pitchInputGuess) + thrustForce, (float)aoa) - offsettingForce,
-                    -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
-            else
-                solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, GetPitchInput(conditions, (float)aoa, dryTorque, pitchInputGuess)) + thrustForce, (float)aoa)
-                - offsettingForce, -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
+            switch (ThrustIsConstantWithAoA)
+            {
+                case true when lockPitchInput:
+                    Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
+                    solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, pitchInputGuess) + thrustForce, (float)aoa) - offsettingForce,
+                        -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
+                    break;
+                case true when !lockPitchInput:
+                    thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
+                    solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, GetPitchInput(conditions, (float)aoa, dryTorque, pitchInputGuess)) + thrustForce, (float)aoa)
+                        - offsettingForce, -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
+                    break;
+                case false when lockPitchInput:
+                    solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, pitchInputGuess) + this.GetThrustForce(conditions, (float)aoa), (float)aoa) - offsettingForce,
+                        -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
+                    break;
+                case false when !lockPitchInput:
+                default:
+                    solver = new Accord.Math.Optimization.BrentSearch((aoa) => GetLiftForceMagnitude(this.GetLiftForce(conditions, (float)aoa, GetPitchInput(conditions, (float)aoa, dryTorque, pitchInputGuess)) + this.GetThrustForce(conditions, (float)aoa), (float)aoa)
+                        - offsettingForce, -10 * Mathf.Deg2Rad, 35 * Mathf.Deg2Rad, tolerance);
+                    break;
+
+            }
 
             if (float.IsNaN(guess) || float.IsInfinity(guess))
                 solver.FindRoot();
@@ -148,47 +164,27 @@ namespace KerbalWindTunnel
             return -ToFlightFrame(force, AoA).z;
         }
 
-        public virtual Vector3 GetThrustForce(Conditions conditions)
+        public abstract Vector3 GetThrustForce(Conditions conditions, float AoA);
+        public virtual Vector3 GetThrustForce(Conditions conditions) => GetThrustForce(conditions, 0);
+        public virtual Vector3 GetthrustForceFlightFrame(Conditions conditions, float AoA)
         {
-            return GetThrustForce(conditions.mach, conditions.atmDensity, conditions.atmPressure, conditions.oxygenAvailable);
-        }
-        public virtual Vector3 GetThrustForce(Conditions conditions, float AoA)
-        {
-            return Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * GetThrustForce(conditions);
+            return ToFlightFrame(GetThrustForce(conditions, AoA), AoA);
         }
 
-        public abstract Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent);
-        public virtual Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent, float AoA)
-        {
-            return Quaternion.AngleAxis((AoA * Mathf.Rad2Deg), Vector3.left) * GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
-        }
-
-        public virtual Vector2 GetThrustForce2D(Conditions conditions)
-        {
-            Vector3 thrustForce = GetThrustForce(conditions);
-            return new Vector2(thrustForce.z, thrustForce.y);
-        }
-        public virtual Vector2 GetThrustForce2D(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
-        {
-            Vector3 thrustForce = GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
-            return new Vector2(thrustForce.z, thrustForce.y);
-        }
+        public virtual Vector2 GetThrustForce2D(Conditions conditions) => GetThrustForce2D(conditions, 0);
         public virtual Vector2 GetThrustForce2D(Conditions conditions, float AoA)
         {
             Vector3 thrustForce = GetThrustForce(conditions, AoA);
             return new Vector2(thrustForce.z, thrustForce.y);
         }
-        public virtual Vector2 GetThrustForce2D(float mach, float atmDensity, float atmPressure, bool oxygenPresent, float AoA)
+        public virtual Vector2 GetThrustForce2DFlightFrame(Conditions conditions, float AoA)
         {
-            Vector3 thrustForce = GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent, AoA);
+            Vector3 thrustForce = ToFlightFrame(GetThrustForce(conditions, AoA), AoA);
             return new Vector2(thrustForce.z, thrustForce.y);
         }
 
-        public virtual float GetFuelBurnRate(Conditions conditions)
-        {
-            return GetFuelBurnRate(conditions.mach, conditions.atmDensity, conditions.atmPressure, conditions.oxygenAvailable);
-        }
-        public abstract float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent);
+        public virtual float GetFuelBurnRate(Conditions conditions) => GetFuelBurnRate(conditions, 0);
+        public abstract float GetFuelBurnRate(Conditions conditions, float AoA);
 
         public static Vector3 ToFlightFrame(Vector3 force, float AoA)
         {

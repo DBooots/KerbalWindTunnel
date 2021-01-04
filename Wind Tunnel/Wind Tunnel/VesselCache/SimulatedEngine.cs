@@ -38,6 +38,7 @@ namespace KerbalWindTunnel.VesselCache
         public float multFlow;
         public float thrustPercentage;
         public Vector3 thrustVector;
+        public Vector3 thrustPoint;
         public float CLAMP;
         public int stage;
         public SimulatedPart part;
@@ -105,10 +106,15 @@ namespace KerbalWindTunnel.VesselCache
             this.multFlow = engine.multFlow;
             this.thrustPercentage = engine.thrustPercentage;
             this.thrustVector = Vector3.zero;
+            float thrustTransformMultiplierSum = 0;
+            this.thrustPoint = Vector3.zero;
             for (int i = engine.thrustTransforms.Count - 1; i >= 0; i--)
             {
                 this.thrustVector -= engine.thrustTransforms[i].forward * engine.thrustTransformMultipliers[i];
+                this.thrustPoint += engine.thrustTransforms[i].position * engine.thrustTransformMultipliers[i];
+                thrustTransformMultiplierSum += engine.thrustTransformMultipliers[i];
             }
+            this.thrustPoint /= thrustTransformMultiplierSum;
             this.CLAMP = engine.CLAMP;
             this.stage = engine.part.inverseStage;
             this.part = part;
@@ -140,6 +146,7 @@ namespace KerbalWindTunnel.VesselCache
             this.multFlow = engine.multFlow;
             this.thrustPercentage = engine.thrustPercentage;
             this.thrustVector = engine.thrustVector;
+            this.thrustPoint = engine.thrustPoint;
             this.CLAMP = engine.CLAMP;
             this.stage = engine.stage;
             this.part = part;

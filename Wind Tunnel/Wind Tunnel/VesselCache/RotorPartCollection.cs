@@ -10,13 +10,16 @@ namespace KerbalWindTunnel.VesselCache
     {
         public Vector3 axis;
         public float angularVelocity;
+        public bool isRotating;
         public float fuelConsumption;
+        private bool enginesUseVelCurve;
+        private bool enginesUseVelCurveISP;
 
         public override Vector3 GetAeroForce(Vector3 inflow, AeroPredictor.Conditions conditions, float pitchInput, out Vector3 torque, Vector3 torquePoint)
         {
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
-            int rotationCount = Math.Abs(angularVelocity) > 0 ? WindTunnelSettings.Instance.rotationCount : 1;
+            int rotationCount = isRotating ? WindTunnelSettings.Instance.rotationCount : 1;
             float Q = 0.0005f * conditions.atmDensity;
 
             // The root part is the rotor hub, so since the rotating mesh is usually cylindrical we
@@ -101,7 +104,11 @@ namespace KerbalWindTunnel.VesselCache
                 }
 
                 // Rotate torque backwards
-                rTorque = Quaternion.AngleAxis(-360f / rotationCount * r, axis) * rTorque;
+                if (r != 0)
+                {
+                    Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
+                    rTorque = inverseRotation * rTorque;
+                }
 
                 torque += rTorque;
                 aeroForce += rAeroForce;
@@ -109,9 +116,7 @@ namespace KerbalWindTunnel.VesselCache
 
             aeroForce /= rotationCount;
             torque /= rotationCount;
-            if (conditions.altitude <= 50 && conditions.speed >= 15 && conditions.speed < 25 && Vector3.Angle(inflow, Vector3.forward) < 10)
             {
-                Debug.LogFormat("Aeroforce {0}\tTorque {1}", aeroForce, torque);
             }
             torque += Vector3.Cross(aeroForce, origin - torquePoint);
 
@@ -201,7 +206,11 @@ namespace KerbalWindTunnel.VesselCache
                 }
 
                 // Rotate torque backwards
-                rTorque = Quaternion.AngleAxis(-360f / rotationCount * r, axis) * rTorque;
+                if (r != 0)
+                {
+                    Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
+                    rTorque = inverseRotation * rTorque;
+                }
 
                 torque += rTorque;
                 aeroForce += rAeroForce;
@@ -213,28 +222,117 @@ namespace KerbalWindTunnel.VesselCache
             return aeroForce;
         }
 
-        public override Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public override Vector3 GetThrustForce(Vector3 inflow, AeroPredictor.Conditions conditions)
         {
-            if (engines.Count == 0 && partCollections.Count == 0)
-                return Vector3.zero;
-
-            Vector3 thrust = base.GetThrustForce(mach, atmDensity, atmPressure, oxygenPresent);
-
-            // eliminate components normal to the axis of rotation.
-            thrust = Vector3.Project(thrust, axis);
+            Vector3 thrust;
+            if ((enginesUseVelCurve || enginesUseVelCurveISP) && isRotating)
+            {
+                thrust = GetThrustForce(inflow, conditions, out _, Vector3.zero);
+            }
+            else
+                thrust = Vector3.Project(base.GetThrustForce(inflow, conditions), axis);
 
             return thrust;
         }
 
-        public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public override Vector3 GetThrustForce(Vector3 inflow, AeroPredictor.Conditions conditions, out Vector3 torque, Vector3 torquePoint)
         {
+            Vector3 thrust;
+            if ((enginesUseVelCurve || enginesUseVelCurveISP) && isRotating)
+            {
+                thrust = Vector3.zero;
+                torque = Vector3.zero;
+                int rotationCount = WindTunnelSettings.Instance.rotationCount;
+
+                for (int r = 0; r < rotationCount; r++)
+                {
+                    Quaternion rotation = Quaternion.AngleAxis(360f / rotationCount * r, axis);
+                    Vector3 rTorque = Vector3.zero;
+                    Vector3 rThrust = Vector3.zero;
+                    // Rotate inflow
+                    Vector3 rotatedInflow = rotation * inflow;
+                    // Calculate forces
+                    for (int i = engines.Count - 1; i >= 0; i--)
+                    {
+                        Vector3 partMotion = Vector3.Cross(axis, (engines[i].thrustPoint - origin)) * angularVelocity + rotatedInflow;
+                        float localMach = partMotion.magnitude / conditions.speedOfSound;
+
+                        Vector3 eThrust = engines[i].GetThrust(localMach, conditions.atmDensity, conditions.atmPressure, conditions.oxygenAvailable);
+                        rThrust += eThrust;
+                        rTorque += Vector3.Cross(eThrust, engines[i].thrustPoint - origin);
+                    }
+
+                    for (int i = partCollections.Count - 1; i >= 0; i--)
+                    {
+                        Vector3 partMotion = Vector3.Cross(axis, partCollections[i].origin - this.origin) * angularVelocity;
+                        rThrust += partCollections[i].GetThrustForce(rotatedInflow + partMotion, conditions, out Vector3 pTorque, origin); ;
+                        rTorque += pTorque;
+                    }
+
+                    // Rotate vectors backwards
+                    if (r != 0)
+                    {
+                        Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
+                        rTorque = inverseRotation * rTorque;
+                    }
+
+                    torque += rTorque;
+                    thrust += rThrust;
+                }
+
+                torque /= rotationCount;
+                thrust /= rotationCount;
+            }
+            else
+            {
+                thrust = Vector3.Project(base.GetThrustForce(inflow, conditions, out torque, origin), axis);
+            }
+            torque = Vector3.ProjectOnPlane(torque, axis);
+            torque += Vector3.Cross(thrust, origin - torquePoint);
+            return thrust;
+        }
+
+        public override float GetFuelBurnRate(Vector3 inflow, AeroPredictor.Conditions conditions)
+        {
+            float burnRate;
+            if (enginesUseVelCurve && isRotating)
+            {
+                burnRate = 0;
+                int rotationCount = WindTunnelSettings.Instance.rotationCount;
+                for (int r = 0; r < rotationCount; r++)
+                {
+                    Quaternion rotation = Quaternion.AngleAxis(360f / rotationCount * r, axis);
+                    Quaternion inverseRotation = Quaternion.AngleAxis(-360f / rotationCount * r, axis);
+                    // Rotate inflow
+                    Vector3 rotatedInflow = rotation * inflow;
+                    // Calculate burn rate
+                    for (int i = engines.Count - 1; i >= 0; i--)
+                    {
+                        Vector3 partMotion = Vector3.Cross(axis, (engines[i].thrustPoint - origin)) * angularVelocity + rotatedInflow;
+                        float localMach = partMotion.magnitude / conditions.speedOfSound;
+
+                        burnRate += engines[i].GetFuelBurnRate(localMach, conditions.atmDensity);
+                    }
+
+                    for (int i = partCollections.Count - 1; i >= 0; i--)
+                    {
+                        Vector3 partMotion = Vector3.Cross(axis, partCollections[i].origin - this.origin) * angularVelocity;
+                        burnRate += partCollections[i].GetFuelBurnRate(rotatedInflow + partMotion, conditions);
+                    }
+                }
+
+                burnRate /= rotationCount;
+            }
+            else
+                burnRate = base.GetFuelBurnRate(inflow, conditions);
+
             // Assumes all rotors are running at max torque.
             // An over-estimation, sure, but the closest I'll get without simulating the aero forces at that point,
             // which requires information this function can't get.
             //
             // Users should be aware, though, and de-tune their rotors to provide only sufficient torque throughout
             // their target flight regime.
-            return fuelConsumption + base.GetFuelBurnRate(mach, atmDensity, atmPressure, oxygenPresent);
+            return fuelConsumption + burnRate;
         }
 
         #region Pool Methods
@@ -255,6 +353,8 @@ namespace KerbalWindTunnel.VesselCache
         private static void Reset(RotorPartCollection obj)
         {
             PartCollection.Reset(obj);
+            obj.enginesUseVelCurve = false;
+            obj.enginesUseVelCurveISP = false;
         }
 
         new public static RotorPartCollection Borrow(PartCollection parentCollection, Part originPart)
@@ -295,6 +395,23 @@ namespace KerbalWindTunnel.VesselCache
             return collection;
         }
 
+        public override void AddPart(Part part)
+        {
+            int enginesCount = engines.Count;
+            base.AddPart(part);
+            int enginesCountPost = engines.Count;
+            if (enginesCountPost < enginesCount)
+            {
+                enginesUseVelCurve = false;
+                enginesUseVelCurveISP = false;
+            }
+            else if (enginesCountPost > enginesCount || (enginesCount == 1 && enginesCountPost == 1))
+            {
+                enginesUseVelCurve |= engines[enginesCountPost - 1].useVelCurve;
+                enginesUseVelCurveISP |= engines[enginesCountPost - 1].useVelCurveIsp;
+            }
+        }
+
         private void Init(Part part)
         {
             Expansions.Serenity.ModuleRoboticServoRotor rotorModule = part.FindModuleImplementing<Expansions.Serenity.ModuleRoboticServoRotor>();
@@ -308,6 +425,7 @@ namespace KerbalWindTunnel.VesselCache
                 axis *= -1;
             angularVelocity = rotorModule.rpmLimit / 60 * 2 * Mathf.PI;
             fuelConsumption = rotorModule.LFPerkN * rotorModule.maxTorque;
+            isRotating = Math.Abs(angularVelocity) > 0 && rotorModule.servoMotorIsEngaged;
         }
 
         protected override void InitClone(PartCollection collection)
@@ -318,6 +436,9 @@ namespace KerbalWindTunnel.VesselCache
                 axis = rotorCollection.axis;
                 angularVelocity = rotorCollection.angularVelocity;
                 fuelConsumption = rotorCollection.fuelConsumption;
+                enginesUseVelCurve = rotorCollection.enginesUseVelCurve;
+                enginesUseVelCurveISP = rotorCollection.enginesUseVelCurveISP;
+                isRotating = rotorCollection.isRotating;
             }
             else
             {
@@ -325,6 +446,9 @@ namespace KerbalWindTunnel.VesselCache
                 axis = Vector3.forward;
                 angularVelocity = 0;
                 fuelConsumption = 0;
+                enginesUseVelCurve = false;
+                enginesUseVelCurveISP = false;
+                isRotating = false;
             }
         }
         #endregion
