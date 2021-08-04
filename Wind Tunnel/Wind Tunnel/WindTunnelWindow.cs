@@ -759,6 +759,9 @@ namespace KerbalWindTunnel
             //this.vessel = new StockAero();
             Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
             selectedCrossHairVect = new Vector2(-1, -1);
+
+            if (FARVesselCache.FARHook.FARInstalled)
+                FARVesselCache.FARAeroUtil.UpdateCurrentActiveBody(body);
             
             switch (body.name.ToLower())
             {

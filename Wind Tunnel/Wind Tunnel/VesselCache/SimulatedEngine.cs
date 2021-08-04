@@ -71,10 +71,17 @@ namespace KerbalWindTunnel.VesselCache
             engine.Init(module, part);
             return engine;
         }
+        public static SimulatedEngine Borrow(ModuleEngines module, AeroPredictor vessel)
+        {
+            SimulatedEngine engine = pool.Borrow();
+            engine.vessel = vessel;
+            engine.Init(module, null);
+            return engine;
+        }
         public static SimulatedEngine BorrowClone(SimulatedEngine engine, SimulatedPart part)
         {
             SimulatedEngine clone = pool.Borrow();
-            clone.vessel = part.vessel;
+            clone.vessel = part?.vessel;
             clone.InitClone(engine, part);
             return clone;
         }

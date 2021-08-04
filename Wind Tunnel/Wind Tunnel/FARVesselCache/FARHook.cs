@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using KerbalWindTunnel.Extensions.Reflection;
 
 namespace KerbalWindTunnel.FARVesselCache
 {
@@ -11,8 +10,10 @@ namespace KerbalWindTunnel.FARVesselCache
         private static bool installed = false;
         private static Assembly FARassembly;
         public static Type simulationType;
-        public static Type simulationOutputType;
-        public static Action<CelestialBody> UpdateCurrentBody;
+        public static Type FARWingInteractionType;
+        public static Type FARWingAerodynamicModelType;
+        public static Type FARControllableSurfaceType;
+        public static Type FARAeroSectionType;
 
         public static bool FARInstalled
         {
@@ -27,52 +28,69 @@ namespace KerbalWindTunnel.FARVesselCache
         public static void Initiate()
         {
             if (initiated) return;
-
-            const string assemblyName = "FerramAerospaceResearch";
-            FARassembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.FullName.Contains(assemblyName));
-            if (FARassembly == null)
+            try
             {
-                UnityEngine.Debug.Log("FAR not installed");
+                const string assemblyName = "FerramAerospaceResearch";
+                FARassembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.FullName.Contains(assemblyName) && !a.FullName.Contains(assemblyName + ".Base"));
+                if (FARassembly == null)
+                {
+                    UnityEngine.Debug.Log("KerbalWindTunnel: Using Stock Aero.");
+                    installed = false;
+                    initiated = true;
+                    return;
+                }
+                UnityEngine.Debug.Log("KerbalWindTunnel: Using FAR Aero.");
+                installed = true;
+
+                simulationType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("InstantConditionSim"));
+                Type editorGUIType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("EditorGUI"));
+                Type FARAeroUtilType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("FARAeroUtil"));
+                Type FARAtmosphereType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("FARAtmosphere"));
+                FARWingInteractionType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("FARWingInteraction"));
+                FARWingAerodynamicModelType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("FARWingAerodynamicModel"));
+                FARAeroSectionType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("FARAeroSection"));
+                FARControllableSurfaceType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("FARControllableSurface"));
+
+                if (simulationType == null || FARAeroUtilType == null || FARAtmosphereType == null || editorGUIType == null || FARWingInteractionType == null || FARWingAerodynamicModelType == null || FARAeroSectionType == null)
+                {
+                    UnityEngine.Debug.LogError("KerbalWindTunnel: FAR API type not found!");
+                    if (simulationType == null) UnityEngine.Debug.LogError("InstantConditionSim not found.");
+                    if (editorGUIType == null) UnityEngine.Debug.LogError("EditorGUI not found.");
+                    if (FARAeroUtilType == null) UnityEngine.Debug.LogError("FARAeroUtil not found.");
+                    if (FARAtmosphereType == null) UnityEngine.Debug.LogError("FARAtmosphere not found.");
+                    if (FARWingAerodynamicModelType == null) UnityEngine.Debug.LogError("FARWingAerodynamicModel not found.");
+                    if (FARWingInteractionType == null) UnityEngine.Debug.LogError("FARWingInteraction not found.");
+                    if (FARAeroSectionType == null) UnityEngine.Debug.LogError("FARAeroSection not found.");
+                    installed = false;
+                    initiated = true;
+                    return;
+                }
+
+                if (!FARVesselCache.SetMethods(simulationType, editorGUIType))
+                    installed = false;
+                if (!FARMethodAssist.Initialize(FARassembly))
+                    installed = false;
+                if (!FARAeroUtil.InitializeMethods(FARAeroUtilType, FARAtmosphereType))
+                    installed = false;
+                if (!FARWingAerodynamicModelWrapper.InitializeMethods(FARWingAerodynamicModelType))
+                    installed = false;
+                if (!FARWingInteractionWrapper.InitializeMethods(FARWingInteractionType))
+                    installed = false;
+                if (!FARCloneAssist.InitializeMethods(FARAeroSectionType))
+                    installed = false;
+                if (installed == false)
+                    UnityEngine.Debug.LogError("KerbalWindTunnel: Some FAR initialization failed.");
+
+                initiated = true;
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogError("KerbalWindTunnel: Exception when initiating FAR Aero. Using Stock Aero.");
                 installed = false;
                 initiated = true;
+                UnityEngine.Debug.LogException(ex);
                 return;
             }
-            installed = true;
-
-            simulationType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("InstantConditionSimulation"));
-            simulationOutputType = FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("InstantConditionSimOutput"));
-            if (simulationType == null || simulationOutputType == null)
-            {
-                UnityEngine.Debug.Log("FAR API type not found!");
-                installed = false;
-                initiated = true;
-                return;
-            }
-
-            UpdateCurrentBody = (Action<CelestialBody>)Delegate.CreateDelegate(typeof(Action<CelestialBody>), FARassembly.GetTypes().FirstOrDefault(t => t.Name.Contains("FARAPI")).GetNestedType("Simulation").GetMethod("UpdateCurrentBody"));
-
-            InstantConditionSimulationWrapper._constructor = simulationType.Constructor();
-            InstantConditionSimulationWrapper._iterationOutput = simulationType.PropertyGet<object>("iterationOutput");
-            InstantConditionSimulationWrapper._ready = simulationType.PropertyGet<bool>("Ready");
-            InstantConditionSimulationWrapper._calculateAccelerationDueToGravity = simulationType.InstanceMethod<Func<object, CelestialBody, double, double>>("CalculateAccelerationDueToGravity");
-            //InstantConditionSimulationWrapper._computeNonDimensionalForcesO = simulationType.InstanceMethod<Func<object, object, bool, bool, object>>("ComputeNonDimensionalForces");
-            InstantConditionSimulationWrapper._computeNonDimensionalForcesS = simulationType.InstanceMethod<Func<object, double, double, double, double, double, double, double, double, bool, bool, object>>("ComputeNonDimensionalForces");
-            InstantConditionSimulationWrapper._computeNonDimensionalForcesE = simulationType.InstanceMethod<Func<object, double, double, double, double, double, double, double, double, int, bool, bool, bool, object>>("ComputeNonDimensionalForces");
-            //InstantConditionSimulationWrapper._setState = simulationType.InstanceMethod<Action<object, double, double, Vector3d, double, int, bool>>("SetState");
-            InstantConditionSimulationWrapper._functionIterateForAlpha = simulationType.InstanceMethod<Func<object, double, double>>("FunctionIterateForAlpha");
-            //InstantConditionSimulationWrapper._computeRequiredAoA = simulationType.InstanceMethod<Func<object, double, double, Vector3d, double, int, bool, double>>("ComputeRequiredAoA");
-            InstantConditionSimulationWrapper._update = simulationType.InstanceMethod<Action<object>>("Update");
-
-            InstantConditionSimOutputWrapper._getCl = simulationOutputType.FieldGet<double>("Cl");
-            InstantConditionSimOutputWrapper._getCd = simulationOutputType.FieldGet<double>("Cd");
-            InstantConditionSimOutputWrapper._getCm = simulationOutputType.FieldGet<double>("Cm");
-            InstantConditionSimOutputWrapper._getCy = simulationOutputType.FieldGet<double>("Cy");
-            InstantConditionSimOutputWrapper._getCn = simulationOutputType.FieldGet<double>("Cn");
-            InstantConditionSimOutputWrapper._getC_roll = simulationOutputType.FieldGet<double>("C_roll");
-            InstantConditionSimOutputWrapper._getArea = simulationOutputType.FieldGet<double>("area");
-            InstantConditionSimOutputWrapper._getMAC = simulationOutputType.FieldGet<double>("MAC");
-
-            initiated = true;
         }
     }
 }
