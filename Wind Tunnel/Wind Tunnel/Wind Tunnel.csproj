@@ -97,8 +97,6 @@
     <Compile Include="Extensions\FloatCurve2.cs" />
     <Compile Include="FARVesselCache\FARHook.cs" />
     <Compile Include="FARVesselCache\FARVesselCache.cs" />
-    <Compile Include="FARVesselCache\InstantConditionSimOutputWrapper.cs" />
-    <Compile Include="FARVesselCache\InstantConditionSimulationWrapper.cs" />
     <Compile Include="Framework\ConfigNodeStorage.cs" />
     <Compile Include="Framework\ExtensionsUnity.cs" />
     <Compile Include="Framework\FrameworkExt\MonoBehaviourWindowPlus.cs" />
@@ -126,9 +124,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extensions\HashCodeHelper.cs" />
+    <Compile Include="Extensions\IListClone.cs" />
     <Compile Include="Extensions\Linq2.cs" />
     <Compile Include="Extensions\GUILayoutHelper.cs" />
     <Compile Include="Extensions\DelegateFactory.cs" />
+    <Compile Include="Extensions\NetObjectDeepCopy.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\FARAeroUtil.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\InstantConditionSim.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\FARWingAerodynamicModel.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\FARWingInteraction.cs" />
+    <Compile Include="FARVesselCache\FARAeroUtil.cs" />
+    <Compile Include="FARVesselCache\FARCloneAssist.cs" />
+    <Compile Include="FARVesselCache\FARMethodAssist.cs" />
+    <Compile Include="FARVesselCache\FARWingAerodynamicModelWrapper.cs" />
+    <Compile Include="FARVesselCache\FARWingInteractionWrapper.cs" />
     <Compile Include="Framework\FrameworkExt\Extensions.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="WindTunnelWindow.cs" />
