@@ -293,7 +293,7 @@ namespace KerbalWindTunnel.VesselCache
             // Recursively add all parts to collections
             // What a crazy change to make just to accomodate rotating parts!
             partCollection = PartCollection.BorrowWithoutAdding(this);
-            partCollection.AddPart(oParts[0]);
+            partCollection.AddPart(oParts[0].localRoot);
 
             CoM /= totalMass;
             CoM_dry /= dryMass;
@@ -329,8 +329,9 @@ namespace KerbalWindTunnel.VesselCache
         public void InitMaxAoA(CelestialBody body, float altitude = 0)
         {
             // If there are rotating parts, this won't ever come in handy so it's not worth the time.
-            if (partCollection.partCollections.Count > 0)
-                return;
+            // Except, it turns out that mach number isn't calculated per-part, but is a vessel-wide number.
+            //if (partCollection.partCollections.Count > 0)
+                //return;
 #if ENABLE_PROFILER
             UnityEngine.Profiling.Profiler.BeginSample("SimulatedVessel.InitMaxAoA()");
 #endif
