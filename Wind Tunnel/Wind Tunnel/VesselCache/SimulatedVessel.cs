@@ -293,7 +293,10 @@ namespace KerbalWindTunnel.VesselCache
             // Recursively add all parts to collections
             // What a crazy change to make just to accomodate rotating parts!
             partCollection = PartCollection.BorrowWithoutAdding(this);
-            partCollection.AddPart(oParts[0].localRoot);
+            Part root = oParts[0];
+            while (root.parent != null)
+                root = root.parent;
+            partCollection.AddPart(root);
 
             CoM /= totalMass;
             CoM_dry /= dryMass;
