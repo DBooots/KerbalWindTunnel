@@ -116,14 +116,14 @@ namespace KerbalWindTunnel.DataGenerators
             }
         }
 
-        public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepSpeed = 50f, float stepAltitude = 500)
+        public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepSpeed = float.NaN, float stepAltitude = float.NaN)
         {
 #if ENABLE_PROFILER
             UnityEngine.Profiling.Profiler.BeginSample("EnvelopeSurf.Calculate");
 #endif
             // Set up calculation conditions and bounds
             Conditions newConditions;
-            newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
+            newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, float.IsNaN(stepSpeed) ? (upperBoundSpeed - lowerBoundSpeed) / resolution[1, 0] : stepSpeed, lowerBoundAltitude, upperBoundAltitude, float.IsNaN(stepAltitude) ? (upperBoundAltitude - lowerBoundAltitude) / resolution[1, 1] : stepAltitude);
 
             if (currentConditions.Equals(newConditions) && Status != TaskStatus.WaitingToRun)
                 return;
@@ -271,6 +271,7 @@ namespace KerbalWindTunnel.DataGenerators
                             EnvelopePoint result;
                             if (!cache.TryGetValue(coords, out result))
                             {
+                                closureCancellationToken.ThrowIfCancellationRequested();
                                 result = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
                                 closureCancellationToken.ThrowIfCancellationRequested();
                                 cache[coords] = result;

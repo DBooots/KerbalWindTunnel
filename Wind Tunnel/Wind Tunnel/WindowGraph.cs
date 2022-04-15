@@ -60,7 +60,7 @@ namespace KerbalWindTunnel
                     switch (graphMode)
                     {
                         case GraphMode.FlightEnvelope:
-                            EnvelopeSurfGenerator.Calculate(body, 0, maxSpeed, 0, maxAltitude, speedStep, altitudeStep);
+                            EnvelopeSurfGenerator.Calculate(body, 0, maxSpeed, 0, maxAltitude); //, speedStep, altitudeStep);
                             break;
                         case GraphMode.AoACurves:
                             AoACurveGenerator.Calculate(body, Altitude, Speed, -20f * Mathf.Deg2Rad, 20f * Mathf.Deg2Rad, 0.5f * Mathf.Deg2Rad);

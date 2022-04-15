@@ -146,8 +146,9 @@ namespace KerbalWindTunnel.VesselCache
 #endif
             // Rotating parts ruin everything... Because their mach number is the sum of the inflow and their rotation,
             // the FloatCurve method isn't valid.
-            if (partCollection.partCollections.Count > 0)
-                return base.GetMaxAoA(conditions, out lift, guess, tolerance);
+            // Except, it turns out that mach number isn't calculated per-part, but is a vessel-wide number.
+            //if (partCollection.partCollections.Count > 0)
+                //return base.GetMaxAoA(conditions, out lift, guess, tolerance);
 
             if (!(conditions.body.bodyName.Equals("Kerbin", StringComparison.InvariantCultureIgnoreCase) ||
                 conditions.body.bodyName.Equals("Laythe", StringComparison.InvariantCultureIgnoreCase)))
