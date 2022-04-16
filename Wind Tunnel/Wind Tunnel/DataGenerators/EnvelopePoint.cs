@@ -29,6 +29,9 @@ namespace KerbalWindTunnel.DataGenerators
 
         public EnvelopePoint(AeroPredictor vessel, CelestialBody body, float altitude, float speed, float AoA_guess = float.NaN, float maxA_guess = float.NaN, float pitchI_guess = float.NaN)
         {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("EnvelopePoint..ctor");
+#endif
             this.altitude = altitude;
             this.speed = speed;
             AeroPredictor.Conditions conditions = new AeroPredictor.Conditions(body, speed, altitude);
@@ -38,9 +41,10 @@ namespace KerbalWindTunnel.DataGenerators
             this.mach = conditions.mach;
             this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
             float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))) - (vessel.Mass * speed * speed / (radius + altitude));
-            Vector3 thrustForce = vessel.GetThrustForce(conditions);
-            fuelBurnRate = vessel.GetFuelBurnRate(conditions);
             //AoA_max = vessel.GetMaxAoA(conditions, out Lift_max, maxA_guess);
+            AoA_level = vessel.GetAoA(conditions, weight, guess: AoA_guess, pitchInputGuess: 0, lockPitchInput: true);
+            Vector3 thrustForce = vessel.GetThrustForce(conditions, AoA_level);
+            fuelBurnRate = vessel.GetFuelBurnRate(conditions, AoA_level);
             if (float.IsNaN(maxA_guess))
             {
                 AoA_max = vessel.GetMaxAoA(conditions, out Lift_max, maxA_guess);
@@ -49,10 +53,9 @@ namespace KerbalWindTunnel.DataGenerators
             else
             {
                 AoA_max = maxA_guess;
-                Lift_max = AeroPredictor.GetLiftForceMagnitude(vessel.GetAeroForce(conditions, AoA_max, 1) + thrustForce, AoA_max);
+                Lift_max = AeroPredictor.GetLiftForceMagnitude(vessel.GetLiftForce(conditions, AoA_max, 1) + (vessel.ThrustIsConstantWithAoA ? AeroPredictor.ToVesselFrame(thrustForce, AoA_max) : vessel.GetThrustForce(conditions, AoA_max)), AoA_max);
             }
 
-            AoA_level = vessel.GetAoA(conditions, weight, guess: AoA_guess, pitchInputGuess: 0, lockPitchInput: true);
             if (AoA_level < AoA_max)
                 pitchInput = vessel.GetPitchInput(conditions, AoA_level, guess: pitchI_guess);
             else
@@ -61,7 +64,7 @@ namespace KerbalWindTunnel.DataGenerators
             if (speed < 5 && Math.Abs(altitude) < 10)
                 AoA_level = 0;
 
-            Thrust_available = thrustForce.magnitude;
+            Thrust_available = AeroPredictor.GetUsefulThrustMagnitude(thrustForce);
 
             //vessel.GetAeroCombined(conditions, AoA_level, pitchInput, out force, out Vector3 torque);
             force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
@@ -83,6 +86,10 @@ namespace KerbalWindTunnel.DataGenerators
             //GetStabilityValues(vessel, conditions, AoA_level, out stabilityRange, out stabilityScore);
 
             completed = true;
+
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
         }
 
         private static void GetStabilityValues(AeroPredictor vessel, AeroPredictor.Conditions conditions, float AoA_centre, out float stabilityRange, out float stabilityScore)

@@ -110,7 +110,9 @@ namespace KerbalWindTunnel.DataGenerators
             primaryProgress = new VelPoint[numPts + 1];
             float trueStep = (conditions.upperBound - conditions.lowerBound) / numPts;
 
-            CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
+            CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
+            AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+
             stopwatch.Reset();
             stopwatch.Start();
 
@@ -120,15 +122,15 @@ namespace KerbalWindTunnel.DataGenerators
                     try
                     {
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
-                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
-                            WindTunnelWindow.Instance.GetAeroPredictor,
+                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationToken },
+                            () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
                             (index, state, predictor) =>
                         {
                             primaryProgress[index] = new VelPoint(predictor, conditions.body, conditions.altitude, conditions.lowerBound + trueStep * index);
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
-                        closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        closureCancellationToken.ThrowIfCancellationRequested();
                         return cache[conditions] = primaryProgress;
                     }
                     catch (AggregateException aggregateException)
@@ -140,13 +142,16 @@ namespace KerbalWindTunnel.DataGenerators
                         throw aggregateException;
                     }
                 },
-            closureCancellationTokenSource.Token);
+            closureCancellationToken);
 
             while (task.Status < TaskStatus.RanToCompletion)
             {
                 //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
             }
+
+            if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
+                releaseable.Release();
 
             if (task.Status > TaskStatus.RanToCompletion)
             {
@@ -160,7 +165,7 @@ namespace KerbalWindTunnel.DataGenerators
                 yield break;
             }
 
-            if (!closureCancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationToken.IsCancellationRequested)
             {
                 VelPoints = primaryProgress;
                 currentConditions = conditions;
@@ -209,11 +214,11 @@ namespace KerbalWindTunnel.DataGenerators
                 this.mach = conditions.mach;
                 this.dynamicPressure = 0.0005f * conditions.atmDensity * speed * speed;
                 float weight = (vessel.Mass * gravParameter / ((radius + altitude) * (radius + altitude))) - (vessel.Mass * speed * speed / (radius + altitude));
-                Vector3 thrustForce = vessel.GetThrustForce(conditions);
                 AoA_max = vessel.GetMaxAoA(conditions, out Lift_max);
                 AoA_level = Math.Min(vessel.GetAoA(conditions, weight), AoA_max);
+                Vector3 thrustForce = vessel.GetThrustForce(conditions, AoA_level);
                 pitchInput = vessel.GetPitchInput(conditions, AoA_level);
-                Thrust_available = thrustForce.magnitude;
+                Thrust_available = AeroPredictor.GetUsefulThrustMagnitude(thrustForce);
                 Vector3 force = vessel.GetAeroForce(conditions, AoA_level, pitchInput);
                 drag = AeroPredictor.GetDragForceMagnitude(force, AoA_level);
                 Thrust_excess = -drag - AeroPredictor.GetDragForceMagnitude(thrustForce, AoA_level);
@@ -279,10 +284,9 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (obj == null)
                     return false;
-                if (obj.GetType() != typeof(Conditions))
-                    return false;
-                Conditions conditions = (Conditions)obj;
-                return this.Equals(conditions);
+                if (obj is Conditions conditions)
+                    return Equals(conditions);
+                return false;
             }
 
             public bool Equals(Conditions conditions)
@@ -293,6 +297,12 @@ namespace KerbalWindTunnel.DataGenerators
                     this.upperBound == conditions.upperBound &&
                     this.step == conditions.step;
             }
+
+            public static bool operator ==(Conditions left, Conditions right)
+            {
+                return left.Equals(right);
+            }
+            public static bool operator !=(Conditions left, Conditions right) => !(left.Equals(right));
 
             public override int GetHashCode()
             {

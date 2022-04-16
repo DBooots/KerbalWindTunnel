@@ -1,29 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Smooth.Pools;
+using System.Reflection;
 using UnityEngine;
+using Smooth.Pools;
+using KerbalWindTunnel.Extensions.Reflection;
 
 namespace KerbalWindTunnel.FARVesselCache
 {
-    class FARVesselCache : AeroPredictor, VesselCache.IReleasable
+    public partial class FARVesselCache : AeroPredictor, VesselCache.IReleasable
     {
         public List<VesselCache.SimulatedEngine> engines = new List<VesselCache.SimulatedEngine>();
 
         public override float Mass => totalMass;
-        public override float Area => throw new NotImplementedException();
-        public override bool ThreadSafe { get { return true; } }
+        public override float Area => area;
+        public override bool ThreadSafe => true;
         private static readonly Pool<FARVesselCache> pool = new Pool<FARVesselCache>(Create, Reset);
-        public List<InstantConditionSimulationWrapper> simulators = new List<InstantConditionSimulationWrapper>(Threading.ThreadPool.ThreadCount);
 
         public static bool accountForControls = false;
 
         public float totalMass = 0;
         public float dryMass = 0;
+        public float area = 0;
+        public float MAC = 0;
+        public float b_2 = 0;
+        public float maxCrossSectionFromBody = 0;
+        public float bodyLength = 0;
+
+        private FARVesselCache parent = null;
 
         public static int PoolSize
         {
             get { return pool.Size; }
+        }
+
+        public override bool ThrustIsConstantWithAoA => true;
+
+        private static Func<object> getFAREditorGUIInstance;
+        private static Func<object, object> getFARSimInstance;
+
+        private List<FARWingAerodynamicModelWrapper> _wingAerodynamicModel;
+        private List<object> _currentAeroSections;
+
+        internal static bool SetMethods(Type FARType, Type editorGUIType)
+        {
+            getFAREditorGUIInstance = editorGUIType.StaticMethod<Func<object>>(editorGUIType.GetProperty("Instance", BindingFlags.Static | BindingFlags.Public).GetGetMethod());
+            getFARSimInstance = editorGUIType.FieldGet(editorGUIType.GetField("_instantSim", BindingFlags.Instance | BindingFlags.NonPublic));
+
+            return true;
         }
 
         private static FARVesselCache Create()
@@ -39,7 +63,6 @@ namespace KerbalWindTunnel.FARVesselCache
         private static void Reset(FARVesselCache obj)
         {
             VesselCache.SimulatedEngine.Release(obj.engines);
-            obj.simulators.Clear();
             obj.engines.Clear();
         }
 
@@ -51,27 +74,32 @@ namespace KerbalWindTunnel.FARVesselCache
             vessel.Init(v, body);
             return vessel;
         }
-
-        private InstantConditionSimulationWrapper GetAvailableSimulator()
+        public static FARVesselCache BorrowClone(FARVesselCache predictor)
         {
-            int i = 0;
-            while(!System.Threading.Monitor.TryEnter(simulators[i]))
-            {
-                //i = i + 1;
-                if (i >= simulators.Count)
-                    i = 0;
-            }
-            return simulators[i];
+            FARVesselCache clone;
+            lock (pool)
+                clone = pool.Borrow();
+            clone.InitClone(predictor);
+            return clone;
+        }
+
+        private static object GetFARSimulationInstance()
+        {
+            return getFARSimInstance(getFAREditorGUIInstance());
         }
 
         public void Init(IShipconstruct v, CelestialBody body)
         {
-            FARHook.UpdateCurrentBody(body);
+            FARAeroUtil.UpdateCurrentActiveBody(body);
+            object simInstance = GetFARSimulationInstance();
 
-            int threads = Threading.ThreadPool.ThreadCount;
-            simulators.Clear();
-            for (int i = 0; i < threads; i++)
-                simulators.Add(new InstantConditionSimulationWrapper()); //(InstantConditionSimulationWrapper.Borrow());
+            maxCrossSectionFromBody = FARMethodAssist.InstantConditionSim__maxCrossSectionFromBody(simInstance);
+            bodyLength = FARMethodAssist.InstantConditionSim__bodyLength(simInstance);
+
+            _wingAerodynamicModel = FARCloneAssist.CloneListFARWingAerodynamicModels(FARMethodAssist.InstantConditionSim__wingAerodynamicModel(simInstance));
+            _currentAeroSections = FARCloneAssist.CloneListFARAeroSections(FARMethodAssist.InstantConditionSim__currentAeroSections(simInstance));
+
+            parent = null;
 
             List<Part> oParts = v.Parts;
             int count = oParts.Count;
@@ -115,59 +143,102 @@ namespace KerbalWindTunnel.FARVesselCache
                     }
                 }
             }
+
+            double area = 0;
+            double MAC = 0;
+            double b_2 = 0;
+            foreach (FARWingAerodynamicModelWrapper wingAerodynamicModel in _wingAerodynamicModel)
+            {
+                if (!(wingAerodynamicModel != null && ((PartModule)wingAerodynamicModel.WrappedObject).part != null))
+                    continue;
+                if (!(FARHook.FARControllableSurfaceType.IsAssignableFrom(wingAerodynamicModel.WrappedObject.GetType()) && !wingAerodynamicModel.isShielded))
+                    continue;
+
+                float S = (float)wingAerodynamicModel.S;
+                area += S;
+                MAC += wingAerodynamicModel.Effective_MAC * S;
+                b_2 += wingAerodynamicModel.Effective_b_2 * S;
+
+                if (area == 0 || Math.Abs(area) < 1e-14 * double.Epsilon)
+                {
+                    area = maxCrossSectionFromBody;
+                    b_2 = 1;
+                    MAC = bodyLength;
+                }
+            }
+            double recipArea = 1 / area;
+            MAC *= recipArea;
+            b_2 *= recipArea;
+            this.area = (float)area;
+            this.MAC = (float)MAC;
+            this.b_2 = (float)b_2;
+        }
+
+        public void InitClone(FARVesselCache vessel)
+        {
+            totalMass = vessel.totalMass;
+            dryMass = vessel.dryMass;
+            CoM = vessel.CoM;
+            CoM_dry = vessel.CoM_dry;
+            maxCrossSectionFromBody = vessel.maxCrossSectionFromBody;
+            bodyLength = vessel.bodyLength;
+            area = vessel.area;
+            MAC = vessel.MAC;
+            b_2 = vessel.b_2;
+
+            engines.Clear();
+            foreach (VesselCache.SimulatedEngine engine in vessel.engines)
+                engines.Add(VesselCache.SimulatedEngine.BorrowClone(engine, null));
+
+            if (parent == null || !ReferenceEquals(GetRootParent(), vessel.GetRootParent()))
+            {
+                _wingAerodynamicModel = FARCloneAssist.CloneListFARWingAerodynamicModelsSafe(vessel._wingAerodynamicModel);
+                _currentAeroSections = FARCloneAssist.CloneListFARAeroSectionsSafe(vessel._currentAeroSections);
+            }
+            parent = vessel;
+        }
+
+        private FARVesselCache GetRootParent()
+        {
+            FARVesselCache rootParent = this;
+            while (rootParent.parent != null)
+                rootParent = rootParent.parent;
+            return rootParent;
+        }
+
+        private void SetAerodynamicModelVels(Vector3d inflow)
+        {
+            foreach (FARWingAerodynamicModelWrapper aeroModel in _wingAerodynamicModel)
+                aeroModel.Vel = inflow;
         }
 
         public override void GetAeroCombined(Conditions conditions, float AoA, float pitchInput, out Vector3 forces, out Vector3 torques, bool dryTorque = false)
         {
-            AoA *= Mathf.Rad2Deg;
-            InstantConditionSimOutputWrapper output;
-            InstantConditionSimulationWrapper simulator = GetAvailableSimulator();
-            try
-            {
-                output = new InstantConditionSimOutputWrapper(simulator.ComputeNonDimensionalForces(AoA, 0, 0, 0, 0, 0, conditions.mach, pitchInput, true, true));
-            }
-            finally
-            { System.Threading.Monitor.Exit(simulator); }
+            GetClCdCmSteady(conditions, InflowVect(AoA), pitchInput, dryTorque ? CoM_dry : CoM, out forces, out torques);
             
-            float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
-            torques = new Vector3((float)output.Cm * (float)output.MAC, 0, 0) * Q * (float)output.Area;
-            forces = new Vector3(0, (float)output.Cl, -(float)output.Cd) * Q * (float)output.Area;
+            //float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
+            //torques *= Q;
+            //forces *= Q;
         }
 
         public override Vector3 GetAeroForce(Conditions conditions, float AoA, float pitchInput = 0)
         {
-            AoA *= Mathf.Rad2Deg;
-            InstantConditionSimOutputWrapper output;
-            InstantConditionSimulationWrapper simulator = GetAvailableSimulator();
-            try
-            {
-                output = new InstantConditionSimOutputWrapper(simulator.ComputeNonDimensionalForces(AoA, 0, 0, 0, 0, 0, conditions.mach, pitchInput, true, true));
-            }
-            finally
-            { System.Threading.Monitor.Exit(simulator); }
+            GetClCdCmSteady(conditions, InflowVect(AoA), pitchInput, Vector3.zero, out Vector3 forces, out _);
 
-            float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
-            return new Vector3(0, (float)output.Cl, -(float)output.Cd) * Q * (float)output.Area;
+            //float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
+            return forces;// * Q;
         }
 
         public override Vector3 GetAeroTorque(Conditions conditions, float AoA, float pitchInput = 0, bool dryTorque = false)
         {
-            AoA *= Mathf.Rad2Deg;
-            InstantConditionSimOutputWrapper output;
-            InstantConditionSimulationWrapper simulator =  GetAvailableSimulator();
-            try
-            {
-                output = new InstantConditionSimOutputWrapper(simulator.ComputeNonDimensionalForces(AoA, 0, 0, 0, 0, 0, conditions.mach, pitchInput, true, true));
-            }
-            finally
-            { System.Threading.Monitor.Exit(simulator); }
+            GetClCdCmSteady(conditions, InflowVect(AoA), pitchInput, dryTorque ? CoM_dry : CoM, out _, out Vector3 torques);
 
-            float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
-            return new Vector3((float)output.Cm * (float)output.MAC, 0, 0) * Q * (float)output.Area;
+            //float Q = 0.0005f * conditions.atmDensity * conditions.speed * conditions.speed;
+            return torques;// * Q;
         }
 
         // TODO: Add ITorqueProvider and thrust effect on torque
-        public override float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false)
+        public override float GetAoA(Conditions conditions, float offsettingForce, bool useThrust = true, bool dryTorque = false, float guess = float.NaN, float pitchInputGuess = float.NaN, bool lockPitchInput = false, float tolerance = 0.0003F)
         {
             Vector3 thrustForce = useThrust ? this.GetThrustForce(conditions) : Vector3.zero;
 
@@ -180,17 +251,17 @@ namespace KerbalWindTunnel.FARVesselCache
             return base.GetAoA(conditions, offsettingForce, useThrust, dryTorque, approxAoA, pitchInputGuess, lockPitchInput);
         }
         
-        public override float GetFuelBurnRate(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public override float GetFuelBurnRate(Conditions conditions, float AoA)
         {
             float burnRate = 0;
             for (int i = engines.Count - 1; i >= 0; i--)
             {
-                burnRate += engines[i].GetFuelBurnRate(mach, atmDensity);
+                burnRate += engines[i].GetFuelBurnRate(conditions.mach, conditions.atmDensity);
             }
             return burnRate;
         }
 
-        public override float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN)
+        public override float GetPitchInput(Conditions conditions, float AoA, bool dryTorque = false, float guess = float.NaN, float tolerance = 0.0003F)
         {
             Accord.Math.Optimization.BrentSearch solver = new Accord.Math.Optimization.BrentSearch((input) => this.GetAeroTorque(conditions, AoA, (float)input, dryTorque).x, -0.3, 0.3, 0.0001);
             if (solver.FindRoot())
@@ -205,12 +276,12 @@ namespace KerbalWindTunnel.FARVesselCache
                 return 1;
         }
 
-        public override Vector3 GetThrustForce(float mach, float atmDensity, float atmPressure, bool oxygenPresent)
+        public override Vector3 GetThrustForce(Conditions conditions, float AoA)
         {
             Vector3 thrust = Vector3.zero;
             for (int i = engines.Count - 1; i >= 0; i--)
             {
-                thrust += engines[i].GetThrust(mach, atmDensity, atmPressure, oxygenPresent);
+                thrust += engines[i].GetThrust(conditions.mach, conditions.atmDensity, conditions.atmPressure, conditions.oxygenAvailable);
             }
             return thrust;
         }

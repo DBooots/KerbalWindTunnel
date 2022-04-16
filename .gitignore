@@ -5,3 +5,6 @@ Wind Tunnel/packages/
 Wind Tunnel/Wind Tunnel/packages.config
 Wind Tunnel/DeadCode.ruleset
 Wind Tunnel/Wind Tunnel/GlobalSuppressions.cs
+WindTunnel.*.zip
+Wind Tunnel/Wind Tunnel/FARVesselCache/Deprecated/
+Builds/

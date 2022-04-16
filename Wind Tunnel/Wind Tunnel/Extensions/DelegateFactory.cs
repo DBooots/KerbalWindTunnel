@@ -451,6 +451,8 @@ namespace KerbalWindTunnel.Extensions.Reflection
 
             // arg0.<field> = arg1
             cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+            if (source.IsValueType && !source.IsEnum)
+                cg.Emit(System.Reflection.Emit.OpCodes.Unbox, source);
             cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
             cg.Emit(System.Reflection.Emit.OpCodes.Stfld, fieldInfo);
             cg.Emit(System.Reflection.Emit.OpCodes.Ret);
@@ -517,7 +519,7 @@ namespace KerbalWindTunnel.Extensions.Reflection
         public static TDelegate InstanceMethod<TDelegate>(this Type source, MethodInfo methodInfo) where TDelegate : class
         {
             var delegateParams = GetFuncDelegateArguments<TDelegate>();
-            if (delegateParams.Length > 4)
+            if (delegateParams.Length > 4 || !typeof(TDelegate).IsGenericType)
                 return MethodEmit<TDelegate>(methodInfo);
             Delegate deleg;
             if (delegateParams[0] == source)
@@ -532,7 +534,7 @@ namespace KerbalWindTunnel.Extensions.Reflection
                 {
                     if (methodInfo.ReturnType != typeof(void) && !methodInfo.ReturnType.IsClass && !methodInfo.ReturnType.IsPrimitive)
                         returnExpression = Expression.Convert(returnExpression, typeof(object));
-                    else
+                    else if (methodInfo.ReturnType != typeof(void))
                         returnExpression = Expression.Convert(returnExpression, GetFuncDelegateReturnType<TDelegate>());
                 }
                 var lambdaParams = new[] { sourceParameter }.Concat(expressions).ToArray();
@@ -551,12 +553,33 @@ namespace KerbalWindTunnel.Extensions.Reflection
 
             for (int i = 0; i < parameterTypes.Length; i++)
             {
-                cg.Emit(System.Reflection.Emit.OpCodes.Ldarg, i);
-                if (i > 0 && parameterTypes[i] == typeof(object))
-                    cg.Emit(System.Reflection.Emit.OpCodes.Unbox_Any, methodInfo.GetParameters()[i - 1].ParameterType);
+                switch (i)
+                {
+                    case 0:
+                        cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_0);
+                        break;
+                    case 1:
+                        cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_1);
+                        break;
+                    case 2:
+                        cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_2);
+                        break;
+                    case 3:
+                        cg.Emit(System.Reflection.Emit.OpCodes.Ldarg_3);
+                        break;
+                    default:
+                        cg.Emit(System.Reflection.Emit.OpCodes.Ldarg, i);
+                        break;
+                }
+                if (methodInfo.IsStatic || i > 0)
+                {
+                    Type parameterType = methodInfo.GetParameters()[i - (methodInfo.IsStatic ? 0 : 1)].ParameterType;
+                    if (parameterTypes[i] == typeof(object) && parameterType != typeof(object))
+                        cg.Emit(System.Reflection.Emit.OpCodes.Unbox_Any, parameterType);
+                }
             }
             cg.Emit(System.Reflection.Emit.OpCodes.Callvirt, methodInfo);
-            if (methodInfo.ReturnType.IsValueType)
+            if (methodInfo.ReturnType != typeof(void) && (methodInfo.ReturnType.IsValueType && !methodInfo.ReturnType.IsPrimitive))
                 cg.Emit(System.Reflection.Emit.OpCodes.Box, methodInfo.ReturnType);
             cg.Emit(System.Reflection.Emit.OpCodes.Ret);
 
@@ -580,7 +603,8 @@ namespace KerbalWindTunnel.Extensions.Reflection
             if (typeof(TDelegate) == typeof(Action))
                 return Type.EmptyTypes;
             if (!typeof(TDelegate).IsGenericType)
-                throw new ArgumentException();
+                return typeof(TDelegate).GetMethod("Invoke").GetParameters().Select(p => p.ParameterType).ToArray();
+                //throw new ArgumentException();
             if (typeof(TDelegate).GetMethod("Invoke").ReturnType == typeof(void))
                 return typeof(TDelegate).GetGenericArguments();
             return typeof(TDelegate).GetGenericArguments().Reverse().Skip(1).Reverse().ToArray();
@@ -588,7 +612,8 @@ namespace KerbalWindTunnel.Extensions.Reflection
         private static Type GetFuncDelegateReturnType<TDelegate>() where TDelegate : class
         {
             if (!typeof(TDelegate).IsGenericType)
-                throw new ArgumentException();
+                return typeof(TDelegate).GetMethod("Invoke").ReturnType;
+                //throw new ArgumentException();
             if (typeof(TDelegate).GetMethod("Invoke").ReturnType == typeof(void))
                 return typeof(void);
             return typeof(TDelegate).GetGenericArguments().Last();

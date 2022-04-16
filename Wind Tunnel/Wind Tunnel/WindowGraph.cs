@@ -17,9 +17,9 @@ namespace KerbalWindTunnel
 
         //internal readonly Vector2 PlotPosition = new Vector2(25, 155);
 
-        private GUIStyle hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
-        private GUIStyle vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
-        private GUIStyle smallPercent = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
+        private GUIStyle hAxisMarks;
+        private GUIStyle vAxisMarks;
+        private GUIStyle smallPercent;
         private Rect graphRect = new Rect(0, 0, graphWidth, graphHeight);
         private Rect cAxisRect = new Rect(0, 0, graphWidth, axisWidth);
 
@@ -31,15 +31,21 @@ namespace KerbalWindTunnel
         {
             if (FARVesselCache.FARHook.FARInstalled)
             {
-                //Debug.Log("FAR Installed, getting FAR-type vessel.");
+                Debug.Log("FAR Installed, getting FAR-type vessel.");
                 FARVesselCache.FARVesselCache obj = FARVesselCache.FARVesselCache.Borrow(EditorLogic.fetch.ship, body);
                 //FARVesselCache.InstantConditionSimOutputWrapper output = new FARVesselCache.InstantConditionSimOutputWrapper(obj.simulators[0].ComputeNonDimensionalForces(5 * Mathf.Deg2Rad, 0, 0, 0, 0, 0, 0.2, 0, true, false));
                 //Debug.LogFormat("{0}\t{1}\t{2}\t{3}\t{4}\t{5}", output.Cd, output.Cl, output.Cm, output.Cn, output.Cy, output.C_roll);
                 return obj;
-                //return null;
             }
             else
                 return VesselCache.SimulatedVessel.Borrow(EditorLogic.fetch.ship);
+        }
+        public static AeroPredictor GetUnitySafeAeroPredictor(AeroPredictor aeroPredictorToClone)
+        {
+            if (FARVesselCache.FARHook.FARInstalled)
+                return FARVesselCache.FARVesselCache.BorrowClone((FARVesselCache.FARVesselCache)aeroPredictorToClone);
+            else
+                return VesselCache.SimulatedVessel.BorrowClone((VesselCache.SimulatedVessel)aeroPredictorToClone);
         }
 
         private void DrawGraph(GraphMode graphMode)
@@ -54,7 +60,7 @@ namespace KerbalWindTunnel
                     switch (graphMode)
                     {
                         case GraphMode.FlightEnvelope:
-                            EnvelopeSurfGenerator.Calculate(body, 0, maxSpeed, 0, maxAltitude, speedStep, altitudeStep);
+                            EnvelopeSurfGenerator.Calculate(body, 0, maxSpeed, 0, maxAltitude); //, speedStep, altitudeStep);
                             break;
                         case GraphMode.AoACurves:
                             AoACurveGenerator.Calculate(body, Altitude, Speed, -20f * Mathf.Deg2Rad, 20f * Mathf.Deg2Rad, 0.5f * Mathf.Deg2Rad);

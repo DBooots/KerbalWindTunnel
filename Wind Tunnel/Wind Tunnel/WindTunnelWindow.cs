@@ -244,29 +244,29 @@ namespace KerbalWindTunnel
         }
         private bool selectingTarget = false;
 
-        private Graphing.Grapher grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes };
+        private Graphing.Grapher grapher;
 
         internal const float AoAdelta = 0.1f * Mathf.Deg2Rad;
 
         private List<CBItem> lstPlanets = new List<CBItem>();
         private CelestialBody cbStar;
 
-        private GUIStyle exitButton = new GUIStyle(HighLogic.Skin.button);
-        private GUIStyle downButton = new GUIStyle(HighLogic.Skin.button);
-        private GUIStyle clearBox = new GUIStyle(HighLogic.Skin.box);
-        private GUIStyle labelCentered = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
+        private GUIStyle exitButton; // = new GUIStyle(HighLogic.Skin.button);
+        private GUIStyle downButton; // = new GUIStyle(HighLogic.Skin.button);
+        private GUIStyle clearBox; // = new GUIStyle(HighLogic.Skin.box);
+        private GUIStyle labelCentered; // = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
 
-        Texture2D crossHair = new Texture2D(1, 1);
-        Texture2D selectedCrossHair = new Texture2D(1, 1);
-        Texture2D clearTex = new Texture2D(1, 1);
-        Texture2D settingsTex = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
-        Texture2D saveIconTex = new Texture2D(21, 21, TextureFormat.ARGB32, false);
+        Texture2D crossHair; // = new Texture2D(1, 1);
+        Texture2D selectedCrossHair; // = new Texture2D(1, 1);
+        Texture2D clearTex; // = new Texture2D(1, 1);
+        Texture2D settingsTex; // = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
+        Texture2D saveIconTex; // = new Texture2D(21, 21, TextureFormat.ARGB32, false);
 
         Vector2 selectedCrossHairVect = new Vector2(-1, -1);
 
         private string conditionDetails = "";
-        private GUIStyle styleSelectedCrossHair = new GUIStyle();
-        private GUIStyle stylePlotCrossHair = new GUIStyle();
+        private GUIStyle styleSelectedCrossHair; // = new GUIStyle();
+        private GUIStyle stylePlotCrossHair; // = new GUIStyle();
 
         public System.Threading.Tasks.TaskStatus Status { get => GraphGenerator.Status; }
         #endregion Fields and Properties
@@ -299,7 +299,7 @@ namespace KerbalWindTunnel
                 if (CurrentGraphMode == GraphMode.AoACurves && AoACurveGenerator.Status == System.Threading.Tasks.TaskStatus.RanToCompletion)
                 {
                     DataGenerators.AoACurve.AoAPoint zeroPoint = new DataGenerators.AoACurve.AoAPoint(vessel, body, Altitude, Speed, 0);
-                    GUILayout.Label(String.Format("CL_0:\t{2:F3}\nCL_Alpha_0:\t{0:F3}/°\nCL_Alpha_avg:\t{1:F3}/°", zeroPoint.dLift / zeroPoint.dynamicPressure / vessel.Area, AoACurveGenerator.AverageLiftSlope, zeroPoint.Lift / zeroPoint.dynamicPressure / vessel.Area));
+                    GUILayout.Label(String.Format("CL_0:\t{2:F3}\nCL_Alpha_0:\t{0:F3}/°\nCL_Alpha_avg:\t{1:F3}/°", zeroPoint.dLift / zeroPoint.dynamicPressure / vessel.Area, AoACurveGenerator.AverageLiftSlope / vessel.Area, zeroPoint.Lift / zeroPoint.dynamicPressure / vessel.Area));
                 }
                 GUILayout.EndVertical();        // \Button and info frame
 
@@ -715,6 +715,7 @@ namespace KerbalWindTunnel
 
             if (vessel is VesselCache.IReleasable releasable)
                 releasable.Release();
+            vessel = null;
 
             selectedCrossHairVect = new Vector2(-1, -1);
         }
@@ -729,7 +730,6 @@ namespace KerbalWindTunnel
         private void OnVesselLoaded(ShipConstruct vessel, KSP.UI.Screens.CraftBrowserDialog.LoadType loadType)
         {
             OnVesselChanged();
-            this.vessel = null;
             //this.vessel = VesselCache.SimulatedVessel.Borrow(vessel, VesselCache.SimCurves.Borrow(body));
         }
 
@@ -737,7 +737,8 @@ namespace KerbalWindTunnel
         {
             OnVesselChanged();
             // TODO: Could do fancier stuff like compare angles and then adjust all AoAs appropriately.
-            this.vessel = GetAeroPredictor();
+            if (WindTunnel.Instance.highlightMode != WindTunnel.HighlightMode.Off)
+                this.vessel = GetAeroPredictor();
         }
 
         private void OnPlanetSelected(DropDownList sender, int OldIndex, int NewIndex)
@@ -758,6 +759,9 @@ namespace KerbalWindTunnel
             //this.vessel = new StockAero();
             Parent.UpdateHighlighting(Parent.highlightMode, this.body, this.Altitude, this.Speed, this.AoA);
             selectedCrossHairVect = new Vector2(-1, -1);
+
+            if (FARVesselCache.FARHook.FARInstalled)
+                FARVesselCache.FARAeroUtil.UpdateCurrentActiveBody(body);
             
             switch (body.name.ToLower())
             {
@@ -801,30 +805,33 @@ namespace KerbalWindTunnel
             SetEnvGraphs(NewIndex, lineFlags[0]);
         }
 
-        public void OnAxesChanged(Graphing.Grapher sender, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
+        public void OnAxesChanged(object sender, Graphing.AxesChangeEventArgs eventArgs)
         {
             if (sender != grapher)
                 return;
             if (!graphRequested || graphDirty)
                 return;
-            if (xMin >= xMax || yMin >= yMax || zMin > zMax)
+            if (eventArgs.XMin >= eventArgs.XMax || eventArgs.YMin >= eventArgs.YMax || eventArgs.ZMin > eventArgs.ZMax)
                 return;
-            GraphGenerator.OnAxesChanged(xMin, xMax, yMin, yMax, zMin, zMax);
+            GraphGenerator.OnAxesChanged(eventArgs.XMin, eventArgs.XMax, eventArgs.YMin, eventArgs.YMax, eventArgs.ZMin, eventArgs.ZMax);
         }
-        public void OnAxesChangeRequested(Graphing.Grapher sender, int axis, ref float min, ref float max)
+        public void OnAxesChangeRequested(object sender, Graphing.AxesChangeRequestedEventArgs eventArgs)
         {
             if (sender != grapher)
                 return;
             switch (CurrentGraphMode)
             {
                 case GraphMode.FlightEnvelope:
-                    if (axis == 1 && min < 0) min = 0;
+                    if (eventArgs.AxisIndex == 1 && eventArgs.Min < 0)
+                        eventArgs.Min = 0;
                     break;
                 case GraphMode.AoACurves:
-                    if (axis == 0)
+                    if (eventArgs.AxisIndex == 0)
                     {
-                        if (min < -180) min = -180;
-                        if (max > 180) max = 180;
+                        if (eventArgs.Min < -180)
+                            eventArgs.Min = -180;
+                        if (eventArgs.Max > 180)
+                            eventArgs.Max = 180;
                     }
                     break;
                 case GraphMode.VelocityCurves: break;
@@ -906,6 +913,26 @@ namespace KerbalWindTunnel
             if (Instance)
                 Destroy(Instance);
             Instance = this;
+
+            grapher = new Graphing.Grapher(graphWidth, graphHeight, axisWidth) { AutoFitAxes = WindTunnelSettings.AutoFitAxes, ExpandSurfFilter = true };
+
+            crossHair = new Texture2D(1, 1);
+            selectedCrossHair = new Texture2D(1, 1);
+            clearTex = new Texture2D(1, 1);
+            settingsTex = new Texture2D(12, 12, TextureFormat.ARGB32, false);// GameDatabase.Instance.GetTexture(WindTunnel.iconPath_settings, false);
+            saveIconTex = new Texture2D(21, 21, TextureFormat.ARGB32, false);
+
+            exitButton = new GUIStyle(HighLogic.Skin.button);
+            downButton = new GUIStyle(HighLogic.Skin.button);
+            clearBox = new GUIStyle(HighLogic.Skin.box);
+            labelCentered = new GUIStyle(HighLogic.Skin.label) { alignment = TextAnchor.MiddleCenter };
+
+            hAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleCenter };
+            vAxisMarks = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleRight };
+            smallPercent = new GUIStyle(HighLogic.Skin.label) { fontSize = 12, alignment = TextAnchor.MiddleLeft };
+
+            styleSelectedCrossHair = new GUIStyle();
+            stylePlotCrossHair = new GUIStyle();
 
             // Fetch Celestial Bodies per TransferWindowPlanner method:
             cbStar = FlightGlobals.Bodies.FirstOrDefault(x => x.referenceBody == x.referenceBody);

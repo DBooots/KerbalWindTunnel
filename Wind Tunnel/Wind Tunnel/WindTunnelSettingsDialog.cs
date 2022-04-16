@@ -115,6 +115,18 @@ namespace KerbalWindTunnel
         [Persistent]
         public bool autoFitAxes = true;
 
+        public static int RotationCount
+        {
+            get => Instance.rotationCount;
+            set
+            {
+                Instance.rotationCount = value;
+                settingsChanged = true;
+            }
+        }
+        [Persistent]
+        public int rotationCount = 1;
+
         private static bool settingsChanged = false;
         private static bool settingsLoaded = false;
 
@@ -180,6 +192,11 @@ namespace KerbalWindTunnel
                 new DialogGUIToggle(WindTunnelSettings.ShowEnvelopeMaskAlways && WindTunnelSettings.ShowEnvelopeMask, "Show flight envelope outline even on flight envelope", delegate (bool b) {if(WindTunnelSettings.ShowEnvelopeMask) WindTunnelSettings.ShowEnvelopeMaskAlways = !WindTunnelSettings.ShowEnvelopeMaskAlways; }),
                 new DialogGUIToggle(WindTunnelSettings.AutoFitAxes, string.Format("Auto-fit axes to graph data\n(Uncheck to plot full range)"), delegate (bool b) {WindTunnelSettings.AutoFitAxes = !WindTunnelSettings.AutoFitAxes; grapher.AutoFitAxes = WindTunnelSettings.AutoFitAxes; })
             };
+
+            if (!FARVesselCache.FARHook.FARInstalled)
+                dialog.Add(new DialogGUIHorizontalLayout(TextAnchor.MiddleLeft,
+                    new DialogGUILabel(() => string.Format("Propeller rotation evaluations: {0}", WindTunnelSettings.RotationCount), UISkinManager.defaultSkin.toggle, true),
+                    new DialogGUISlider(() => Mathf.Log(WindTunnelSettings.RotationCount, 2), 0, 4, true, 100, 20, value => WindTunnelSettings.RotationCount = (int)Mathf.Pow(2, value))));
 
             if (ToolbarManager.ToolbarAvailable)
                 dialog.Add(new DialogGUIToggle(WindTunnelSettings.UseBlizzy, "Use Blizzy's Toolbar", delegate (bool b) { WindTunnelSettings.UseBlizzy = !WindTunnelSettings.UseBlizzy; }));

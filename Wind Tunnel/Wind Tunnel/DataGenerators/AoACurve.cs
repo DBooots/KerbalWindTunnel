@@ -97,8 +97,6 @@ namespace KerbalWindTunnel.DataGenerators
         public override void UpdateGraphs()
         {
             AverageLiftSlope = AoAPoints.Select(pt => pt.dLift / pt.dynamicPressure).Where(v => !float.IsNaN(v) && !float.IsInfinity(v)).Average();
-            if (WindTunnelSettings.UseCoefficients)
-                AverageLiftSlope /= WindTunnelWindow.Instance.CommonPredictor.Area;
 
             float left = currentConditions.lowerBound * Mathf.Rad2Deg;
             float right = currentConditions.upperBound * Mathf.Rad2Deg;
@@ -137,7 +135,9 @@ namespace KerbalWindTunnel.DataGenerators
             primaryProgress = new AoAPoint[numPts + 1];
             float trueStep = (conditions.upperBound - conditions.lowerBound) / numPts;
 
-            CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
+            CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
+            AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+
             stopwatch.Reset();
             stopwatch.Start();
 
@@ -147,15 +147,15 @@ namespace KerbalWindTunnel.DataGenerators
                     try
                     {
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
-                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
-                            WindTunnelWindow.Instance.GetAeroPredictor,
+                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationToken },
+                            () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
                             (index, state, predictor) =>
                         {
                             primaryProgress[index] = new AoAPoint(predictor, conditions.body, conditions.altitude, conditions.speed, conditions.lowerBound + trueStep * index);
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
-                        closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        closureCancellationToken.ThrowIfCancellationRequested();
                         return cache[conditions] = primaryProgress;
                     }
                     catch (AggregateException aggregateException)
@@ -167,13 +167,16 @@ namespace KerbalWindTunnel.DataGenerators
                         throw aggregateException;
                     }
                 },
-            closureCancellationTokenSource.Token);
+            closureCancellationToken);
 
             while (task.Status < TaskStatus.RanToCompletion)
             {
                 //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
             }
+
+            if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
+                releaseable.Release();
 
             if (task.Status > TaskStatus.RanToCompletion)
             {
@@ -187,7 +190,7 @@ namespace KerbalWindTunnel.DataGenerators
                 yield break;
             }
             
-            if (!closureCancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationToken.IsCancellationRequested)
             {
                 AoAPoints = primaryProgress;
                 currentConditions = conditions;
@@ -316,10 +319,9 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (obj == null)
                     return false;
-                if (obj.GetType() != typeof(Conditions))
-                    return false;
-                Conditions conditions = (Conditions)obj;
-                return this.Equals(conditions);
+                if (obj is Conditions conditions)
+                    return Equals(conditions);
+                return false;
             }
 
             public bool Equals(Conditions conditions)
@@ -331,6 +333,12 @@ namespace KerbalWindTunnel.DataGenerators
                     this.upperBound == conditions.upperBound &&
                     this.step == conditions.step;
             }
+
+            public static bool operator == (Conditions left, Conditions right)
+            {
+                return left.Equals(right);
+            }
+            public static bool operator !=(Conditions left, Conditions right) => !(left.Equals(right));
 
             public override int GetHashCode()
             {

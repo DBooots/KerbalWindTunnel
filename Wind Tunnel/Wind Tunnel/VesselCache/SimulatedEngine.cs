@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Smooth.Pools;
 using UnityEngine;
+using KerbalWindTunnel.Extensions;
 
 namespace KerbalWindTunnel.VesselCache
 {
@@ -38,6 +38,7 @@ namespace KerbalWindTunnel.VesselCache
         public float multFlow;
         public float thrustPercentage;
         public Vector3 thrustVector;
+        public Vector3 thrustPoint;
         public float CLAMP;
         public int stage;
         public SimulatedPart part;
@@ -74,9 +75,15 @@ namespace KerbalWindTunnel.VesselCache
         {
             SimulatedEngine engine = pool.Borrow();
             engine.vessel = vessel;
-            // This is possibly dangerous and may lead to NullReferenceException
             engine.Init(module, null);
             return engine;
+        }
+        public static SimulatedEngine BorrowClone(SimulatedEngine engine, SimulatedPart part)
+        {
+            SimulatedEngine clone = pool.Borrow();
+            clone.vessel = part?.vessel;
+            clone.InitClone(engine, part);
+            return clone;
         }
 
         protected void Init(ModuleEngines engine, SimulatedPart part)
@@ -85,20 +92,20 @@ namespace KerbalWindTunnel.VesselCache
             this.atmChangeFlow = engine.atmChangeFlow;
             this.useAtmCurve = engine.useAtmCurve;
             this.useAtmCurveIsp = engine.useAtmCurveIsp;
-            this.atmCurve = new FloatCurve(engine.atmCurve.Curve.keys);
-            this.atmCurveIsp = new FloatCurve(engine.atmCurveIsp.Curve.keys);
+            this.atmCurve = engine.atmCurve.Clone();
+            this.atmCurveIsp = engine.atmCurveIsp.Clone();
             this.useVelCurve = engine.useVelCurve;
             this.useVelCurveIsp = engine.useVelCurveIsp;
-            this.velCurve = new FloatCurve(engine.velCurve.Curve.keys);
-            this.velCurveIsp = new FloatCurve(engine.velCurveIsp.Curve.keys);
+            this.velCurve = engine.velCurve.Clone();
+            this.velCurveIsp = engine.velCurveIsp.Clone();
             this.flowMultCap = engine.flowMultCap;
             this.flowMultCapSharpness = engine.flowMultCapSharpness;
-            this.atmosphereCurve = new FloatCurve(engine.atmosphereCurve.Curve.keys);
+            this.atmosphereCurve = engine.atmosphereCurve.Clone();
             this.useThrustCurve = engine.useThrustCurve;
-            this.thrustCurve = new FloatCurve(engine.thrustCurve.Curve.keys);
+            this.thrustCurve = engine.thrustCurve.Clone();
             this.useThrottleIspCurve = engine.useThrottleIspCurve;
-            this.throttleIspCurve = new FloatCurve(engine.throttleIspCurve.Curve.keys);
-            this.throttleIspCurveAtmStrength = new FloatCurve(engine.throttleIspCurveAtmStrength.Curve.keys);
+            this.throttleIspCurve = engine.throttleIspCurve.Clone();
+            this.throttleIspCurveAtmStrength = engine.throttleIspCurveAtmStrength.Clone();
             this.requiresOxygen = engine.propellants.Any(propellant => propellant.name == "IntakeAir");
             this.g = engine.g;
             this.multIsp = engine.multIsp;
@@ -106,12 +113,49 @@ namespace KerbalWindTunnel.VesselCache
             this.multFlow = engine.multFlow;
             this.thrustPercentage = engine.thrustPercentage;
             this.thrustVector = Vector3.zero;
+            float thrustTransformMultiplierSum = 0;
+            this.thrustPoint = Vector3.zero;
             for (int i = engine.thrustTransforms.Count - 1; i >= 0; i--)
             {
                 this.thrustVector -= engine.thrustTransforms[i].forward * engine.thrustTransformMultipliers[i];
+                this.thrustPoint += engine.thrustTransforms[i].position * engine.thrustTransformMultipliers[i];
+                thrustTransformMultiplierSum += engine.thrustTransformMultipliers[i];
             }
+            this.thrustPoint /= thrustTransformMultiplierSum;
             this.CLAMP = engine.CLAMP;
             this.stage = engine.part.inverseStage;
+            this.part = part;
+        }
+        protected void InitClone(SimulatedEngine engine, SimulatedPart part)
+        {
+            this.flameoutBar = engine.flameoutBar;
+            this.atmChangeFlow = engine.atmChangeFlow;
+            this.useAtmCurve = engine.useAtmCurve;
+            this.useAtmCurveIsp = engine.useAtmCurveIsp;
+            this.atmCurve = engine.atmCurve.Clone();
+            this.atmCurveIsp = engine.atmCurveIsp.Clone();
+            this.useVelCurve = engine.useVelCurve;
+            this.useVelCurveIsp = engine.useVelCurveIsp;
+            this.velCurve = engine.velCurve.Clone();
+            this.velCurveIsp = engine.velCurveIsp.Clone();
+            this.flowMultCap = engine.flowMultCap;
+            this.flowMultCapSharpness = engine.flowMultCapSharpness;
+            this.atmosphereCurve = engine.atmosphereCurve.Clone();
+            this.useThrustCurve = engine.useThrustCurve;
+            this.thrustCurve = engine.thrustCurve.Clone();
+            this.useThrottleIspCurve = engine.useThrottleIspCurve;
+            this.throttleIspCurve = engine.throttleIspCurve.Clone();
+            this.throttleIspCurveAtmStrength = engine.throttleIspCurveAtmStrength.Clone();
+            this.requiresOxygen = engine.requiresOxygen;
+            this.g = engine.g;
+            this.multIsp = engine.multIsp;
+            this.maxFuelFlow = engine.maxFuelFlow;
+            this.multFlow = engine.multFlow;
+            this.thrustPercentage = engine.thrustPercentage;
+            this.thrustVector = engine.thrustVector;
+            this.thrustPoint = engine.thrustPoint;
+            this.CLAMP = engine.CLAMP;
+            this.stage = engine.stage;
             this.part = part;
         }
 
@@ -143,9 +187,10 @@ namespace KerbalWindTunnel.VesselCache
                 lock (velCurveIsp)
                     isp *= velCurveIsp.Evaluate(mach);
 
-
+#if DEBUG
             if (!requiresOxygen)
-                Debug.Log(string.Format("Fuel: {0}, ISP: {1}, Thrust: {2}", fuelBurnRate, isp, fuelBurnRate * g * multIsp * thrustPercentage / 100f));
+                Debug.LogFormat("Fuel: {0:F3}, ISP: {1:F1}, Thrust: {2:F2}", fuelBurnRate, isp, fuelBurnRate * g * multIsp * thrustPercentage / 100f);
+#endif
             return thrustVector * fuelBurnRate * g * multIsp * isp * (thrustPercentage / 100f);
         }
 

@@ -17,10 +17,10 @@
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
+    <DebugType>portable</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;ENABLE_PROFILER</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
@@ -34,8 +34,20 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+  <PropertyGroup>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnityEditor|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\UnityEditor\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;UnityEditor</DefineConstants>
+    <DebugType>portable</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
+    <Reference Include="Assembly-CSharp" Condition="'$(Configuration)' != 'UnityEditor'">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -69,52 +81,67 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\KSP_x64_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)' != 'UnityEditor'">
+    <Compile Include="AeroPredictor.cs" />
+    <Compile Include="ToolbarWrapper.cs" />
+    <Compile Include="WindTunnel.cs" />
+    <Compile Include="WindowGraph.cs" />
+    <Compile Include="WindTunnelSettingsDialog.cs" />
+    <Compile Include="DataGenerators\AoACurve.cs" />
+    <Compile Include="DataGenerators\EnvelopeSurf.cs" />
+    <Compile Include="DataGenerators\GraphGenerator.cs" />
+    <Compile Include="DataGenerators\VelCurve.cs" />
+    <Compile Include="DataGenerators\EnvelopeLine.cs" />
+    <Compile Include="DataGenerators\EnvelopePoint.cs" />
+    <Compile Include="Extensions\KSPClassExtensions.cs" />
+    <Compile Include="Extensions\FloatCurve2.cs" />
+    <Compile Include="FARVesselCache\FARHook.cs" />
+    <Compile Include="FARVesselCache\FARVesselCache.cs" />
+    <Compile Include="Framework\ConfigNodeStorage.cs" />
+    <Compile Include="Framework\ExtensionsUnity.cs" />
+    <Compile Include="Framework\FrameworkExt\MonoBehaviourWindowPlus.cs" />
+    <Compile Include="Framework\MonoBehaviourExtended.cs" />
+    <Compile Include="Framework\MonoBehaviourWindow.cs" />
+    <Compile Include="Framework\SkinsLibrary.cs" />
+    <Compile Include="Framework\FrameworkExt\KSPDateStructure.cs" />
+    <Compile Include="Framework\FrameworkExt\KSPDateTime.cs" />
+    <Compile Include="Framework\FrameworkExt\KSPTimeSpan.cs" />
+    <Compile Include="VesselCache\SimulatedLiftingSurface.cs" />
+    <Compile Include="VesselCache\SimCurves.cs" />
+    <Compile Include="VesselCache\SimulatedEngine.cs" />
+    <Compile Include="VesselCache\SimulatedPart.cs" />
+    <Compile Include="VesselCache\SimulatedVessel.cs" />
+    <Compile Include="VesselCache\PartCollection.cs" />
+    <Compile Include="VesselCache\IReleasable.cs" />
+    <Compile Include="VesselCache\RotorPartCollection.cs" />
+    <Compile Include="VesselCache\SimulatedControlSurface.cs" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="Accord.Net Framework\BrentSearch.cs" />
     <Compile Include="Accord.Net Framework\Constants.cs" />
     <Compile Include="Accord.Net Framework\ConvergenceException.cs" />
     <Compile Include="Accord.Net Framework\IOptimizationMethod.cs" />
-    <Compile Include="DataGenerators\EnvelopeLine.cs" />
-    <Compile Include="DataGenerators\EnvelopePoint.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Extensions\HashCodeHelper.cs" />
+    <Compile Include="Extensions\IListClone.cs" />
+    <Compile Include="Extensions\Linq2.cs" />
     <Compile Include="Extensions\GUILayoutHelper.cs" />
     <Compile Include="Extensions\DelegateFactory.cs" />
-    <Compile Include="FARVesselCache\FARHook.cs" />
-    <Compile Include="FARVesselCache\FARVesselCache.cs" />
-    <Compile Include="FARVesselCache\InstantConditionSimOutputWrapper.cs" />
-    <Compile Include="FARVesselCache\InstantConditionSimulationWrapper.cs" />
-    <Compile Include="Extensions\KSPClassExtensions.cs" />
-    <Compile Include="Extensions\HashCodeHelper.cs" />
-    <Compile Include="Extensions\Linq2.cs" />
-    <Compile Include="Framework\ConfigNodeStorage.cs" />
-    <Compile Include="Framework\ExtensionsUnity.cs" />
+    <Compile Include="Extensions\NetObjectDeepCopy.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\FARAeroUtil.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\InstantConditionSim.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\FARWingAerodynamicModel.cs" />
+    <Compile Include="FARVesselCache\Borrowed Code\FARWingInteraction.cs" />
+    <Compile Include="FARVesselCache\FARAeroUtil.cs" />
+    <Compile Include="FARVesselCache\FARCloneAssist.cs" />
+    <Compile Include="FARVesselCache\FARMethodAssist.cs" />
+    <Compile Include="FARVesselCache\FARWingAerodynamicModelWrapper.cs" />
+    <Compile Include="FARVesselCache\FARWingInteractionWrapper.cs" />
     <Compile Include="Framework\FrameworkExt\Extensions.cs" />
-    <Compile Include="Extensions\FloatCurve2.cs" />
-    <Compile Include="Framework\FrameworkExt\KSPDateStructure.cs" />
-    <Compile Include="Framework\FrameworkExt\KSPDateTime.cs" />
-    <Compile Include="Framework\FrameworkExt\KSPTimeSpan.cs" />
-    <Compile Include="Framework\FrameworkExt\MonoBehaviourWindowPlus.cs" />
-    <Compile Include="Framework\MonoBehaviourExtended.cs" />
-    <Compile Include="Framework\MonoBehaviourWindow.cs" />
-    <Compile Include="Framework\SkinsLibrary.cs" />
-    <Compile Include="DataGenerators\AoACurve.cs" />
-    <Compile Include="DataGenerators\EnvelopeSurf.cs" />
-    <Compile Include="DataGenerators\GraphGenerator.cs" />
-    <Compile Include="DataGenerators\VelCurve.cs" />
     <Compile Include="GlobalSuppressions.cs" />
-    <Compile Include="VesselCache\IReleasable.cs" />
-    <Compile Include="VesselCache\SimulatedControlSurface.cs" />
-    <Compile Include="WindowGraph.cs" />
-    <Compile Include="AeroPredictor.cs" />
-    <Compile Include="VesselCache\SimulatedLiftingSurface.cs" />
-    <Compile Include="VesselCache\SimCurves.cs" />
-    <Compile Include="VesselCache\SimulatedEngine.cs" />
-    <Compile Include="VesselCache\SimulatedPart.cs" />
-    <Compile Include="ToolbarWrapper.cs" />
-    <Compile Include="VesselCache\SimulatedVessel.cs" />
-    <Compile Include="WindTunnel.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="WindTunnelSettingsDialog.cs" />
     <Compile Include="WindTunnelWindow.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Framework\LICENSE_Framework.md" />
@@ -129,4 +156,11 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>IF "$(ConfigurationName)"=="Release" (
+	copy "$(TargetPath)" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program\GameData\WindTunnel\Plugins"
+) ELSE IF "$(ConfigurationName)"=="Debug" (
+	copy "$(TargetDir)$(TargetName).*" "C:\Program Files (x86)\Steam\steamapps\common\Kerbal Space Program Debugging\GameData\WindTunnel\Plugins"
+)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

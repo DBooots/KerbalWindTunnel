@@ -24,12 +24,14 @@ namespace KerbalWindTunnel.VesselCache
         private Vector3 dragReferenceVector;
         internal bool cubesNone;
         private float bodyLiftMultiplier;
+        public int shipIndex;
 
         internal SimCurves simCurves;
 
         private Quaternion vesselToPart;
         private Quaternion partToVessel;
         public Vector3 CoM, CoL, CoP;
+        public Vector3 transformPosition;
 
         private static readonly Pool<SimulatedPart> pool = new Pool<SimulatedPart>(Create, Reset);
 
@@ -51,8 +53,13 @@ namespace KerbalWindTunnel.VesselCache
 
         public void Release()
         {
-            lock (pool)
-                pool.Release(this);
+            foreach (DragCube cube in cubes.Cubes)
+            {
+                DragCubePool.Release(cube);
+            }
+            cubes.ClearCubes();
+            simCurves.Release();
+            pool.Release(this);
         }
 
         public static void Release(List<SimulatedPart> objList)
@@ -63,66 +70,70 @@ namespace KerbalWindTunnel.VesselCache
             }
         }
 
-        private static void Reset(SimulatedPart obj)
-        {
-            foreach (DragCube cube in obj.cubes.Cubes)
-            {
-                DragCubePool.Instance.Release(cube);
-            }
-            obj.simCurves.Release();
-        }
+        private static void Reset(SimulatedPart obj) { }
 
-        public static SimulatedPart Borrow(Part p, SimulatedVessel vessel)
+        public static SimulatedPart Borrow(Part part, SimulatedVessel vessel)
         {
-            SimulatedPart part;
+            SimulatedPart simPart;
             lock (pool)
-                part = pool.Borrow();
-            part.vessel = vessel;
-            part.Init(p);
-            return part;
+                simPart = pool.Borrow();
+            simPart.vessel = vessel;
+            simPart.Init(part);
+            return simPart;
+        }
+        public static SimulatedPart BorrowClone(SimulatedPart part, SimulatedVessel vessel)
+        {
+            SimulatedPart clone;
+            lock (pool)
+                clone = pool.Borrow();
+            clone.vessel = vessel;
+            clone.InitClone(part);
+            return clone;
         }
 
-        protected void Init(Part p)
+        protected void Init(Part part)
         {
-            this.name = p.name;
-            Rigidbody rigidbody = p.rb;
+            this.name = part.name;
+            Rigidbody rigidbody = part.rb;
+            this.shipIndex = part.ship.parts.IndexOf(part);
 
             //totalMass = rigidbody == null ? 0 : rigidbody.mass; // TODO : check if we need to use this or the one without the childMass
-            totalMass = p.mass + p.GetResourceMass();
-            dryMass = p.mass;
-            shieldedFromAirstream = p.ShieldedFromAirstream;
+            totalMass = part.mass + part.GetResourceMass();
+            dryMass = part.mass;
+            shieldedFromAirstream = part.ShieldedFromAirstream;
 
             noDrag = rigidbody == null && !PhysicsGlobals.ApplyDragToNonPhysicsParts;
-            hasLiftModule = p.hasLiftModule;
-            bodyLiftMultiplier = p.bodyLiftMultiplier;
-            dragModel = p.dragModel;
-            cubesNone = p.DragCubes.None;
+            hasLiftModule = part.hasLiftModule;
+            bodyLiftMultiplier = part.bodyLiftMultiplier;
+            dragModel = part.dragModel;
+            cubesNone = part.DragCubes.None;
 
-            CoM = p.transform.TransformPoint(p.CoMOffset);
-            CoP = p.transform.TransformPoint(p.CoPOffset);
-            CoL = p.transform.TransformPoint(p.CoLOffset);
+            CoM = part.transform.TransformPoint(part.CoMOffset);
+            CoP = part.transform.TransformPoint(part.CoPOffset);
+            CoL = part.transform.TransformPoint(part.CoLOffset);
+            transformPosition = part.transform.position;
 
             switch (dragModel)
             {
                 case Part.DragModel.CYLINDRICAL:
                 case Part.DragModel.CONIC:
-                    maximum_drag = p.maximum_drag;
-                    minimum_drag = p.minimum_drag;
-                    dragReferenceVector = p.partTransform.TransformDirection(p.dragReferenceVector);
+                    maximum_drag = part.maximum_drag;
+                    minimum_drag = part.minimum_drag;
+                    dragReferenceVector = part.partTransform.TransformDirection(part.dragReferenceVector);
                     break;
                 case Part.DragModel.SPHERICAL:
-                    maximum_drag = p.maximum_drag;
+                    maximum_drag = part.maximum_drag;
                     break;
                 case Part.DragModel.CUBE:
                     if (cubesNone)
-                        maximum_drag = p.maximum_drag;
+                        maximum_drag = part.maximum_drag;
                     break;
             }
 
             simCurves = SimCurves.Borrow(null);
 
             //cubes = new DragCubeList();
-            ModuleWheels.ModuleWheelDeployment wheelDeployment = p.FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
+            ModuleWheels.ModuleWheelDeployment wheelDeployment = part.FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
             bool forcedRetract = !shieldedFromAirstream && wheelDeployment != null && wheelDeployment.Position > 0;
             float gearPosition = 0;
 
@@ -131,16 +142,16 @@ namespace KerbalWindTunnel.VesselCache
                 gearPosition = wheelDeployment.Position;
                 lock (wheelDeployment)
                 {
-                    lock (p.DragCubes)
+                    lock (part.DragCubes)
                     {
-                        p.DragCubes.SetCubeWeight("Retracted", 1);
-                        p.DragCubes.SetCubeWeight("Deployed", 0);
+                        part.DragCubes.SetCubeWeight("Retracted", 1);
+                        part.DragCubes.SetCubeWeight("Deployed", 0);
 
                         lock (this.cubes)
-                            CopyDragCubesList(p.DragCubes, cubes);
+                            CopyDragCubesList(part.DragCubes, cubes);
 
-                        p.DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
-                        p.DragCubes.SetCubeWeight("Deployed", gearPosition);
+                        part.DragCubes.SetCubeWeight("Retracted", 1 - gearPosition);
+                        part.DragCubes.SetCubeWeight("Deployed", gearPosition);
                     }
                 }
             }
@@ -148,23 +159,50 @@ namespace KerbalWindTunnel.VesselCache
             else
             {
                 lock (this.cubes)
-                    lock (p.DragCubes)
-                        CopyDragCubesList(p.DragCubes, cubes);
+                    lock (part.DragCubes)
+                        CopyDragCubesList(part.DragCubes, cubes);
             }
 
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
-            // QuaternionD.LookRotation is not working...
-            //partToVessel = Quaternion.LookRotation(p.vessel.GetTransform().InverseTransformDirection(p.transform.forward), p.vessel.GetTransform().InverseTransformDirection(p.transform.up));
-            //vesselToPart = Quaternion.Inverse(partToVessel);
-            partToVessel = p.transform.rotation;
+            partToVessel = part.transform.rotation;
             vesselToPart = Quaternion.Inverse(partToVessel);
-            /*Debug.Log(p.name);
-            Debug.Log(p.transform.rotation);
-            Debug.Log(Quaternion.Inverse(p.transform.rotation));
-            Debug.Log(Quaternion.LookRotation(p.transform.forward, p.transform.up));
-            Debug.Log(p.transform.InverseTransformDirection(Vector3.forward) + " // " + Quaternion.Inverse(p.transform.rotation) * Vector3.forward + " // " + Quaternion.Inverse(Quaternion.LookRotation(p.transform.forward, p.transform.up)) * Vector3.forward);
-            Debug.Log(p.DragCubes.None + " " + p.dragModel);
-            Debug.Log("");*/
+        }
+        protected void InitClone(SimulatedPart part)
+        {
+            this.name = part.name;
+
+            totalMass = part.totalMass;
+            dryMass = part.dryMass;
+            shieldedFromAirstream = part.shieldedFromAirstream;
+
+            noDrag = part.noDrag;
+            hasLiftModule = part.hasLiftModule;
+            bodyLiftMultiplier = part.bodyLiftMultiplier;
+            dragModel = part.dragModel;
+            cubesNone = part.cubesNone;
+
+            CoM = part.CoM;
+            CoP = part.CoP;
+            CoL = part.CoL;
+            transformPosition = part.transformPosition;
+
+            maximum_drag = part.maximum_drag;
+            minimum_drag = part.minimum_drag;
+            dragReferenceVector = part.dragReferenceVector;
+
+            simCurves = SimCurves.Borrow(null);
+
+            // Calling cubes.SetPartOcclusion() is somehow necessary for correct data, despite my belief that all relevant
+            // fields are copied in CopyDragCubesList().
+            // But SetPartOcclusion() accesses Part.get_transform(), which is invalid from other than the main thread.
+            // Fortunately, there doesn't seem to be a performance issue with sharing cubes and locking against them.
+            //lock (this.cubes)
+            //    CopyDragCubesList(part.cubes, cubes, true);
+            this.cubes = part.cubes;
+
+            // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
+            partToVessel = part.partToVessel;
+            vesselToPart = part.vesselToPart;
         }
 
         public Vector3 GetAero(Vector3 velocityVect, float mach, float pseudoReDragMult)
@@ -250,48 +288,38 @@ namespace KerbalWindTunnel.VesselCache
             return liftV;
         }
 
-        /*public virtual Vector3 Drag(Vector3 vesselVelocity, float dragFactor, float mach)
+        public static Pool<DragCube> DragCubePool { get; } = new Pool<DragCube>(
+            () => new DragCube(), cube => { });
+
+        protected static void CopyDragCubesList(DragCubeList source, DragCubeList dest, bool sourceIsSet = false)
         {
-            if (shieldedFromAirstream || noDrag)
-                return Vector3.zero;
-
-            Vector3 dragVectorDirLocal = -(vesselToPart * vesselVelocity).normalized;
-
-            cubes.SetDrag(-dragVectorDirLocal, mach);
-
-            Vector3 drag = -vesselVelocity.normalized * cubes.AreaDrag * dragFactor;
-
-            return drag;
-        }
-
-        public virtual Vector3 Lift(Vector3 vesselVelocity, float liftFactor)
-        {
-            if (shieldedFromAirstream || hasLiftModule)
-                return Vector3.zero;
-
-            // direction of the lift in a vessel centric reference
-            Vector3 liftV = partToVessel * (cubes.LiftForce * bodyLiftMultiplier * liftFactor);
-
-            Vector3 liftVector = Vector3.ProjectOnPlane(liftV, -vesselVelocity);
-
-            return liftVector;
-        }*/
-
-        public static class DragCubePool
-        {
-            public static Pool<DragCube> Instance { get; } = new Pool<DragCube>(
-                () => new DragCube(), cube => { });
-        }
-
-        protected void CopyDragCubesList(DragCubeList source, DragCubeList dest)
-        {
-            source.ForceUpdate(true, true);
-            source.SetDragWeights();
-            source.SetPartOcclusion();
+            if (!sourceIsSet)
+            {
+                source.ForceUpdate(true, true);
+                source.SetDragWeights();
+                source.SetPartOcclusion();
+            }
 
             dest.ClearCubes();
 
             dest.SetPart(source.Part);
+
+            dest.DragCurveCd = source.DragCurveCd.Clone();
+            dest.DragCurveCdPower = source.DragCurveCdPower.Clone();
+            dest.DragCurveMultiplier = source.DragCurveMultiplier.Clone();
+
+            dest.BodyLiftCurve = new PhysicsGlobals.LiftingSurfaceCurve();
+            dest.BodyLiftCurve.name = source.BodyLiftCurve.name;
+            dest.BodyLiftCurve.liftCurve = source.BodyLiftCurve.liftCurve.Clone();
+            dest.BodyLiftCurve.dragCurve = source.BodyLiftCurve.dragCurve.Clone();
+            dest.BodyLiftCurve.dragMachCurve = source.BodyLiftCurve.dragMachCurve.Clone();
+            dest.BodyLiftCurve.liftMachCurve = source.BodyLiftCurve.liftMachCurve.Clone();
+
+            dest.SurfaceCurves = new PhysicsGlobals.SurfaceCurvesList();
+            dest.SurfaceCurves.dragCurveMultiplier = source.SurfaceCurves.dragCurveMultiplier.Clone();
+            dest.SurfaceCurves.dragCurveSurface = source.SurfaceCurves.dragCurveSurface.Clone();
+            dest.SurfaceCurves.dragCurveTail = source.SurfaceCurves.dragCurveTail.Clone();
+            dest.SurfaceCurves.dragCurveTip = source.SurfaceCurves.dragCurveTip.Clone();
 
             dest.None = source.None;
 
@@ -300,14 +328,13 @@ namespace KerbalWindTunnel.VesselCache
 
             for (int i = 0; i < source.Cubes.Count; i++)
             {
-                DragCube c;
-                lock (DragCubePool.Instance)
-                    c = DragCubePool.Instance.Borrow();
-                CopyDragCube(source.Cubes[i], c);
-                dest.Cubes.Add(c);
+                dest.Cubes.Add(CloneDragCube(source.Cubes[i]));
             }
 
             dest.SetDragWeights();
+
+            for (int i = 0; i < source.Cubes.Count; i++)
+                CloneDragCube(source.Cubes[i], dest.Cubes[i]);
 
             for (int i = 0; i < 6; i++)
             {
@@ -317,29 +344,27 @@ namespace KerbalWindTunnel.VesselCache
                 dest.WeightedDepth[i] = source.WeightedDepth[i];
             }
 
-            dest.SetDragWeights();
+            if (source.RotateDragVector)
+                dest.SetDragVectorRotation(source.DragVectorRotation);
+            else
+                dest.SetDragVectorRotation(false);
 
-            dest.BodyLiftCurve = new PhysicsGlobals.LiftingSurfaceCurve();
-            dest.SurfaceCurves = new PhysicsGlobals.SurfaceCurvesList();
-
-            dest.DragCurveCd = simCurves.DragCurveCd.Clone();
-            dest.DragCurveCdPower = simCurves.DragCurveCdPower.Clone();
-            dest.DragCurveMultiplier = simCurves.DragCurveMultiplier.Clone();
-
-            dest.BodyLiftCurve.liftCurve = simCurves.LiftCurve.Clone();
-            dest.BodyLiftCurve.dragCurve = simCurves.DragCurve.Clone();
-            dest.BodyLiftCurve.dragMachCurve = simCurves.DragMachCurve.Clone();
-            dest.BodyLiftCurve.liftMachCurve = simCurves.LiftMachCurve.Clone();
-
-            dest.SurfaceCurves.dragCurveMultiplier = simCurves.DragCurveMultiplier.Clone();
-            dest.SurfaceCurves.dragCurveSurface = simCurves.DragCurveSurface.Clone();
-            dest.SurfaceCurves.dragCurveTail = simCurves.DragCurveTail.Clone();
-            dest.SurfaceCurves.dragCurveTip = simCurves.DragCurveTip.Clone();
-
-            dest.SetPartOcclusion();
+            if (true)//!sourceIsSet)
+            {
+                dest.SetPartOcclusion();
+            }
         }
 
-        protected static void CopyDragCube(DragCube source, DragCube dest)
+        protected static DragCube CloneDragCube(DragCube source)
+        {
+            DragCube clone;
+            lock (DragCubePool)
+                clone = DragCubePool.Borrow();
+            CloneDragCube(source, clone);
+            return clone;
+        }
+
+        protected static void CloneDragCube(DragCube source, DragCube dest)
         {
             dest.Name = source.Name;
             dest.Weight = source.Weight;

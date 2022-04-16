@@ -20,8 +20,8 @@ namespace KerbalWindTunnel.DataGenerators
         public Conditions currentConditions = Conditions.Blank;
         //private Dictionary<Conditions, EnvelopePoint[,]> cache = new Dictionary<Conditions, EnvelopePoint[,]>();
         private ConcurrentDictionary<SurfCoords, EnvelopePoint> cache = new ConcurrentDictionary<SurfCoords, EnvelopePoint>();
+        private CancellationTokenSource optimalLineCancellationTokenSource;
         
-        private EnvelopePoint[] primaryProgress = null;
         public int[,] resolution = { { 10, 10 }, { 40, 120 }, { 80, 180 }, { 160, 360 } };
 
         public EnvelopeSurf()
@@ -33,7 +33,7 @@ namespace KerbalWindTunnel.DataGenerators
 
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Excess Thrust", ZUnit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Excess Acceleration", ZUnit = "g", StringFormat = "N2", Color = Jet_Dark_Positive });
-            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Thrust Available", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
+            graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Thrust Available", ZUnit = "kN", StringFormat = "N0", Color = Jet_Dark_Positive });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Level AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Max Lift AoA", ZUnit = "°", StringFormat = "F2", Color = ColorMap.Jet_Dark });
             graphables.Add(new SurfGraph(blank, left, right, bottom, top) { Name = "Max Lift", ZUnit = "kN", StringFormat = "N0", Color = ColorMap.Jet_Dark });
@@ -67,9 +67,7 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (Status == TaskStatus.RanToCompletion)
                     return 1;
-                if (primaryProgress == null)
-                    return -1;
-                return (float)(primaryProgress.Count((pt) => pt.completed)) / primaryProgress.Count();
+                return (float)progressNumerator / progressDenominator;
             }
         }
 
@@ -79,29 +77,53 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (InternalStatus == TaskStatus.RanToCompletion)
                     return 1;
-                if (primaryProgress == null)
-                    return -1;
-                return (float)(primaryProgress.Count((pt) => pt.completed)) / primaryProgress.Count();
+                return (float)progressNumerator / progressDenominator;
             }
         }
+
+        private int progressNumerator = -1;
+        private int progressDenominator = 1;
 
         public override void Clear()
         {
             base.Clear();
             currentConditions = Conditions.Blank;
             cache.Clear();
-            primaryProgress = null;
+            progressNumerator = -1;
+            progressDenominator = 1;
             envelopePoints = new EnvelopePoint[0, 0];
 
             ((LineGraph)graphables["Fuel-Optimal Path"]).SetValues(new Vector2[0]);
             ((LineGraph)graphables["Time-Optimal Path"]).SetValues(new Vector2[0]);
         }
 
-        public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepSpeed = 50f, float stepAltitude = 500)
+        public override void Cancel()
         {
+            base.Cancel();
+            optimalLineCancellationTokenSource?.Cancel();
+            optimalLineCancellationTokenSource = null;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing && optimalLineCancellationTokenSource != null)
+            {
+                if (!optimalLineCancellationTokenSource.IsCancellationRequested)
+                    cancellationTokenSource.Cancel();
+                cancellationTokenSource.Dispose();
+                cancellationTokenSource = null;
+            }
+        }
+
+        public void Calculate(CelestialBody body, float lowerBoundSpeed = 0, float upperBoundSpeed = 2000, float lowerBoundAltitude = 0, float upperBoundAltitude = 60000, float stepSpeed = float.NaN, float stepAltitude = float.NaN)
+        {
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.BeginSample("EnvelopeSurf.Calculate");
+#endif
             // Set up calculation conditions and bounds
             Conditions newConditions;
-            newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, stepSpeed, lowerBoundAltitude, upperBoundAltitude, stepAltitude);
+            newConditions = new Conditions(body, lowerBoundSpeed, upperBoundSpeed, float.IsNaN(stepSpeed) ? (upperBoundSpeed - lowerBoundSpeed) / resolution[1, 0] : stepSpeed, lowerBoundAltitude, upperBoundAltitude, float.IsNaN(stepAltitude) ? (upperBoundAltitude - lowerBoundAltitude) / resolution[1, 1] : stepAltitude);
 
             if (currentConditions.Equals(newConditions) && Status != TaskStatus.WaitingToRun)
                 return;
@@ -112,12 +134,16 @@ namespace KerbalWindTunnel.DataGenerators
             float firstStepSpeed = (newConditions.upperBoundSpeed - newConditions.lowerBoundSpeed) / resolution[0, 0];
             float firstStepAltitude = (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) / resolution[0, 1];
             EnvelopePoint[] preliminaryData = new EnvelopePoint[(resolution[0, 0] + 1) * (resolution[0, 1] + 1)];
+            AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+            if (aeroPredictorToClone is VesselCache.SimulatedVessel simVessel)
+                simVessel.InitMaxAoA(newConditions.body, (newConditions.upperBoundAltitude - newConditions.lowerBoundAltitude) * 0.25f + newConditions.lowerBoundAltitude);
+
             // Probably won't run in parallel because it's very short.
             // But the UI will hang waiting for this to complete, so a self-triggering CancellationToken is provided with a life span of 5 seconds.
             try
             {
                 Parallel.For(0, preliminaryData.Length, new ParallelOptions() { CancellationToken = new CancellationTokenSource(5000).Token },
-                    WindTunnelWindow.Instance.GetAeroPredictor, (index, state, predictor) =>
+                    () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone), (index, state, predictor) =>
                          {
                              int x = index % (resolution[0, 0] + 1), y = index / (resolution[0, 0] + 1);
                              EnvelopePoint result = new EnvelopePoint(predictor, newConditions.body, y * firstStepAltitude + newConditions.lowerBoundAltitude, x * firstStepSpeed + newConditions.lowerBoundSpeed);
@@ -136,9 +162,16 @@ namespace KerbalWindTunnel.DataGenerators
                 Debug.LogException(ex.InnerException);
             }
 
+            if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
+                releaseable.Release();
+
             cancellationTokenSource = new CancellationTokenSource();
 
             WindTunnel.Instance.StartCoroutine(Processing(newConditions, preliminaryData.To2Dimension(resolution[0, 0] + 1)));
+
+#if ENABLE_PROFILER
+            UnityEngine.Profiling.Profiler.EndSample();
+#endif
         }
 
         public override void UpdateGraphs()
@@ -199,17 +232,26 @@ namespace KerbalWindTunnel.DataGenerators
 
         private IEnumerator Processing(Conditions conditions, EnvelopePoint[,] prelimData)
         {
-            CancellationTokenSource closureCancellationTokenSource = this.cancellationTokenSource;
+            CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
+            optimalLineCancellationTokenSource?.CancelAfter(2000);
+            optimalLineCancellationTokenSource = new CancellationTokenSource();
+            CancellationToken optimalLineCancellationToken = optimalLineCancellationTokenSource.Token;
 
-            primaryProgress = new EnvelopePoint[conditions.Resolution];
+            progressNumerator = 0;
+            progressDenominator = conditions.Resolution;
             int cachedCount = 0;
 
             stopwatch.Reset();
             stopwatch.Start();
 
-            task = Task.Factory.StartNew<EnvelopePoint[,]>(
+            AeroPredictor aeroPredictorToClone = WindTunnelWindow.Instance.GetAeroPredictor();
+            if (aeroPredictorToClone is VesselCache.SimulatedVessel simVessel)
+                simVessel.InitMaxAoA(conditions.body, (conditions.upperBoundAltitude - conditions.lowerBoundAltitude) * 0.25f + conditions.lowerBoundAltitude);
+
+            task = new Task<EnvelopePoint[,]>(
                 () =>
                 {
+                    EnvelopePoint[] closureProgress = new EnvelopePoint[conditions.Resolution];
                     float[,] AoAs_guess = null, maxAs_guess = null, pitchIs_guess = null;
                     AoAs_guess = prelimData.SelectToArray(pt => pt.AoA_level);
                     maxAs_guess = prelimData.SelectToArray(pt => pt.AoA_max);
@@ -218,8 +260,8 @@ namespace KerbalWindTunnel.DataGenerators
                     try
                     {
                         //OrderablePartitioner<EnvelopePoint> partitioner = Partitioner.Create(primaryProgress, true);
-                        Parallel.For<AeroPredictor>(0, primaryProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationTokenSource.Token },
-                            WindTunnelWindow.Instance.GetAeroPredictor,
+                        Parallel.For<AeroPredictor>(0, closureProgress.Length, new ParallelOptions() { CancellationToken = closureCancellationToken },
+                            () => WindTunnelWindow.GetUnitySafeAeroPredictor(aeroPredictorToClone),
                             (index, state, predictor) =>
                         {
                             int x = index % conditions.XResolution, y = index / conditions.XResolution;
@@ -229,39 +271,52 @@ namespace KerbalWindTunnel.DataGenerators
                             EnvelopePoint result;
                             if (!cache.TryGetValue(coords, out result))
                             {
+                                closureCancellationToken.ThrowIfCancellationRequested();
                                 result = new EnvelopePoint(predictor, conditions.body, y * conditions.stepAltitude + conditions.lowerBoundAltitude, x * conditions.stepSpeed + conditions.lowerBoundSpeed);
+                                closureCancellationToken.ThrowIfCancellationRequested();
                                 cache[coords] = result;
                             }
                             else
                                 Interlocked.Increment(ref cachedCount);
-                            primaryProgress[index] = result;
+                            closureProgress[index] = result;
+                            Interlocked.Increment(ref progressNumerator);
                             return predictor;
                         }, (predictor) => (predictor as VesselCache.IReleasable)?.Release());
 
-                        closureCancellationTokenSource.Token.ThrowIfCancellationRequested();
-                        Debug.Log("KWT Data run finished. " + cachedCount + " of " + primaryProgress.Length + " retreived from cache. (" + (float)cachedCount / primaryProgress.Length * 100 + "%)");
+                        closureCancellationToken.ThrowIfCancellationRequested();
+                        Debug.LogFormat("Wind Tunnel - Data run finished. {0} of {1} ({2:F0}%) retrieved from cache.", cachedCount, closureProgress.Length, (float)cachedCount / closureProgress.Length * 100);
 
-                        return primaryProgress.To2Dimension(conditions.XResolution);
+                        return closureProgress.To2Dimension(conditions.XResolution);
                     }
+                    catch (OperationCanceledException) { return null; }
                     catch (AggregateException aggregateException)
                     {
+                        bool onlyCancelled = true;
                         foreach (var ex in aggregateException.Flatten().InnerExceptions)
                         {
+                            if (ex is OperationCanceledException)
+                                continue;
                             Debug.LogException(ex);
+                            onlyCancelled = false;
                         }
-                        throw aggregateException;
+                        if (!onlyCancelled)
+                            throw new AggregateException(aggregateException.Flatten().InnerExceptions.Where(ex => !(ex is OperationCanceledException)));
+                        return null;
                     }
                 },
-            closureCancellationTokenSource.Token);
+            closureCancellationToken, TaskCreationOptions.LongRunning);
 
-            //if (task.Wait(25))
-                //Debug.Log("KWT: Waiting actually did something!");
+            task.Start();
 
             while (task.Status < TaskStatus.RanToCompletion)
             {
                 //Debug.Log(manager.PercentComplete + "% done calculating...");
                 yield return 0;
             }
+
+            if (aeroPredictorToClone is VesselCache.IReleasable releaseable)
+                releaseable.Release();
+
             //timer.Stop();
             //Debug.Log("Time taken: " + timer.ElapsedMilliseconds / 1000f);
 
@@ -277,19 +332,20 @@ namespace KerbalWindTunnel.DataGenerators
                 yield break;
             }
 
-            if (!closureCancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationToken.IsCancellationRequested)
             {
                 envelopePoints = ((Task<EnvelopePoint[,]>)task).Result;
                 currentConditions = conditions;
                 UpdateGraphs();
-                EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, closureCancellationTokenSource, graphables);
+                if (!optimalLineCancellationToken.IsCancellationRequested)
+                    EnvelopeLine.CalculateOptimalLines(conditions, WindTunnelWindow.Instance.TargetSpeed, WindTunnelWindow.Instance.TargetAltitude, 0, 0, envelopePoints, optimalLineCancellationToken, graphables);
                 valuesSet = true;
             }
 
-            if (cachedCount < primaryProgress.Length)
+            if (cachedCount < conditions.Resolution)
                 yield return 0;
 
-            if (!closureCancellationTokenSource.IsCancellationRequested)
+            if (!closureCancellationToken.IsCancellationRequested)
             {
                 Conditions newConditions;
                 for (int i = 1; i <= resolution.GetUpperBound(0); i++)
@@ -299,7 +355,7 @@ namespace KerbalWindTunnel.DataGenerators
                         newConditions = conditions.Modify(
                             stepSpeed: Math.Min((conditions.upperBoundSpeed - conditions.lowerBoundSpeed) / resolution[i, 0], conditions.stepSpeed),
                             stepAltitude: Math.Min((conditions.upperBoundAltitude - conditions.lowerBoundAltitude) / resolution[i, 1], conditions.stepAltitude));
-                        Debug.Log("Wind Tunnel graphing higher res at:" + newConditions.XResolution + " by " + newConditions.YResolution);
+                        Debug.LogFormat("Wind Tunnel graphing higher res at: {0} by {1}.", newConditions.XResolution, newConditions.YResolution);
                         WindTunnel.Instance.StartCoroutine(Processing(newConditions, envelopePoints));
                         yield break;
                     }
@@ -310,7 +366,11 @@ namespace KerbalWindTunnel.DataGenerators
         }
 
         public void CalculateOptimalLines(Conditions conditions, float exitSpeed, float exitAlt, float initialSpeed, float initialAlt)
-            => EnvelopeLine.CalculateOptimalLines(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, envelopePoints, cancellationTokenSource, graphables);
+        {
+            if (cancellationTokenSource != null && cancellationTokenSource.IsCancellationRequested)
+                return;
+            EnvelopeLine.CalculateOptimalLines(conditions, exitSpeed, exitAlt, initialSpeed, initialAlt, envelopePoints, cancellationTokenSource.Token, graphables);
+        }
 
         public override void OnAxesChanged(float xMin, float xMax, float yMin, float yMax, float zMin, float zMax)
         {
@@ -322,14 +382,9 @@ namespace KerbalWindTunnel.DataGenerators
 
         private struct SurfCoords : IEquatable<SurfCoords>
         {
-            public readonly int speed, altitude;
+            public readonly float speed, altitude;
 
             public SurfCoords(float speed, float altitude)
-            {
-                this.speed = Mathf.RoundToInt(speed);
-                this.altitude = Mathf.RoundToInt(altitude);
-            }
-            public SurfCoords(int speed, int altitude)
             {
                 this.speed = speed;
                 this.altitude = altitude;
@@ -356,7 +411,7 @@ namespace KerbalWindTunnel.DataGenerators
                 // same quality as the default uint/int hash
                 // (which may or may not be just that number).
                 // This means that there will be zero collisions within the expected range.
-                return ((((uint)speed) << 17) & (uint)altitude).GetHashCode();
+                return ((((uint)Mathf.RoundToInt(speed)) << 17) | (uint)Mathf.RoundToInt(altitude)).GetHashCode();
             }
         }
 
@@ -447,10 +502,9 @@ namespace KerbalWindTunnel.DataGenerators
             {
                 if (obj == null)
                     return false;
-                if (obj.GetType() != typeof(Conditions))
-                    return false;
-                Conditions conditions = (Conditions)obj;
-                return this.Equals(conditions);
+                if (obj is Conditions conditions)
+                    return Equals(conditions);
+                return false;
             }
 
             public bool Equals(Conditions conditions)
@@ -463,6 +517,12 @@ namespace KerbalWindTunnel.DataGenerators
                     this.upperBoundAltitude == conditions.upperBoundAltitude &&
                     this.stepAltitude == conditions.stepAltitude;
             }
+
+            public static bool operator ==(Conditions left, Conditions right)
+            {
+                return left.Equals(right);
+            }
+            public static bool operator !=(Conditions left, Conditions right) => !(left.Equals(right));
 
             public override int GetHashCode()
             {
