@@ -24,6 +24,7 @@ namespace KerbalWindTunnel.VesselCache
         private Vector3 dragReferenceVector;
         internal bool cubesNone;
         private float bodyLiftMultiplier;
+        public int shipIndex;
 
         internal SimCurves simCurves;
 
@@ -94,6 +95,7 @@ namespace KerbalWindTunnel.VesselCache
         {
             this.name = part.name;
             Rigidbody rigidbody = part.rb;
+            this.shipIndex = part.ship.parts.IndexOf(part);
 
             //totalMass = rigidbody == null ? 0 : rigidbody.mass; // TODO : check if we need to use this or the one without the childMass
             totalMass = part.mass + part.GetResourceMass();

@@ -297,6 +297,7 @@ namespace KerbalWindTunnel.VesselCache
             while (root.parent != null)
                 root = root.parent;
             partCollection.AddPart(root);
+            partCollection.OrderParts();
 
             CoM /= totalMass;
             CoM_dry /= dryMass;

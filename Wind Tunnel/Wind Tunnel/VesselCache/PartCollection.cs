@@ -296,6 +296,12 @@ namespace KerbalWindTunnel.VesselCache
             clone.InitClone(collection);
             return clone;
         }
+        public void OrderParts()
+        {
+            parts.Sort((p1, p2) => p1.shipIndex.CompareTo(p2.shipIndex));
+            foreach (PartCollection collection in partCollections)
+                collection.OrderParts();
+        }
 
         public virtual void AddPart(Part part)
         {
