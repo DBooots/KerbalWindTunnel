@@ -9,7 +9,9 @@ namespace KerbalWindTunnel.VesselCache
     public class PartCollection
     {
         public SimulatedVessel parentVessel;
+
         public PartCollection parentCollection;
+
         public List<SimulatedPart> parts = new List<SimulatedPart>();
         public List<SimulatedLiftingSurface> surfaces = new List<SimulatedLiftingSurface>();
         public List<SimulatedControlSurface> ctrls = new List<SimulatedControlSurface>();
@@ -328,6 +330,7 @@ namespace KerbalWindTunnel.VesselCache
             {
                 part.hasLiftModule = true;
                 SimulatedLiftingSurface surface;
+                
                 if (liftingSurface is ModuleControlSurface ctrlSurface && (!ctrlSurface.ignorePitch || ctrlSurface.deploy))
                 {
                     surface = SimulatedControlSurface.Borrow(ctrlSurface, simulatedPart);

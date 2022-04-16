@@ -23,6 +23,7 @@ namespace KerbalWindTunnel.VesselCache
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
             int rotationCount = isRotating ? WindTunnelSettings.Instance.rotationCount : 1;
+
             float Q = 0.0005f * conditions.atmDensity;
 
             // The root part is the rotor hub, so since the rotating mesh is usually cylindrical we
@@ -32,8 +33,10 @@ namespace KerbalWindTunnel.VesselCache
                 float localMach = inflow.magnitude;
                 float localVelFactor = localMach * localMach;
                 float localPRDM;
+
                 lock (parentVessel.DragCurvePseudoReynolds)
                     localPRDM = parentVessel.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
+
                 localMach /= conditions.speedOfSound;
                 aeroForce += parts[0].GetAero(inflow.normalized, localMach, localPRDM, out Vector3 pTorque, origin) * localVelFactor * Q;
                 torque += pTorque * localVelFactor * Q;
@@ -54,12 +57,15 @@ namespace KerbalWindTunnel.VesselCache
                     Vector3 partMotion = Vector3.Cross(axis, (parts[i].transformPosition - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
+
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
                     float localPRDM;
+                    
                     lock (parentVessel.DragCurvePseudoReynolds)
                         localPRDM = parentVessel.DragCurvePseudoReynolds.Evaluate(conditions.atmDensity * localMach);
+
                     localMach /= conditions.speedOfSound;
                     rAeroForce += parts[i].GetAero(partInflow, localMach, localPRDM, out Vector3 pTorque, origin) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
@@ -71,6 +77,7 @@ namespace KerbalWindTunnel.VesselCache
                     Vector3 partMotion = Vector3.Cross(axis, (surfaces[i].part.transformPosition + surfaces[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
+                        
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
@@ -87,6 +94,7 @@ namespace KerbalWindTunnel.VesselCache
                     Vector3 partMotion = Vector3.Cross(axis, (ctrls[i].part.transformPosition + ctrls[i].velocityOffset - origin)) * angularVelocity + rotatedInflow;
                     if (partMotion.sqrMagnitude <= 0)
                         continue;
+                        
                     Vector3 partInflow = partMotion.normalized;
                     float localMach = partMotion.magnitude;
                     float localVelFactor = localMach * localMach;
@@ -208,6 +216,7 @@ namespace KerbalWindTunnel.VesselCache
             Vector3 aeroForce = Vector3.zero;
             torque = Vector3.zero;
             int rotationCount = Math.Abs(angularVelocity) > 0 ? WindTunnelSettings.Instance.rotationCount : 1;
+
             float Q = 0.0005f * conditions.atmDensity;
 
             // The root part is the rotor hub, so since the rotating mesh is usually cylindrical we
@@ -260,6 +269,7 @@ namespace KerbalWindTunnel.VesselCache
                     rAeroForce += surfaces[i].GetLift(partInflow, localMach, out Vector3 pTorque, torquePoint) * localVelFactor;
                     rTorque += pTorque * localVelFactor;
                 }*/
+                
                 for (int i = ctrls.Count - 1; i >= 0; i--)
                 {
                     if (ctrls[i].part.shieldedFromAirstream)
@@ -521,7 +531,7 @@ namespace KerbalWindTunnel.VesselCache
             lock (pool)
                 return pool.Borrow();
         }
-
+        
         new public static RotorPartCollection Borrow(SimulatedVessel vessel, Part originPart)
         {
             RotorPartCollection collection;

@@ -28,7 +28,7 @@ namespace KerbalWindTunnel.VesselCache
             RootSolver.LeftGuessBound(-2 * Mathf.PI / 180),
             RootSolver.RightGuessBound(2 * Mathf.PI / 180),
             RootSolver.ShiftWithGuess(true));*/
-        
+
         public PartCollection partCollection;
 
         private int count;
@@ -36,8 +36,8 @@ namespace KerbalWindTunnel.VesselCache
         public float dryMass = 0;
         public float relativeWingArea = 0;
         public int stage = 0;
+        
         public FloatCurve DragCurvePseudoReynolds;
-
         public FloatCurve maxAoA = null;
         public static List<float> AoAMachs = null;
 
