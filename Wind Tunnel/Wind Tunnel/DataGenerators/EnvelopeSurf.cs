@@ -110,9 +110,9 @@ namespace KerbalWindTunnel.DataGenerators
             if (disposing && optimalLineCancellationTokenSource != null)
             {
                 if (!optimalLineCancellationTokenSource.IsCancellationRequested)
-                    cancellationTokenSource.Cancel();
-                cancellationTokenSource.Dispose();
-                cancellationTokenSource = null;
+                    optimalLineCancellationTokenSource.Cancel();
+                optimalLineCancellationTokenSource.Dispose();
+                optimalLineCancellationTokenSource = null;
             }
         }
 
@@ -233,7 +233,11 @@ namespace KerbalWindTunnel.DataGenerators
         private IEnumerator Processing(Conditions conditions, EnvelopePoint[,] prelimData)
         {
             CancellationToken closureCancellationToken = this.cancellationTokenSource.Token;
-            optimalLineCancellationTokenSource?.CancelAfter(2000);
+            if (optimalLineCancellationTokenSource != null)
+            {
+                optimalLineCancellationTokenSource.CancelAfter(2000);
+                optimalLineCancellationTokenSource.Dispose();
+            }
             optimalLineCancellationTokenSource = new CancellationTokenSource();
             CancellationToken optimalLineCancellationToken = optimalLineCancellationTokenSource.Token;
 
