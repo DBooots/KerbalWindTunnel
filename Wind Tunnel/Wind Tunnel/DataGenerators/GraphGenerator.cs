@@ -108,8 +108,10 @@ namespace KerbalWindTunnel.DataGenerators
             if (!cancellationTokenSource.IsCancellationRequested)
                 cancellationTokenSource.Cancel();
 
+            CancellationTokenSource closureSource = cancellationTokenSource;
+
             if (task != null && task.Status < TaskStatus.RanToCompletion)
-                task.ContinueWith((t) => cancellationTokenSource.Dispose());
+                task.ContinueWith((t) => closureSource.Dispose());
             else
                 cancellationTokenSource.Dispose();
 
