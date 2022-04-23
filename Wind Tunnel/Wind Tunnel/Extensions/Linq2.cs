@@ -245,10 +245,10 @@ namespace KerbalWindTunnel.Extensions
             {
                 for (int r2 = 0; r2 < r; r2++)
                 {
-                    if (startY + r <= height && startX + r2 <= width) yield return vals[startX + r2, startY + r];
-                    if (startX + r <= width && startY - r2 >= 0) yield return vals[startX + r, startY - r2];
-                    if (startY - r >= 0 && startX - r2 >= 0) yield return vals[startX - r2, startY - r];
-                    if (startX - r >= 0 && startY + r2 <= height) yield return vals[startX - r, startY + r2];
+                    if (startY + (r - r2) <= height && startX + r2 <= width) yield return vals[startX + r2, startY + (r - r2)];
+                    if (startX + (r - r2) <= width && startY - r2 >= 0) yield return vals[startX + (r - r2), startY - r2];
+                    if (startY - (r - r2) >= 0 && startX - r2 >= 0) yield return vals[startX - r2, startY - (r - r2)];
+                    if (startX - (r - r2) >= 0 && startY + r2 <= height) yield return vals[startX - (r - r2), startY + r2];
                 }
             }
         }
@@ -282,10 +282,10 @@ namespace KerbalWindTunnel.Extensions
             {
                 for (int r2 = 0; r2 < r; r2++)
                 {
-                    if (quads[0] && startY + r <= height && startX + r2 <= width) yield return vals[startX + r2, startY + r];
-                    if (quads[3] && startX + r <= width && startY - r2 >= 0) yield return vals[startX + r, startY - r2];
-                    if (quads[2] && startY - r >= 0 && startX - r2 >= 0) yield return vals[startX - r2, startY - r];
-                    if (quads[1] && startX - r >= 0 && startY + r2 <= height) yield return vals[startX - r, startY + r2];
+                    if (quads[0] && startY + (r - r2) <= height && startX + r2 <= width) yield return vals[startX + r2, startY + (r - r2)];
+                    if (quads[3] && startX + (r - r2) <= width && startY - r2 >= 0) yield return vals[startX + (r - r2), startY - r2];
+                    if (quads[2] && startY - (r - r2) >= 0 && startX - r2 >= 0) yield return vals[startX - r2, startY - (r - r2)];
+                    if (quads[1] && startX - (r - r2) >= 0 && startY + r2 <= height) yield return vals[startX - (r - r2), startY + r2];
                 }
             }
         }
