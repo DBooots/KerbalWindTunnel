@@ -243,7 +243,7 @@ namespace KerbalWindTunnel.Extensions
             if (maxRange < 0) maxRange = width + height;
             for (int r = 1; r <= maxRange; r++)
             {
-                for (int r2 = 0; r2 < r; r++)
+                for (int r2 = 0; r2 < r; r2++)
                 {
                     if (startY + r <= height && startX + r2 <= width) yield return vals[startX + r2, startY + r];
                     if (startX + r <= width && startY - r2 >= 0) yield return vals[startX + r, startY - r2];
@@ -280,7 +280,7 @@ namespace KerbalWindTunnel.Extensions
             if (maxRange < 0) maxRange = width + height;
             for (int r = 1; r <= maxRange; r++)
             {
-                for (int r2 = 0; r2 < r; r++)
+                for (int r2 = 0; r2 < r; r2++)
                 {
                     if (quads[0] && startY + r <= height && startX + r2 <= width) yield return vals[startX + r2, startY + r];
                     if (quads[3] && startX + r <= width && startY - r2 >= 0) yield return vals[startX + r, startY - r2];
