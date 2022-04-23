@@ -263,14 +263,14 @@ namespace KerbalWindTunnel.VesselCache
                                 cubes.SetPartOcclusion();
                                 cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
                             }
-                            catch (Exception)
+                            catch (NullReferenceException nre)
                             {
                                 cubes.SetDrag(Vector3.forward, 0);
                                 cubes.ForceUpdate(true, true);
                                 cubes.SetDragWeights();
                                 cubes.SetPartOcclusion();
                                 cubes.AddSurfaceDragDirection(-Vector3.forward, 0, ref p_drag_data);
-                                //Debug.Log(String.Format("Trajectories: Caught NRE on Drag Initialization.  Should be fixed now.  {0}", e));
+                                Debug.LogError(String.Format("Wind Tunnel: Caught NRE on Drag Initialization.  Should be fixed now.  {0}", nre));
                             }
                         }
                     }
@@ -297,7 +297,6 @@ namespace KerbalWindTunnel.VesselCache
             while (root.parent != null)
                 root = root.parent;
             partCollection.AddPart(root);
-            partCollection.OrderParts();
 
             CoM /= totalMass;
             CoM_dry /= dryMass;
