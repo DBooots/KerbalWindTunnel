@@ -9,6 +9,7 @@ namespace KerbalWindTunnel.VesselCache
     public class SimulatedPart
     {
         protected internal DragCubeList cubes = new DragCubeList();
+        private bool ownsCubes = true;
 
         public AeroPredictor vessel;
 
@@ -53,11 +54,18 @@ namespace KerbalWindTunnel.VesselCache
 
         public void Release()
         {
-            foreach (DragCube cube in cubes.Cubes)
+            // No check that cloned SimulatedParts are not still using this...
+            if (ownsCubes)
             {
-                DragCubePool.Release(cube);
+                lock (cubes)
+                {
+                    foreach (DragCube cube in cubes.Cubes)
+                    {
+                        DragCubePool.Release(cube);
+                    }
+                    cubes.ClearCubes();
+                }
             }
-            cubes.ClearCubes();
             simCurves.Release();
             pool.Release(this);
         }
@@ -132,7 +140,13 @@ namespace KerbalWindTunnel.VesselCache
 
             simCurves = SimCurves.Borrow(null);
 
-            //cubes = new DragCubeList();
+            cubes = new DragCubeList
+            {
+                BodyLiftCurve = new PhysicsGlobals.LiftingSurfaceCurve(),
+                SurfaceCurves = new PhysicsGlobals.SurfaceCurvesList()
+            };
+            ownsCubes = true;
+
             ModuleWheels.ModuleWheelDeployment wheelDeployment = part.FindModuleImplementing<ModuleWheels.ModuleWheelDeployment>();
             bool forcedRetract = !shieldedFromAirstream && wheelDeployment != null && wheelDeployment.Position > 0;
             float gearPosition = 0;
@@ -199,6 +213,7 @@ namespace KerbalWindTunnel.VesselCache
             //lock (this.cubes)
             //    CopyDragCubesList(part.cubes, cubes, true);
             this.cubes = part.cubes;
+            ownsCubes = false;
 
             // Rotation to convert the vessel space vesselVelocity to the part space vesselVelocity
             partToVessel = part.partToVessel;
@@ -333,9 +348,6 @@ namespace KerbalWindTunnel.VesselCache
 
             dest.SetDragWeights();
 
-            for (int i = 0; i < source.Cubes.Count; i++)
-                CloneDragCube(source.Cubes[i], dest.Cubes[i]);
-
             for (int i = 0; i < 6; i++)
             {
                 dest.WeightedArea[i] = source.WeightedArea[i];
@@ -349,7 +361,7 @@ namespace KerbalWindTunnel.VesselCache
             else
                 dest.SetDragVectorRotation(false);
 
-            if (true)//!sourceIsSet)
+            if (!sourceIsSet)
             {
                 dest.SetPartOcclusion();
             }
