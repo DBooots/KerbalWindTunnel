@@ -382,7 +382,7 @@ namespace KerbalWindTunnel.DataGenerators
             }
             public override int GetHashCode()
             {
-                return Extensions.HashCode.Of(this.x).And(this.y);
+                return HashCode.Combine(this.x, this.y);
             }
         }
     }

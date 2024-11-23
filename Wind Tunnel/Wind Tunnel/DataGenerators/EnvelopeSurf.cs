@@ -530,7 +530,7 @@ namespace KerbalWindTunnel.DataGenerators
 
             public override int GetHashCode()
             {
-                return Extensions.HashCode.Of(this.body).And(this.lowerBoundSpeed).And(this.upperBoundSpeed).And(this.stepSpeed).And(this.lowerBoundAltitude).And(this.upperBoundAltitude).And(this.stepAltitude);
+                return HashCode.Combine(this.body, this.lowerBoundSpeed, this.upperBoundSpeed, this.stepSpeed, this.lowerBoundAltitude, this.upperBoundAltitude, this.stepAltitude);
             }
 
             private class StepInsensitiveComparer : EqualityComparer<Conditions>
@@ -546,7 +546,7 @@ namespace KerbalWindTunnel.DataGenerators
 
                 public override int GetHashCode(Conditions obj)
                 {
-                    return Extensions.HashCode.Of(obj.body).And(obj.lowerBoundSpeed).And(obj.upperBoundSpeed).And(obj.lowerBoundAltitude).And(obj.upperBoundAltitude);
+                    return HashCode.Combine(obj.body, obj.lowerBoundSpeed, obj.upperBoundSpeed, obj.lowerBoundAltitude, obj.upperBoundAltitude);
                 }
             }
         }
